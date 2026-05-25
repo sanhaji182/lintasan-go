@@ -5,12 +5,34 @@ import Connections from './pages/Connections'
 import Models from './pages/Models'
 import Logs from './pages/Logs'
 import Settings from './pages/Settings'
+import Analytics from './pages/Analytics'
+import Usage from './pages/Usage'
+import Routing from './pages/Routing'
+import Playground from './pages/Playground'
+import Keys from './pages/Keys'
+import Plugins from './pages/Plugins'
+import Teams from './pages/Teams'
+import Users from './pages/Users'
+import Webhooks from './pages/Webhooks'
+import Backup from './pages/Backup'
+import Docs from './pages/Docs'
 
 const NAV_ITEMS = [
   { path: '/dashboard', icon: '📊', label: 'Overview' },
+  { path: '/dashboard/analytics', icon: '📈', label: 'Analytics' },
+  { path: '/dashboard/usage', icon: '🪙', label: 'Usage' },
+  { path: '/dashboard/routing', icon: '🧭', label: 'Routing' },
+  { path: '/dashboard/playground', icon: '💬', label: 'Playground' },
   { path: '/dashboard/connections', icon: '🔌', label: 'Connections' },
   { path: '/dashboard/models', icon: '🤖', label: 'Models' },
+  { path: '/dashboard/keys', icon: '🔑', label: 'API Keys' },
+  { path: '/dashboard/plugins', icon: '🧩', label: 'Plugins' },
+  { path: '/dashboard/teams', icon: '👥', label: 'Teams' },
+  { path: '/dashboard/users', icon: '👤', label: 'Users' },
+  { path: '/dashboard/webhooks', icon: '🪝', label: 'Webhooks' },
+  { path: '/dashboard/backup', icon: '💾', label: 'Backup' },
   { path: '/dashboard/logs', icon: '📋', label: 'Logs' },
+  { path: '/dashboard/docs', icon: '📚', label: 'Docs' },
   { path: '/dashboard/settings', icon: '⚙️', label: 'Settings' },
 ]
 
@@ -59,9 +81,20 @@ export default function App() {
         <main className="main-content">
           <Routes>
             <Route path="/dashboard" element={<Overview />} />
+            <Route path="/dashboard/analytics" element={<Analytics />} />
+            <Route path="/dashboard/usage" element={<Usage />} />
+            <Route path="/dashboard/routing" element={<Routing />} />
+            <Route path="/dashboard/playground" element={<Playground />} />
             <Route path="/dashboard/connections" element={<Connections />} />
             <Route path="/dashboard/models" element={<Models />} />
+            <Route path="/dashboard/keys" element={<Keys />} />
+            <Route path="/dashboard/plugins" element={<Plugins />} />
+            <Route path="/dashboard/teams" element={<Teams />} />
+            <Route path="/dashboard/users" element={<Users />} />
+            <Route path="/dashboard/webhooks" element={<Webhooks />} />
+            <Route path="/dashboard/backup" element={<Backup />} />
             <Route path="/dashboard/logs" element={<Logs />} />
+            <Route path="/dashboard/docs" element={<Docs />} />
             <Route path="/dashboard/settings" element={<Settings />} />
           </Routes>
         </main>

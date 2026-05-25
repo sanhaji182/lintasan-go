@@ -1,0 +1,9 @@
+import { useState } from 'react'
+import { useApi } from '../hooks/useApi'
+const inputStyle={padding:'10px 14px',background:'var(--bg-body)',border:'1px solid var(--border)',borderRadius:'8px',fontSize:'13px',color:'var(--fg-0)',outline:'none',width:'100%'}
+const btn={padding:'9px 14px',background:'var(--primary)',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',cursor:'pointer'}
+function Header({title,sub}){return <div style={{marginBottom:24}}><h2 style={{fontSize:20,fontWeight:700}}>{title}</h2><p style={{fontSize:13,color:'var(--fg-2)'}}>{sub}</p></div>}
+function Card({children}){return <div className='card' style={{marginBottom:20}}>{children}</div>}
+function Empty({icon,text}){return <div className='empty-state'><div className='icon'>{icon}</div><p>{text}</p></div>}
+
+export default function Webhooks(){const {data,reload}=useApi('/api/webhooks'); const [name,setName]=useState(''); const [url,setUrl]=useState(''); async function create(){await fetch('/api/webhooks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',name,url,events:['request.completed']})});setName('');setUrl('');reload()} let hooks=data?.webhooks||[]; return <div className='fade-in'><Header title='Webhooks' sub='Event delivery to external systems'/><Card><div style={{display:'grid',gridTemplateColumns:'1fr 2fr auto',gap:10}}><input style={inputStyle} placeholder='Name' value={name} onChange={e=>setName(e.target.value)}/><input style={inputStyle} placeholder='https://...' value={url} onChange={e=>setUrl(e.target.value)}/><button style={btn} onClick={create}>Create</button></div></Card><Card>{hooks.length?hooks.map(h=><div key={h.id} style={{padding:12,borderBottom:'1px solid var(--border)'}}><b>{h.name}</b><p style={{fontSize:12,color:'var(--fg-2)'}}>{h.url}</p></div>):<Empty icon='🪝' text='No webhooks yet.'/>}</Card></div>}

@@ -1,0 +1,8 @@
+import { useApi } from '../hooks/useApi'
+const fmt=n=>String(n||0)
+function Header(){return <div style={{marginBottom:24}}><h2 style={{fontSize:20,fontWeight:700}}>Analytics</h2><p style={{fontSize:13,color:'var(--fg-2)'}}>Token, cache, latency, and cost insights</p></div>}
+function Metric({icon,label,value}){return <div className='card metric-card'><div className='icon-box' style={{background:'var(--primary-light)'}}>{icon}</div><div className='value'>{value}</div><div className='label'>{label}</div></div>}
+export default function Analytics(){
+ const {data}=useApi('/api/analytics'); const daily=data?.daily||[]; const max=Math.max(1,...daily.map(x=>(x.input_tokens||0)+(x.output_tokens||0)))
+ return <div className='fade-in'><Header/><div className='metric-grid'><Metric icon='💰' label='Tokens Saved' value={fmt(data?.tokensSavedToday)}/><Metric icon='⚡' label='Cache Hit Rate' value={(data?.cacheHitRate||0)+'%'}/><Metric icon='🪙' label='Total Tokens' value={fmt(data?.totalTokensUsed)}/><Metric icon='⏱️' label='Avg Latency' value={Math.round(data?.avgLatency||0)+'ms'}/></div><div className='card'><h3 className='card-title'>Daily Usage</h3>{daily.length?<div style={{display:'flex',alignItems:'end',gap:8,height:220,marginTop:20}}>{daily.map((d,i)=>{const val=(d.input_tokens||0)+(d.output_tokens||0);return <div key={i} style={{flex:1}}><div style={{height:Math.max(8,val/max*180),background:'linear-gradient(180deg,var(--primary),var(--primary-light))',borderRadius:'6px 6px 2px 2px'}}/><div style={{fontSize:10,color:'var(--fg-3)',marginTop:6}}>{String(d.date).slice(5)}</div></div>})}</div>:<div className='empty-state'><div className='icon'>📈</div><p>No analytics data yet.</p></div>}</div></div>
+}

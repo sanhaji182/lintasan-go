@@ -1,0 +1,9 @@
+import { useState } from 'react'
+import { useApi } from '../hooks/useApi'
+const inputStyle={padding:'10px 14px',background:'var(--bg-body)',border:'1px solid var(--border)',borderRadius:'8px',fontSize:'13px',color:'var(--fg-0)',outline:'none',width:'100%'}
+const btn={padding:'9px 14px',background:'var(--primary)',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',cursor:'pointer'}
+function Header({title,sub}){return <div style={{marginBottom:24}}><h2 style={{fontSize:20,fontWeight:700}}>{title}</h2><p style={{fontSize:13,color:'var(--fg-2)'}}>{sub}</p></div>}
+function Card({children}){return <div className='card' style={{marginBottom:20}}>{children}</div>}
+function Empty({icon,text}){return <div className='empty-state'><div className='icon'>{icon}</div><p>{text}</p></div>}
+
+export default function Backup(){const {data,reload}=useApi('/api/backup'); async function create(){await fetch('/api/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create'})});reload()} return <div className='fade-in'><Header title='Backup' sub='Create, export, restore, and delete backups'/><div className='metric-grid'><button className='card' style={{cursor:'pointer',textAlign:'left'}} onClick={create}><h3>💾 Create Backup</h3><p>Snapshot SQLite DB</p></button><button className='card' style={{cursor:'pointer',textAlign:'left'}} onClick={()=>fetch('/api/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'export',type:'config'})})}><h3>📦 Export Config</h3><p>Download JSON config</p></button></div><Card><h3 className='card-title'>Backups</h3>{data?.backups?.length?data.backups.map(b=><div style={{padding:12,borderBottom:'1px solid var(--border)'}}><b>{b.filename}</b><p style={{fontSize:12,color:'var(--fg-2)'}}>{b.size} bytes · {b.created_at}</p></div>):<Empty icon='💾' text='No backups yet.'/>}</Card></div>}
