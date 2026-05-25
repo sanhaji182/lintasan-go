@@ -1,15 +1,14 @@
 package server
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "strings"
-    "time"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
 
-    "github.com/google/uuid"
+	"github.com/google/uuid"
 )
 
 func (s *Server) registerParityRoutes() {
@@ -128,13 +127,13 @@ func (s *Server) handleAudit(w http.ResponseWriter,r *http.Request){
 	writeData(w,map[string]any{"events":events,"total":len(events)})
 }
 func (s *Server) handleFeatures(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"features":map[string]bool{"proxy":true,"streaming":true,"dashboard":true,"fallback":true,"cache":true,"plugins":true,"teams":true}}) }
-func (s *Server) handleFeatureStats(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"enabled":7,"total":7}) }
+func (s *Server) handleFeatureStats(w http.ResponseWriter,r *http.Request){ writeData(w,map[string]any{"enabled":7,"total":7}) }
 func (s *Server) handleAnalyticsRealtime(w http.ResponseWriter,r *http.Request){ s.handleAnalytics(w,r) }
 func (s *Server) handleAnalyticsCombos(w http.ResponseWriter,r *http.Request){ writeData(w,map[string]any{"combos":s.getJSONSetting("combos",[]any{}),"stats":[]any{}}) }
 func (s *Server) handleAnalyticsStream(w http.ResponseWriter,r *http.Request){ w.Header().Set("Content-Type","text/event-stream"); fmt.Fprintf(w,"data: {\"status\":\"connected\"}\n\n") }
 func (s *Server) handleChatTest(w http.ResponseWriter,r *http.Request){ s.proxy.HandleChatCompletions(w,r) }
-func (s *Server) handlePromptRouting(w http.ResponseWriter,r *http.Request){ var in map[string]any; json.NewDecoder(r.Body).Decode(&in); writeJSON(w,map[string]any{"recommended_model":"auto","reason":"Go heuristic routing placeholder","input":in}) }
-func (s *Server) handlePromptOptimizer(w http.ResponseWriter,r *http.Request){ var in map[string]string; json.NewDecoder(r.Body).Decode(&in); writeJSON(w,map[string]any{"optimized_prompt":strings.TrimSpace(in["prompt"]),"changes":[]string{"trimmed whitespace"}}) }
+func (s *Server) handlePromptRouting(w http.ResponseWriter,r *http.Request){ var in map[string]any; json.NewDecoder(r.Body).Decode(&in); writeData(w,map[string]any{"recommended_model":"auto","reason":"Go heuristic routing placeholder","input":in}) }
+func (s *Server) handlePromptOptimizer(w http.ResponseWriter,r *http.Request){ var in map[string]string; json.NewDecoder(r.Body).Decode(&in); writeData(w,map[string]any{"optimized_prompt":in["prompt"],"changes":[]string{"Placeholder optimizer"}}) }
 func (s *Server) handleExport(w http.ResponseWriter,r *http.Request){ w.Header().Set("Content-Type","application/json"); writeJSON(w,map[string]any{"exported_at":time.Now(),"settings":s.getJSONSetting("settings",map[string]any{})}) }
 func (s *Server) handleSync(w http.ResponseWriter,r *http.Request){ s.handleModelsSync(w,r) }
 func (s *Server) handleMarketplace(w http.ResponseWriter,r *http.Request){ s.handlePluginStore(w,r) }
@@ -146,16 +145,3 @@ func (s *Server) handleTeamByID(w http.ResponseWriter,r *http.Request){ writeJSO
 func (s *Server) handleTeamMembers(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"team_id":r.PathValue("id"),"members":[]any{}}) }
 func (s *Server) handleUserByID(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"success":true,"id":r.PathValue("id")}) }
 func (s *Server) handleWebSearch(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"results":[]any{},"note":"web search provider not configured"}) }
-
-func (p *ProxyHandler) proxyPath(w http.ResponseWriter, r *http.Request, upstreamPath string){
-    body,_:=io.ReadAll(r.Body); var reqBody io.Reader=bytes.NewReader(body)
-    conn,err:=p.getFirstConnection(); if err!=nil{http.Error(w,`{"error":"no active connections"}`,404);return}
-    upReq,err:=http.NewRequestWithContext(r.Context(),"POST",strings.TrimRight(conn.BaseURL,"/")+upstreamPath,reqBody); if err!=nil{http.Error(w,err.Error(),500);return}
-    upReq.Header.Set("Content-Type", r.Header.Get("Content-Type")); if upReq.Header.Get("Content-Type")==""{upReq.Header.Set("Content-Type","application/json")}
-    if conn.APIKey!=""{h:=conn.AuthHeader; if h==""{h="Authorization"}; pfx:=conn.AuthPrefix; if pfx==""{pfx="Bearer "}; upReq.Header.Set(h,pfx+conn.APIKey)}
-    resp,err:=p.client.Do(upReq); if err!=nil{http.Error(w,fmt.Sprintf(`{"error":"upstream error: %s"}`,err.Error()),502);return}; defer resp.Body.Close()
-    for k,v:=range resp.Header{for _,vv:=range v{w.Header().Add(k,vv)}}; w.WriteHeader(resp.StatusCode); io.Copy(w,resp.Body)
-}
-func (p *ProxyHandler) HandleImages(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/images/generations") }
-func (p *ProxyHandler) HandleAudioSpeech(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/audio/speech") }
-func (p *ProxyHandler) HandleAudioTranscriptions(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/audio/transcriptions") }

@@ -61,6 +61,8 @@ func (s *Server) routes() {
 	// Management API
 	s.mux.HandleFunc("GET /api/connections", s.handleGetConnections)
 	s.mux.HandleFunc("POST /api/connections", s.handleCreateConnection)
+	s.mux.HandleFunc("PATCH /api/connections", s.handlePatchConnection)
+	s.mux.HandleFunc("DELETE /api/connections", s.handleDeleteConnection)
 	s.mux.HandleFunc("DELETE /api/connections/{id}", s.handleDeleteConnection)
 	s.mux.HandleFunc("GET /api/combos", s.handleGetCombos)
 	s.mux.HandleFunc("POST /api/combos", s.handleCreateCombo)

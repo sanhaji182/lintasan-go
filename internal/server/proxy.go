@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/sanhaji182/lintasan-go/internal/config"
 	"github.com/sanhaji182/lintasan-go/internal/db"
+	"github.com/sanhaji182/lintasan-go/internal/cache"
+	"github.com/sanhaji182/lintasan-go/internal/quota"
+	"github.com/sanhaji182/lintasan-go/internal/optimizer"
 )
 
 type ProxyHandler struct {
@@ -49,6 +53,12 @@ type Connection struct {
 	Priority   int    `json:"priority"`
 }
 
+func (p *ProxyHandler) getSetting(key, def string) string {
+	val, err := p.db.GetSetting(key)
+	if err != nil || val == "" { return def }
+	return val
+}
+
 func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
@@ -70,6 +80,27 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		http.Error(w, `{"error":"model is required"}`, http.StatusBadRequest)
 		return
 	}
+	
+	stream, _ := req["stream"].(bool)
+	messages, _ := req["messages"].([]any)
+	
+	// Optimizer
+	if p.getSetting("prompt_optimizer_enabled", "false") == "true" {
+		msgs, saved := optimizer.OptimizeMessages(messages)
+		req["messages"] = msgs
+		_ = saved
+	}
+	
+	// Semantic Cache
+	semanticEnabled := p.getSetting("semantic_cache_enabled", "true") == "true"
+	if semanticEnabled && !stream {
+		if respBody, ok := cache.GetSemanticMatch(p.db.Conn(), model, messages, 0.92); ok {
+			p.logRequest(model, "cache", "cache", 200, time.Since(start).Milliseconds(), 0, 0, true, "")
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(respBody))
+			return
+		}
+	}
 
 	candidates, resolvedModel, err := p.resolveRoute(model)
 	if err != nil || len(candidates) == 0 {
@@ -79,9 +110,7 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	req["model"] = resolvedModel
 	body, _ = json.Marshal(req)
 
-	stream, _ := req["stream"].(bool)
 	var lastErr string
-	var lastStatus int
 	for i, conn := range candidates {
 		resp, err := p.doUpstream(r, conn, body)
 		if err != nil {
@@ -90,7 +119,6 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 			continue
 		}
 		defer resp.Body.Close()
-		lastStatus = resp.StatusCode
 		if resp.StatusCode >= 500 && i < len(candidates)-1 {
 			b, _ := io.ReadAll(resp.Body)
 			lastErr = string(b)
@@ -98,9 +126,13 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 			continue
 		}
 
+		// Quota success
+		if resp.StatusCode == 200 { quota.RecordQuota(p.db.Conn(), conn.ID, 0) } // Token parsing later
+
 		for k, v := range resp.Header {
 			for _, vv := range v { w.Header().Add(k, vv) }
 		}
+
 		if stream {
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.Header().Set("Cache-Control", "no-cache")
@@ -110,79 +142,22 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 			if !ok { io.Copy(w, resp.Body); return }
 			buf := make([]byte, 4096)
 			for { n, er := resp.Body.Read(buf); if n > 0 { w.Write(buf[:n]); flusher.Flush() }; if er != nil { break } }
-		} else {
-			w.WriteHeader(resp.StatusCode)
-			io.Copy(w, resp.Body)
-		}
-		p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, "")
-		return
-	}
-	http.Error(w, fmt.Sprintf(`{"error":"all routes failed","status":%d,"last_error":%q}`, lastStatus, lastErr), http.StatusBadGateway)
-}
-
-func (p *ProxyHandler) HandleEmbeddings(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, `{"error":"failed to read request body"}`, http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	var req map[string]any
-	if err := json.Unmarshal(body, &req); err != nil {
-		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
-		return
-	}
-
-	model, _ := req["model"].(string)
-	if model == "" {
-		model = "text-embedding-3-small"
-	}
-
-	conn, err := p.findConnectionForModel(model)
-	if err != nil {
-		// Fallback: use first active connection
-		conn, err = p.getFirstConnection()
-		if err != nil {
-			http.Error(w, fmt.Sprintf(`{"error":"no connection found for model %s"}`, model), http.StatusNotFound)
+			p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, "")
 			return
 		}
-	}
 
-	upstreamURL := strings.TrimRight(conn.BaseURL, "/") + "/v1/embeddings"
-	upReq, err := http.NewRequestWithContext(r.Context(), "POST", upstreamURL, strings.NewReader(string(body)))
-	if err != nil {
-		http.Error(w, `{"error":"failed to create upstream request"}`, http.StatusInternalServerError)
-		return
-	}
-
-	upReq.Header.Set("Content-Type", "application/json")
-	authHeader := conn.AuthHeader
-	if authHeader == "" {
-		authHeader = "Authorization"
-	}
-	authPrefix := conn.AuthPrefix
-	if authPrefix == "" {
-		authPrefix = "Bearer "
-	}
-	if conn.APIKey != "" {
-		upReq.Header.Set(authHeader, authPrefix+conn.APIKey)
-	}
-
-	resp, err := p.client.Do(upReq)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"upstream error: %s"}`, err.Error()), http.StatusBadGateway)
-		return
-	}
-	defer resp.Body.Close()
-
-	for k, v := range resp.Header {
-		for _, vv := range v {
-			w.Header().Add(k, vv)
+		b, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(b)
+		p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, "")
+		
+		if semanticEnabled && resp.StatusCode == 200 {
+			cache.SaveSemanticMatch(p.db.Conn(), model, messages, string(b), 3600)
 		}
+		return
 	}
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	
+	http.Error(w, fmt.Sprintf(`{"error":{"message":"all routes failed","details":%q}}`, lastErr), http.StatusBadGateway)
 }
 
 func (p *ProxyHandler) doUpstream(r *http.Request, conn *Connection, body []byte) (*http.Response, error) {
@@ -303,14 +278,58 @@ func (p *ProxyHandler) getFirstConnection() (*Connection, error) {
 }
 
 func (p *ProxyHandler) logRequest(model, connID, provider string, status int, latencyMs int64, tokensIn, tokensOut int, cached bool, errMsg string) {
-	cachedInt := 0
-	if cached {
-		cachedInt = 1
-	}
-
+	cachedInt := 0; if cached { cachedInt = 1 }
 	id := uuid.New().String()
 	p.db.Conn().Exec(`
 		INSERT INTO request_logs (id, connection_id, provider, model, status, input_tokens, output_tokens, latency_ms, cached, error, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
 	`, id, connID, provider, model, status, tokensIn, tokensOut, latencyMs, cachedInt, errMsg)
 }
+
+func (p *ProxyHandler) HandleEmbeddings(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil { http.Error(w, `{"error":"failed to read request body"}`, http.StatusBadRequest); return }
+	defer r.Body.Close()
+
+	var req map[string]any
+	if err := json.Unmarshal(body, &req); err != nil { http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest); return }
+
+	model, _ := req["model"].(string)
+	if model == "" { model = "text-embedding-3-small" }
+
+	conn, err := p.findConnectionForModel(model)
+	if err != nil {
+		conn, err = p.getFirstConnection()
+		if err != nil { http.Error(w, fmt.Sprintf(`{"error":"no connection found for model %s"}`, model), http.StatusNotFound); return }
+	}
+
+	upstreamURL := strings.TrimRight(conn.BaseURL, "/") + "/v1/embeddings"
+	upReq, err := http.NewRequestWithContext(r.Context(), "POST", upstreamURL, strings.NewReader(string(body)))
+	if err != nil { http.Error(w, `{"error":"failed to create upstream request"}`, http.StatusInternalServerError); return }
+
+	upReq.Header.Set("Content-Type", "application/json")
+	authHeader := conn.AuthHeader; if authHeader == "" { authHeader = "Authorization" }
+	authPrefix := conn.AuthPrefix; if authPrefix == "" { authPrefix = "Bearer " }
+	if conn.APIKey != "" { upReq.Header.Set(authHeader, authPrefix+conn.APIKey) }
+
+	resp, err := p.client.Do(upReq)
+	if err != nil { http.Error(w, fmt.Sprintf(`{"error":"upstream error: %s"}`, err.Error()), http.StatusBadGateway); return }
+	defer resp.Body.Close()
+
+	for k, v := range resp.Header { for _, vv := range v { w.Header().Add(k, vv) } }
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+func (p *ProxyHandler) proxyPath(w http.ResponseWriter, r *http.Request, upstreamPath string){
+    body,_:=io.ReadAll(r.Body); var reqBody io.Reader=bytes.NewReader(body)
+    conn,err:=p.getFirstConnection(); if err!=nil{http.Error(w,`{"error":"no active connections"}`,404);return}
+    upReq,err:=http.NewRequestWithContext(r.Context(),"POST",strings.TrimRight(conn.BaseURL,"/")+upstreamPath,reqBody); if err!=nil{http.Error(w,err.Error(),500);return}
+    upReq.Header.Set("Content-Type", r.Header.Get("Content-Type")); if upReq.Header.Get("Content-Type")==""{upReq.Header.Set("Content-Type","application/json")}
+    if conn.APIKey!=""{h:=conn.AuthHeader; if h==""{h="Authorization"}; pfx:=conn.AuthPrefix; if pfx==""{pfx="Bearer "}; upReq.Header.Set(h,pfx+conn.APIKey)}
+    resp,err:=p.client.Do(upReq); if err!=nil{http.Error(w,fmt.Sprintf(`{"error":"upstream error: %s"}`,err.Error()),502);return}; defer resp.Body.Close()
+    for k,v:=range resp.Header{for _,vv:=range v{w.Header().Add(k,vv)}}; w.WriteHeader(resp.StatusCode); io.Copy(w,resp.Body)
+}
+func (p *ProxyHandler) HandleImages(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/images/generations") }
+func (p *ProxyHandler) HandleAudioSpeech(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/audio/speech") }
+func (p *ProxyHandler) HandleAudioTranscriptions(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/audio/transcriptions") }
