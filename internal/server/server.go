@@ -3,10 +3,13 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sanhaji182/lintasan-go/internal/config"
+	"github.com/sanhaji182/lintasan-go/internal/dashboard"
 	"github.com/sanhaji182/lintasan-go/internal/db"
 )
 
@@ -55,26 +58,53 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/combos", s.handleGetCombos)
 	s.mux.HandleFunc("POST /api/combos", s.handleCreateCombo)
 	s.mux.HandleFunc("GET /api/stats", s.handleStats)
+	s.mux.HandleFunc("GET /api/logs", s.handleLogs)
 	s.mux.HandleFunc("GET /api/settings", s.handleGetSettings)
 	s.mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
 
 	// Dashboard (embedded SPA)
-	s.mux.HandleFunc("GET /dashboard", s.handleDashboard)
-	s.mux.HandleFunc("GET /dashboard/", s.handleDashboard)
+	dashFS, _ := fs.Sub(dashboard.Assets, "dist")
+	s.mux.HandleFunc("/dashboard/", func(w http.ResponseWriter, r *http.Request) {
+		// Strip /dashboard prefix for file lookup
+		path := strings.TrimPrefix(r.URL.Path, "/dashboard/")
+		if path == "" {
+			path = "index.html"
+		}
+		// Try to serve the file, fallback to index.html for SPA routing
+		f, err := dashFS.(fs.ReadFileFS).ReadFile(path)
+		if err != nil {
+			f, _ = dashFS.(fs.ReadFileFS).ReadFile("index.html")
+			path = "index.html"
+		}
+		// Set content type
+		switch {
+		case strings.HasSuffix(path, ".html"):
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		case strings.HasSuffix(path, ".js"):
+			w.Header().Set("Content-Type", "application/javascript")
+		case strings.HasSuffix(path, ".css"):
+			w.Header().Set("Content-Type", "text/css")
+		case strings.HasSuffix(path, ".svg"):
+			w.Header().Set("Content-Type", "image/svg+xml")
+		case strings.HasSuffix(path, ".json"):
+			w.Header().Set("Content-Type", "application/json")
+		}
+		w.Write(f)
+	})
+
+	// Redirect /dashboard to /dashboard/
+	s.mux.HandleFunc("GET /dashboard", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/dashboard/", http.StatusMovedPermanently)
+	})
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
 		"status":  "ok",
 		"version": "2.0.0",
 		"uptime":  time.Since(startTime).String(),
 	})
-}
-
-func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	// TODO: serve embedded React SPA
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, "<html><body><h1>Lintasan Dashboard</h1><p>Coming soon - embedded React SPA</p></body></html>")
 }
 
 var startTime = time.Now()

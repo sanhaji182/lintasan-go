@@ -227,6 +227,58 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Logs
+func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "20"
+	}
+
+	rows, err := s.db.Conn().Query(`
+		SELECT id, connection_id, provider, model, status, input_tokens, output_tokens, latency_ms, cached, error, created_at
+		FROM request_logs
+		ORDER BY created_at DESC
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		http.Error(w, `{"error":"failed to query logs"}`, http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type LogEntry struct {
+		ID           string `json:"id"`
+		ConnectionID string `json:"connection_id"`
+		Provider     string `json:"provider"`
+		Model        string `json:"model"`
+		Status       int    `json:"status"`
+		InputTokens  int    `json:"input_tokens"`
+		OutputTokens int    `json:"output_tokens"`
+		LatencyMs    int    `json:"latency_ms"`
+		Cached       int    `json:"cached"`
+		Error        string `json:"error"`
+		CreatedAt    string `json:"created_at"`
+	}
+
+	var logs []LogEntry
+	for rows.Next() {
+		var l LogEntry
+		var errStr sql.NullString
+		rows.Scan(&l.ID, &l.ConnectionID, &l.Provider, &l.Model, &l.Status, &l.InputTokens, &l.OutputTokens, &l.LatencyMs, &l.Cached, &errStr, &l.CreatedAt)
+		if errStr.Valid {
+			l.Error = errStr.String
+		}
+		logs = append(logs, l)
+	}
+
+	if logs == nil {
+		logs = []LogEntry{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(logs)
+}
+
 // Settings
 func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.db.Conn().Query("SELECT key, value FROM settings")
