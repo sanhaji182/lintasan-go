@@ -102,11 +102,17 @@ func (s *Server) handleGetConnections(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCreateConnection(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Name     string `json:"name"`
-		BaseURL  string `json:"base_url"`
-		APIKey   string `json:"api_key"`
-		Format   string `json:"format"`
-		Priority int    `json:"priority"`
+		Name       string `json:"name"`
+		BaseURL    string `json:"base_url"`
+		BaseURL2   string `json:"baseUrl"`
+		APIKey     string `json:"api_key"`
+		APIKey2    string `json:"apiKey"`
+		Format     string `json:"format"`
+		Priority   int    `json:"priority"`
+		ChatPath   string `json:"chatPath"`
+		ModelsPath string `json:"modelsPath"`
+		AuthHeader string `json:"authHeader"`
+		AuthPrefix string `json:"authPrefix"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -114,19 +120,22 @@ func (s *Server) handleCreateConnection(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if input.BaseURL == "" { input.BaseURL = input.BaseURL2 }
+	if input.APIKey == "" { input.APIKey = input.APIKey2 }
 	if input.Name == "" || input.BaseURL == "" {
-		http.Error(w, `{"error":"name and base_url are required"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":{"message":"name and baseUrl are required"}}`, http.StatusBadRequest)
 		return
 	}
-
-	if input.Format == "" {
-		input.Format = "openai"
-	}
+	if input.Format == "" { input.Format = "openai" }
+	if input.ChatPath == "" { input.ChatPath = "/v1/chat/completions" }
+	if input.ModelsPath == "" { input.ModelsPath = "/v1/models" }
+	if input.AuthHeader == "" { input.AuthHeader = "Authorization" }
+	if input.AuthPrefix == "" { input.AuthPrefix = "Bearer " }
 
 	id := uuid.New().String()
 	_, err := s.db.Conn().Exec(
-		`INSERT INTO connections (id, name, base_url, api_key, format, priority) VALUES (?, ?, ?, ?, ?, ?)`,
-		id, input.Name, input.BaseURL, input.APIKey, input.Format, input.Priority,
+		`INSERT INTO connections (id, name, base_url, api_key, format, priority, chat_path, models_path, auth_header, auth_prefix) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, input.Name, input.BaseURL, input.APIKey, input.Format, input.Priority, input.ChatPath, input.ModelsPath, input.AuthHeader, input.AuthPrefix,
 	)
 	if err != nil {
 		http.Error(w, `{"error":"failed to create connection"}`, http.StatusInternalServerError)
@@ -135,11 +144,12 @@ func (s *Server) handleCreateConnection(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"id": id, "status": "created"})
+	json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"id": id}, "id": id, "status": "created"})
 }
 
 func (s *Server) handleDeleteConnection(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	if id == "" { id = r.URL.Query().Get("id") }
 	if id == "" {
 		http.Error(w, `{"error":"id is required"}`, http.StatusBadRequest)
 		return
@@ -156,6 +166,15 @@ func (s *Server) handleDeleteConnection(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+}
+
+func (s *Server) handlePatchConnection(w http.ResponseWriter, r *http.Request) {
+	var input struct { ID string `json:"id"`; IsActive *int `json:"is_active"` }
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil || input.ID == "" {
+		http.Error(w, `{"error":{"message":"id is required"}}`, http.StatusBadRequest); return
+	}
+	if input.IsActive != nil { s.db.Conn().Exec("UPDATE connections SET is_active=?, updated_at=datetime('now') WHERE id=?", *input.IsActive, input.ID) }
+	w.Header().Set("Content-Type", "application/json"); json.NewEncoder(w).Encode(map[string]any{"success":true,"data":map[string]any{"id":input.ID}})
 }
 
 // Combos - read from settings (Node.js stores combos in settings as JSON)

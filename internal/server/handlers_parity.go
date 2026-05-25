@@ -19,8 +19,11 @@ func (s *Server) registerParityRoutes() {
     s.mux.HandleFunc("GET /api/providers/presets/config", s.handleProviderPresetsConfig)
     s.mux.HandleFunc("POST /api/providers/discover", s.handleProviderDiscover)
     s.mux.HandleFunc("POST /api/connections/test", s.handleConnectionTest)
+    s.mux.HandleFunc("GET /api/models/sync", s.handleModelsSync)
     s.mux.HandleFunc("POST /api/models/sync", s.handleModelsSync)
+    s.mux.HandleFunc("GET /api/models/manual", s.handleModelsManual)
     s.mux.HandleFunc("POST /api/models/manual", s.handleModelsManual)
+    s.mux.HandleFunc("DELETE /api/models/manual", s.handleModelsManual)
     s.mux.HandleFunc("GET /api/cache", s.handleCache)
     s.mux.HandleFunc("POST /api/cache", s.handleCacheAction)
     s.mux.HandleFunc("GET /api/costs", s.handleCosts)
@@ -59,14 +62,16 @@ func (s *Server) handleOverviewStats(w http.ResponseWriter, r *http.Request){ s.
 func (s *Server) handleProviders(w http.ResponseWriter, r *http.Request){ s.handleGetConnections(w,r) }
 
 func providerPresets() []map[string]any { return []map[string]any{
-    {"id":"openai","name":"OpenAI","base_url":"https://api.openai.com","format":"openai","chat_path":"/v1/chat/completions","models_path":"/v1/models","auth_header":"Authorization","auth_prefix":"Bearer "},
-    {"id":"anthropic","name":"Anthropic","base_url":"https://api.anthropic.com","format":"anthropic","chat_path":"/v1/messages","models_path":"/v1/models","auth_header":"x-api-key","auth_prefix":""},
-    {"id":"openrouter","name":"OpenRouter","base_url":"https://openrouter.ai/api","format":"openai","chat_path":"/v1/chat/completions","models_path":"/v1/models","auth_header":"Authorization","auth_prefix":"Bearer "},
-    {"id":"sumopod","name":"Sumopod","base_url":"https://ai.sumopod.com","format":"openai","chat_path":"/v1/chat/completions","models_path":"/v1/models","auth_header":"Authorization","auth_prefix":"Bearer "},
-    {"id":"ollama","name":"Ollama","base_url":"http://localhost:11434","format":"openai","chat_path":"/v1/chat/completions","models_path":"/v1/models","auth_header":"Authorization","auth_prefix":"Bearer "},
+    {"id":"openai","name":"OpenAI","description":"GPT models from OpenAI","category":"cloud","baseUrl":"https://api.openai.com","format":"openai","chatPath":"/v1/chat/completions","modelsPath":"/v1/models","authHeader":"Authorization","authPrefix":"Bearer "},
+    {"id":"anthropic","name":"Anthropic","description":"Claude models","category":"cloud","baseUrl":"https://api.anthropic.com","format":"anthropic","chatPath":"/v1/messages","modelsPath":"/v1/models","authHeader":"x-api-key","authPrefix":""},
+    {"id":"openrouter","name":"OpenRouter","description":"Many models through one endpoint","category":"aggregator","baseUrl":"https://openrouter.ai/api","format":"openai","chatPath":"/v1/chat/completions","modelsPath":"/v1/models","authHeader":"Authorization","authPrefix":"Bearer "},
+    {"id":"sumopod","name":"Sumopod","description":"Sans Sumopod AI gateway","category":"aggregator","baseUrl":"https://ai.sumopod.com","format":"openai","chatPath":"/v1/chat/completions","modelsPath":"/v1/models","authHeader":"Authorization","authPrefix":"Bearer "},
+    {"id":"ollama","name":"Ollama","description":"Local Ollama server","category":"local","baseUrl":"http://localhost:11434","format":"openai","chatPath":"/v1/chat/completions","modelsPath":"/v1/models","authHeader":"Authorization","authPrefix":"Bearer ","noAuth":true},
+    {"id":"custom","name":"Custom OpenAI-Compatible","description":"Any OpenAI-compatible endpoint","category":"custom","baseUrl":"","format":"openai","chatPath":"/v1/chat/completions","modelsPath":"/v1/models","authHeader":"Authorization","authPrefix":"Bearer "},
 } }
-func (s *Server) handleProviderPresets(w http.ResponseWriter, r *http.Request){ writeJSON(w, providerPresets()) }
-func (s *Server) handleProviderPresetsConfig(w http.ResponseWriter, r *http.Request){ writeJSON(w, map[string]any{"presets":providerPresets(),"formats":[]string{"openai","anthropic","gemini","ollama","custom"}}) }
+func providerCategories() []map[string]any { return []map[string]any{{"id":"cloud","name":"Cloud Providers"},{"id":"aggregator","name":"Aggregators"},{"id":"local","name":"Local"},{"id":"custom","name":"Custom"}} }
+func (s *Server) handleProviderPresets(w http.ResponseWriter, r *http.Request){ writeJSON(w, map[string]any{"data":providerPresets(),"categories":providerCategories()}) }
+func (s *Server) handleProviderPresetsConfig(w http.ResponseWriter, r *http.Request){ id:=r.URL.Query().Get("id"); for _,p:=range providerPresets(){ if p["id"]==id { writeData(w,p); return } }; writeJSON(w, map[string]any{"data":map[string]any{},"presets":providerPresets(),"formats":[]string{"openai","anthropic","gemini","ollama","custom"}}) }
 
 func (s *Server) handleProviderDiscover(w http.ResponseWriter, r *http.Request){
     var in map[string]any; json.NewDecoder(r.Body).Decode(&in)
@@ -89,17 +94,29 @@ func fetchModels(base, path, key, h, prefix string)([]any,error){
 }
 
 func (s *Server) handleConnectionTest(w http.ResponseWriter, r *http.Request){
-    var in map[string]any; json.NewDecoder(r.Body).Decode(&in); base,_:=in["base_url"].(string); key,_:=in["api_key"].(string); path,_:=in["models_path"].(string); if path==""{path="/v1/models"}
+    var in map[string]any; json.NewDecoder(r.Body).Decode(&in); base,_:=in["base_url"].(string); if base==""{base,_=in["baseUrl"].(string)}; key,_:=in["api_key"].(string); if key==""{key,_=in["apiKey"].(string)}; path,_:=in["models_path"].(string); if path==""{path,_=in["modelsPath"].(string)}; if path==""{path="/v1/models"}
     start:=time.Now(); models,err:=fetchModels(base,path,key,"Authorization","Bearer "); if err!=nil{writeJSON(w,map[string]any{"success":false,"error":err.Error(),"latency_ms":time.Since(start).Milliseconds()});return}
-    writeJSON(w,map[string]any{"success":true,"latency_ms":time.Since(start).Milliseconds(),"models_count":len(models)})
+    writeJSON(w,map[string]any{"success":true,"message":fmt.Sprintf("Connected successfully · %d models found · %dms", len(models), time.Since(start).Milliseconds()),"latency_ms":time.Since(start).Milliseconds(),"models_count":len(models)})
 }
 
 func (s *Server) handleModelsSync(w http.ResponseWriter, r *http.Request){
-    rows,_:=s.db.Conn().Query("SELECT id, base_url, api_key, models_path, auth_header, auth_prefix FROM connections WHERE is_active=1")
-    synced:=0; if rows!=nil{defer rows.Close(); for rows.Next(){var id,base,key,path,h,p string; rows.Scan(&id,&base,&key,&path,&h,&p); if path==""{path="/v1/models"}; models,err:=fetchModels(base,path,key,h,p); if err==nil{ for _,m:=range models{ mm,_:=m.(map[string]any); mid,_:=mm["id"].(string); if mid==""{continue}; s.db.Conn().Exec("INSERT OR REPLACE INTO discovered_models(id,connection_id,model_id,model_name,owned_by,is_active) VALUES(?,?,?,?,?,1)", uuid.New().String(),id,mid,mid,fmt.Sprint(mm["owned_by"])); synced++ }; s.db.Conn().Exec("UPDATE connections SET models_count=?, last_sync=datetime('now') WHERE id=?", len(models), id) } } }
-    writeJSON(w,map[string]any{"success":true,"synced":synced})
+    if r.Method=="GET" { connID:=r.URL.Query().Get("connection_id"); rows,_:=s.db.Conn().Query("SELECT id, model_id, model_name, owned_by, is_active, discovered_at FROM discovered_models WHERE connection_id=? ORDER BY model_id", connID); out:=[]map[string]any{}; if rows!=nil{defer rows.Close(); for rows.Next(){var id,mid,name,owner,dt string; var active int; rows.Scan(&id,&mid,&name,&owner,&active,&dt); out=append(out,map[string]any{"id":id,"model_id":mid,"model_name":name,"owned_by":owner,"is_active":active,"discovered_at":dt})}}; writeData(w,out); return }
+    var in map[string]any; json.NewDecoder(r.Body).Decode(&in); onlyID,_:=in["connection_id"].(string)
+    q:="SELECT id, base_url, api_key, models_path, auth_header, auth_prefix FROM connections WHERE is_active=1"; args:=[]any{}; if onlyID!=""{q+=" AND id=?"; args=append(args,onlyID)}
+    rows,_:=s.db.Conn().Query(q,args...); synced:=0; if rows!=nil{defer rows.Close(); for rows.Next(){var id,base,key,path,h,p string; rows.Scan(&id,&base,&key,&path,&h,&p); if path==""{path="/v1/models"}; models,err:=fetchModels(base,path,key,h,p); if err==nil{ s.db.Conn().Exec("DELETE FROM discovered_models WHERE connection_id=? AND owned_by!='manual'",id); for _,m:=range models{ mm,_:=m.(map[string]any); mid,_:=mm["id"].(string); if mid==""{continue}; s.db.Conn().Exec("INSERT OR REPLACE INTO discovered_models(id,connection_id,model_id,model_name,owned_by,is_active) VALUES(?,?,?,?,?,1)", uuid.New().String(),id,mid,mid,fmt.Sprint(mm["owned_by"])); synced++ }; s.db.Conn().Exec("UPDATE connections SET models_count=(SELECT COUNT(*) FROM discovered_models WHERE connection_id=? AND is_active=1), last_sync=datetime('now') WHERE id=?", id, id) } } }
+    writeJSON(w,map[string]any{"success":true,"data":map[string]any{"synced":synced},"synced":synced})
 }
-func (s *Server) handleModelsManual(w http.ResponseWriter, r *http.Request){ var in map[string]string; json.NewDecoder(r.Body).Decode(&in); id:=uuid.New().String(); s.db.Conn().Exec("INSERT OR REPLACE INTO discovered_models(id,connection_id,model_id,model_name,owned_by,is_active) VALUES(?,?,?,?,?,1)",id,in["connection_id"],in["model_id"],in["model_name"],"manual"); writeJSON(w,map[string]any{"success":true,"id":id}) }
+func (s *Server) handleModelsManual(w http.ResponseWriter, r *http.Request){
+    connID:=r.URL.Query().Get("connectionId"); if connID==""{connID=r.URL.Query().Get("connection_id")}
+    if r.Method=="GET" { rows,_:=s.db.Conn().Query("SELECT id, model_id, model_name, owned_by, is_active, discovered_at FROM discovered_models WHERE connection_id=? ORDER BY model_id", connID); out:=[]map[string]any{}; if rows!=nil{defer rows.Close(); for rows.Next(){var id,mid,name,owner,dt string; var active int; rows.Scan(&id,&mid,&name,&owner,&active,&dt); out=append(out,map[string]any{"id":id,"model_id":mid,"model_name":name,"owned_by":owner,"is_active":active,"discovered_at":dt})}}; writeJSON(w,map[string]any{"models":out,"data":out}); return }
+    if r.Method=="DELETE" { mid:=r.URL.Query().Get("modelId"); s.db.Conn().Exec("DELETE FROM discovered_models WHERE connection_id=? AND model_id=?", connID, mid); writeJSON(w,map[string]any{"success":true}); return }
+    var in map[string]any; json.NewDecoder(r.Body).Decode(&in); if connID==""{connID,_=in["connectionId"].(string)}; if connID==""{connID,_=in["connection_id"].(string)}
+    if in["action"]=="toggle" { mid,_:=in["modelId"].(string); active:=1; if v,ok:=in["active"].(bool);ok&&!v{active=0}; s.db.Conn().Exec("UPDATE discovered_models SET is_active=? WHERE connection_id=? AND model_id=?",active,connID,mid); writeJSON(w,map[string]any{"success":true}); return }
+    models:=stringSlice(in["models"]); if len(models)==0{ if m,_:=in["model_id"].(string);m!=""{models=[]string{m}} }
+    for _,mid:= range models { s.db.Conn().Exec("INSERT OR REPLACE INTO discovered_models(id,connection_id,model_id,model_name,owned_by,is_active) VALUES(?,?,?,?,?,1)",uuid.New().String(),connID,mid,mid,"manual") }
+    s.db.Conn().Exec("UPDATE connections SET models_count=(SELECT COUNT(*) FROM discovered_models WHERE connection_id=? AND is_active=1) WHERE id=?",connID,connID)
+    writeJSON(w,map[string]any{"success":true,"data":map[string]any{"count":len(models)}})
+}
 func (s *Server) handleCache(w http.ResponseWriter,r *http.Request){ var emb,sem int; s.db.Conn().QueryRow("SELECT COUNT(*) FROM embedding_cache").Scan(&emb); s.db.Conn().QueryRow("SELECT COUNT(*) FROM semantic_cache").Scan(&sem); writeJSON(w,map[string]any{"embedding_cache":emb,"semantic_cache":sem,"total":emb+sem}) }
 func (s *Server) handleCacheAction(w http.ResponseWriter,r *http.Request){ s.db.Conn().Exec("DELETE FROM embedding_cache"); s.db.Conn().Exec("DELETE FROM semantic_cache"); writeJSON(w,map[string]any{"success":true,"status":"cleared"}) }
 func (s *Server) handleCosts(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"today":0,"month":0,"currency":"USD","by_model":[]any{}}) }
