@@ -16,11 +16,15 @@ import (
 	"github.com/sanhaji182/lintasan-go/internal/cache"
 	"github.com/sanhaji182/lintasan-go/internal/quota"
 	"github.com/sanhaji182/lintasan-go/internal/optimizer"
+	"github.com/sanhaji182/lintasan-go/internal/plugin"
+	"github.com/sanhaji182/lintasan-go/internal/webhook"
 )
 
 type ProxyHandler struct {
 	cfg    *config.Config
 	db     *db.DB
+	pm     *plugin.Manager
+	wm     *webhook.Manager
 	client *http.Client
 }
 
@@ -28,6 +32,8 @@ func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
 	return &ProxyHandler{
 		cfg: cfg,
 		db:  database,
+		pm:  plugin.NewManager(database.Conn()),
+		wm:  webhook.NewManager(database.Conn()),
 		client: &http.Client{
 			Timeout: 300 * time.Second,
 			Transport: &http.Transport{
@@ -93,11 +99,30 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	
 	// Semantic Cache
 	semanticEnabled := p.getSetting("semantic_cache_enabled", "true") == "true"
-	if semanticEnabled && !stream {
+	if semanticEnabled {
 		if respBody, ok := cache.GetSemanticMatch(p.db.Conn(), model, messages, 0.92); ok {
 			p.logRequest(model, "cache", "cache", 200, time.Since(start).Milliseconds(), 0, 0, true, "")
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(respBody))
+			
+			if stream {
+				w.Header().Set("Content-Type", "text/event-stream")
+				w.Header().Set("Cache-Control", "no-cache")
+				w.Header().Set("Connection", "keep-alive")
+				w.WriteHeader(200)
+				
+				// SSE cache replay format
+				// In Node.js version we replay full SSE events, here we send as one big event
+				// For real UI parsing we need to structure this similar to OpenAI chunks
+				
+				w.Write([]byte("data: " + respBody + "\n\n"))
+				w.Write([]byte("data: [DONE]\n\n"))
+				
+				if flusher, ok := w.(http.Flusher); ok {
+					flusher.Flush()
+				}
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				w.Write([]byte(respBody))
+			}
 			return
 		}
 	}
@@ -139,10 +164,30 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 			w.Header().Set("Connection", "keep-alive")
 			w.WriteHeader(resp.StatusCode)
 			flusher, ok := w.(http.Flusher)
-			if !ok { io.Copy(w, resp.Body); return }
-			buf := make([]byte, 4096)
-			for { n, er := resp.Body.Read(buf); if n > 0 { w.Write(buf[:n]); flusher.Flush() }; if er != nil { break } }
+			
+			var streamBuffer []byte
+			if !ok { 
+				b, _ := io.ReadAll(resp.Body)
+				w.Write(b)
+				streamBuffer = b
+			} else {
+				buf := make([]byte, 4096)
+				for {
+					n, er := resp.Body.Read(buf)
+					if n > 0 { 
+						w.Write(buf[:n])
+						flusher.Flush() 
+						streamBuffer = append(streamBuffer, buf[:n]...)
+					}
+					if er != nil { break }
+				}
+			}
+			
 			p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, "")
+			
+			if semanticEnabled && resp.StatusCode == 200 {
+				cache.SaveSemanticMatch(p.db.Conn(), model, messages, string(streamBuffer), 3600)
+			}
 			return
 		}
 
@@ -151,11 +196,25 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		w.Write(b)
 		p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, "")
 		
+		if p.wm != nil {
+			p.wm.Fire("request.success", map[string]interface{}{
+				"model": resolvedModel,
+				"status": resp.StatusCode,
+			})
+		}
+		
 		if semanticEnabled && resp.StatusCode == 200 {
 			cache.SaveSemanticMatch(p.db.Conn(), model, messages, string(b), 3600)
 		}
 		return
 	}
+	
+		if p.wm != nil {
+			p.wm.Fire("request.error", map[string]interface{}{
+				"model": model,
+				"error": lastErr, // lastErr is already a string in Go implementation
+			})
+		}
 	
 	http.Error(w, fmt.Sprintf(`{"error":{"message":"all routes failed","details":%q}}`, lastErr), http.StatusBadGateway)
 }

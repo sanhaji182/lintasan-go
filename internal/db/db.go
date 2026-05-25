@@ -109,6 +109,15 @@ func (d *DB) migrate() error {
 			status TEXT DEFAULT 'pending',
 			created_at TEXT DEFAULT (datetime('now'))
 		)`,
+		`CREATE TABLE IF NOT EXISTS plugins (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL UNIQUE,
+			description TEXT,
+			enabled INTEGER DEFAULT 1,
+			priority INTEGER DEFAULT 100,
+			code TEXT NOT NULL,
+			created_at TEXT DEFAULT (datetime('now'))
+		)`,
 		`CREATE TABLE IF NOT EXISTS audit_events (
 			id TEXT PRIMARY KEY,
 			action TEXT NOT NULL,
