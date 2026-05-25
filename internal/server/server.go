@@ -43,6 +43,9 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) routes() {
+	// Register Node.js feature-parity management routes
+	s.registerParityRoutes()
+
 	// Health
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 
