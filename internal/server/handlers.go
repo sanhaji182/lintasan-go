@@ -1,0 +1,270 @@
+package server
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// Models endpoint - OpenAI compatible
+func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.db.Conn().Query(`
+		SELECT m.model_id, c.name as connection_name, m.owned_by
+		FROM discovered_models m
+		JOIN connections c ON m.connection_id = c.id
+		WHERE m.is_active = 1 AND c.is_active = 1
+		ORDER BY m.model_id
+	`)
+	if err != nil {
+		http.Error(w, `{"error":"failed to query models"}`, http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type Model struct {
+		ID      string `json:"id"`
+		Object  string `json:"object"`
+		Created int64  `json:"created"`
+		OwnedBy string `json:"owned_by"`
+	}
+
+	var models []Model
+	for rows.Next() {
+		var modelID, connName string
+		var ownedBy sql.NullString
+		rows.Scan(&modelID, &connName, &ownedBy)
+		owner := connName
+		if ownedBy.Valid && ownedBy.String != "" {
+			owner = ownedBy.String
+		}
+		models = append(models, Model{
+			ID:      modelID,
+			Object:  "model",
+			Created: time.Now().Unix(),
+			OwnedBy: owner,
+		})
+	}
+
+	if models == nil {
+		models = []Model{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"object": "list",
+		"data":   models,
+	})
+}
+
+// Connections CRUD
+func (s *Server) handleGetConnections(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.db.Conn().Query(`SELECT id, name, base_url, api_key, format, is_active, priority, models_count, created_at FROM connections ORDER BY priority DESC, created_at DESC`)
+	if err != nil {
+		http.Error(w, `{"error":"failed to query connections"}`, http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type ConnResponse struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		BaseURL     string `json:"base_url"`
+		APIKey      string `json:"api_key"`
+		Format      string `json:"format"`
+		IsActive    int    `json:"is_active"`
+		Priority    int    `json:"priority"`
+		ModelsCount int    `json:"models_count"`
+		CreatedAt   string `json:"created_at"`
+	}
+
+	var conns []ConnResponse
+	for rows.Next() {
+		var c ConnResponse
+		rows.Scan(&c.ID, &c.Name, &c.BaseURL, &c.APIKey, &c.Format, &c.IsActive, &c.Priority, &c.ModelsCount, &c.CreatedAt)
+		// Mask API key
+		if len(c.APIKey) > 8 {
+			c.APIKey = c.APIKey[:4] + "..." + c.APIKey[len(c.APIKey)-4:]
+		}
+		conns = append(conns, c)
+	}
+
+	if conns == nil {
+		conns = []ConnResponse{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(conns)
+}
+
+func (s *Server) handleCreateConnection(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Name     string `json:"name"`
+		BaseURL  string `json:"base_url"`
+		APIKey   string `json:"api_key"`
+		Format   string `json:"format"`
+		Priority int    `json:"priority"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, `{"error":"invalid JSON"}`, http.StatusBadRequest)
+		return
+	}
+
+	if input.Name == "" || input.BaseURL == "" {
+		http.Error(w, `{"error":"name and base_url are required"}`, http.StatusBadRequest)
+		return
+	}
+
+	if input.Format == "" {
+		input.Format = "openai"
+	}
+
+	id := uuid.New().String()
+	_, err := s.db.Conn().Exec(
+		`INSERT INTO connections (id, name, base_url, api_key, format, priority) VALUES (?, ?, ?, ?, ?, ?)`,
+		id, input.Name, input.BaseURL, input.APIKey, input.Format, input.Priority,
+	)
+	if err != nil {
+		http.Error(w, `{"error":"failed to create connection"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"id": id, "status": "created"})
+}
+
+func (s *Server) handleDeleteConnection(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, `{"error":"id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	_, err := s.db.Conn().Exec("DELETE FROM connections WHERE id = ?", id)
+	if err != nil {
+		http.Error(w, `{"error":"failed to delete connection"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Also delete associated models
+	s.db.Conn().Exec("DELETE FROM discovered_models WHERE connection_id = ?", id)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+}
+
+// Combos - read from settings (Node.js stores combos in settings as JSON)
+func (s *Server) handleGetCombos(w http.ResponseWriter, r *http.Request) {
+	combosJSON, err := s.db.GetSetting("combos")
+	if err != nil || combosJSON == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]any{})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(combosJSON))
+}
+
+func (s *Server) handleCreateCombo(w http.ResponseWriter, r *http.Request) {
+	var input map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, `{"error":"invalid JSON"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Get existing combos
+	combosJSON, _ := s.db.GetSetting("combos")
+	var combos []map[string]any
+	if combosJSON != "" {
+		json.Unmarshal([]byte(combosJSON), &combos)
+	}
+
+	input["id"] = uuid.New().String()
+	combos = append(combos, input)
+
+	newJSON, _ := json.Marshal(combos)
+	s.db.SetSetting("combos", string(newJSON))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"id": input["id"].(string), "status": "created"})
+}
+
+// Stats
+func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
+	var totalRequests, cachedRequests int
+	var avgLatency sql.NullFloat64
+
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM request_logs").Scan(&totalRequests)
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM request_logs WHERE cached = 1").Scan(&cachedRequests)
+	s.db.Conn().QueryRow("SELECT AVG(latency_ms) FROM request_logs WHERE status = 200").Scan(&avgLatency)
+
+	var modelCount int
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM discovered_models WHERE is_active = 1").Scan(&modelCount)
+
+	var connCount int
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM connections WHERE is_active = 1").Scan(&connCount)
+
+	cacheRate := 0.0
+	if totalRequests > 0 {
+		cacheRate = float64(cachedRequests) / float64(totalRequests) * 100
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"total_requests":     totalRequests,
+		"cached_requests":    cachedRequests,
+		"cache_hit_rate":     fmt.Sprintf("%.1f%%", cacheRate),
+		"avg_latency_ms":     avgLatency.Float64,
+		"active_models":      modelCount,
+		"active_connections": connCount,
+	})
+}
+
+// Settings
+func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.db.Conn().Query("SELECT key, value FROM settings")
+	if err != nil {
+		http.Error(w, `{"error":"failed to query settings"}`, http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	settings := make(map[string]string)
+	for rows.Next() {
+		var k, v string
+		rows.Scan(&k, &v)
+		// Mask sensitive values
+		if k == "master_key" && len(v) > 8 {
+			v = v[:4] + "..." + v[len(v)-4:]
+		}
+		settings[k] = v
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(settings)
+}
+
+func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
+	var input map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, `{"error":"invalid JSON"}`, http.StatusBadRequest)
+		return
+	}
+
+	for k, v := range input {
+		if err := s.db.SetSetting(k, v); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"failed to set %s"}`, k), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
