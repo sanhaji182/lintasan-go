@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"strings"
 	"time"
@@ -95,39 +94,24 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/settings", s.handleGetSettings)
 	s.mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
 
-	// Dashboard (embedded SPA)
-	dashFS, _ := fs.Sub(dashboard.Assets, "dist")
-	s.mux.HandleFunc("/dashboard/", func(w http.ResponseWriter, r *http.Request) {
-		// Strip /dashboard prefix for file lookup
-		path := strings.TrimPrefix(r.URL.Path, "/dashboard/")
-		if path == "" {
-			path = "index.html"
-		}
-		// Try to serve the file, fallback to index.html for SPA routing
-		f, err := dashFS.(fs.ReadFileFS).ReadFile(path)
-		if err != nil {
-			f, _ = dashFS.(fs.ReadFileFS).ReadFile("index.html")
-			path = "index.html"
-		}
-		// Set content type
-		switch {
-		case strings.HasSuffix(path, ".html"):
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		case strings.HasSuffix(path, ".js"):
-			w.Header().Set("Content-Type", "application/javascript")
-		case strings.HasSuffix(path, ".css"):
-			w.Header().Set("Content-Type", "text/css")
-		case strings.HasSuffix(path, ".svg"):
-			w.Header().Set("Content-Type", "image/svg+xml")
-		case strings.HasSuffix(path, ".json"):
-			w.Header().Set("Content-Type", "application/json")
-		}
-		w.Write(f)
-	})
+	// Dashboard API endpoints
+	s.mux.HandleFunc("GET /api/dashboard/stats", s.handleDashboardStats)
+	s.mux.HandleFunc("GET /api/dashboard/connections", s.handleDashboardConnections)
+	s.mux.HandleFunc("GET /api/dashboard/cache", s.handleDashboardCache)
+	s.mux.HandleFunc("GET /api/dashboard/combo", s.handleDashboardCombo)
+	s.mux.HandleFunc("GET /api/dashboard/logs", s.handleDashboardLogs)
+	s.mux.HandleFunc("PUT /api/dashboard/settings", s.handleDashboardSettings)
 
-	// Redirect /dashboard to /dashboard/
-	s.mux.HandleFunc("GET /dashboard", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/dashboard/", http.StatusMovedPermanently)
+	// Dashboard (embedded SPA) — serve index.html for all non-API paths
+	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// API routes already matched above; this catches browser requests
+		f, err := dashboard.Assets.ReadFile("index.html")
+		if err != nil {
+			http.Error(w, "dashboard not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(f)
 	})
 }
 
@@ -157,8 +141,9 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip auth for health and dashboard
-		if r.URL.Path == "/health" || r.URL.Path == "/dashboard" || r.URL.Path == "/dashboard/" {
+		// Skip auth for health, dashboard, and dashboard API
+		if r.URL.Path == "/health" || r.URL.Path == "/" ||
+			strings.HasPrefix(r.URL.Path, "/api/dashboard/") {
 			next.ServeHTTP(w, r)
 			return
 		}

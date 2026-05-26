@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lintasan Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f172a;--bg-card:#1e293b;--bg-hover:#334155;--text:#e2e8f0;--text-muted:#94a3b8;--accent:#3b82f6;--accent-hover:#2563eb;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--border:#334155;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.3)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+nav{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:24px;position:sticky;top:0;z-index:100}
+nav .logo{font-size:18px;font-weight:700;color:var(--accent);text-decoration:none;padding:16px 0}
+nav .tabs{display:flex;gap:4px}
+nav .tab{padding:12px 16px;color:var(--text-muted);cursor:pointer;border:none;background:none;font-size:13px;font-weight:500;border-bottom:2px solid transparent;transition:all .2s}
+nav .tab:hover{color:var(--text)}
+nav .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+main{padding:24px;max-width:1400px;margin:0 auto}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.stat-card .label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.stat-card .value{font-size:28px;font-weight:700;color:var(--text)}
+.stat-card .value.accent{color:var(--accent)}
+.stat-card .value.success{color:var(--success)}
+.stat-card .value.warning{color:var(--warning)}
+.stat-card .value.danger{color:var(--danger)}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:space-between}
+.card-body{padding:20px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 12px;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-weight:600}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px}
+tr:hover{background:var(--bg-hover)}
+.badge{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;display:inline-block}
+.badge-success{background:rgba(34,197,94,.15);color:var(--success)}
+.badge-danger{background:rgba(239,68,68,.15);color:var(--danger)}
+.badge-warning{background:rgba(245,158,11,.15);color:var(--warning)}
+.badge-info{background:rgba(59,130,246,.15);color:var(--accent)}
+.priority{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.priority-0{background:rgba(148,163,184,.15);color:var(--text-muted)}
+.priority-1{background:rgba(59,130,246,.15);color:var(--accent)}
+.priority-2{background:rgba(34,197,94,.15);color:var(--success)}
+.priority-3{background:rgba(239,68,68,.15);color:var(--danger)}
+.chart-container{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.donut{position:relative;width:140px;height:140px}
+.donut svg{width:100%;height:100%;transform:rotate(-90deg)}
+.donut circle{fill:none;stroke-width:12}
+.donut .bg{stroke:var(--border)}
+.donut .arc{transition:stroke-dashoffset .5s}
+.donut .center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:20px;font-weight:700}
+.legend{display:flex;flex-direction:column;gap:8px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:13px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.select-group{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+select,input[type=text]{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:13px;outline:none}
+select:focus,input:focus{border-color:var(--accent)}
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.empty{text-align:center;padding:48px 24px;color:var(--text-muted)}
+.refresh-time{font-size:11px;color:var(--text-muted);text-align:right;margin-bottom:16px}
+.section{display:none}
+.section.active{display:block}
+.uptime{font-size:12px;color:var(--text-muted)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.grid-2{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.loading{opacity:.5;pointer-events:none}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="#" onclick="showSection('overview')">⚡ Lintasan</a>
+  <div class="tabs">
+    <button class="tab active" onclick="showSection('overview')">Overview</button>
+    <button class="tab" onclick="showSection('connections')">Connections</button>
+    <button class="tab" onclick="showSection('cache')">Cache</button>
+    <button class="tab" onclick="showSection('combo')">Combo Keys</button>
+    <button class="tab" onclick="showSection('logs')">Request Log</button>
+    <button class="tab" onclick="showSection('settings')">Settings</button>
+  </div>
+  <div style="flex:1"></div>
+  <span class="uptime" id="uptime"></span>
+</nav>
+<main>
+  <div class="refresh-time">Auto-refresh every 3s · <span id="lastRefresh">--</span></div>
+
+  <!-- Overview -->
+  <section id="section-overview" class="section active">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Total Requests</div><div class="value accent" id="stat-requests">--</div></div>
+      <div class="stat-card"><div class="label">Active Connections</div><div class="value success" id="stat-connections">--</div></div>
+      <div class="stat-card"><div class="label">Cache Hit Rate</div><div class="value" id="stat-cache">--</div></div>
+      <div class="stat-card"><div class="label">Avg Latency</div><div class="value warning" id="stat-latency">--</div></div>
+    </div>
+  </section>
+
+  <!-- Connections -->
+  <section id="section-connections" class="section">
+    <div class="card">
+      <div class="card-header">Connections <span class="uptime" id="conn-count"></span></div>
+      <div class="card-body" style="overflow-x:auto">
+        <table><thead><tr><th>Name</th><th>Base URL</th><th>Format</th><th>Status</th><th>Priority</th><th>Models</th><th>Latency</th></tr></thead>
+        <tbody id="conn-table"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cache -->
+  <section id="section-cache" class="section">
+    <div class="card">
+      <div class="card-header">Cache Statistics</div>
+      <div class="card-body">
+        <div class="chart-container">
+          <div class="donut" id="cache-donut"></div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--success)"></div>Exact Hits <b id="lc-exact">--</b></div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Stream Hits <b id="lc-stream">--</b></div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--warning)"></div>Semantic Hits <b id="lc-semantic">--</b></div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>Misses <b id="lc-misses">--</b></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;font-size:13px;color:var(--text-muted)">
+          Hit Rate: <b style="color:var(--text)" id="lc-rate">--</b>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Combo Keys -->
+  <section id="section-combo" class="section">
+    <div id="combo-cards"></div>
+  </section>
+
+  <!-- Request Log -->
+  <section id="section-logs" class="section">
+    <div class="card">
+      <div class="card-header">Request Log (last 50)</div>
+      <div class="card-body" style="overflow-x:auto">
+        <table><thead><tr><th>Time</th><th>Model</th><th>Latency</th><th>Status</th><th>Cache</th><th>Tokens</th></tr></thead>
+        <tbody id="log-table"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="section-settings" class="section">
+    <div class="card">
+      <div class="card-header">Load Balancer & Combo Settings</div>
+      <div class="card-body">
+        <div class="select-group" style="margin-bottom:16px">
+          <label>Load Balancer Strategy:</label>
+          <select id="lb-strategy" onchange="updateSetting('lb_strategy',this.value)">
+            <option value="priority">Priority</option>
+            <option value="round_robin">Round Robin</option>
+            <option value="weighted">Weighted</option>
+            <option value="least_latency">Least Latency</option>
+          </select>
+        </div>
+        <div class="select-group">
+          <label>Combo Strategy:</label>
+          <select id="combo-strategy" onchange="updateSetting('combo_strategy',this.value)">
+            <option value="first">First Available</option>
+            <option value="round_robin">Round Robin</option>
+            <option value="random">Random</option>
+            <option value="fallback">Fallback Chain</option>
+          </select>
+        </div>
+        <div id="settings-status" style="margin-top:12px;font-size:12px;color:var(--success)"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+let currentSection='overview';
+
+function showSection(name) {
+  currentSection=name;
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('section-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>{if(t.textContent.toLowerCase().includes(name)||(name==='logs'&&t.textContent.includes('Request Log')||(name==='combo'&&t.textContent.includes('Combo'))))t.classList.add('active')});
+  fetchSection(name);
+}
+
+async function api(url) {
+  const r=await fetch(url);
+  if(!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+function formatMs(ms) {
+  if(ms==null||ms===0) return '--';
+  if(ms<1000) return ms+'ms';
+  return (ms/1000).toFixed(2)+'s';
+}
+
+function formatTokens(i,o) {
+  return (i||0)+' / '+(o||0);
+}
+
+function timeAgo(dt) {
+  if(!dt) return '--';
+  const d=new Date(dt+'Z');
+  if(isNaN(d)) return dt;
+  const s=Math.floor((Date.now()-d)/1000);
+  if(s<60) return s+'s ago';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  return Math.floor(s/3600)+'h ago';
+}
+
+let allSections=['overview','connections','cache','combo','logs','settings'];
+
+async function fetchAll() {
+  try {
+    const results=await Promise.allSettled([
+      api('/api/dashboard/stats'),
+      api('/api/dashboard/connections'),
+      api('/api/dashboard/cache'),
+      api('/api/dashboard/combo'),
+      api('/api/dashboard/logs?limit=50'),
+      api('/api/settings')
+    ]);
+    renderOverview(results[0].value);
+    renderConnections(results[1].value);
+    renderCache(results[2].value);
+    renderCombo(results[3].value);
+    renderLogs(results[4].value);
+    renderSettingsDropdowns(results[5].value);
+  } catch(e) {}
+  document.getElementById('lastRefresh').textContent=new Date().toLocaleTimeString();
+}
+
+function fetchSection(name) {
+  switch(name) {
+    case 'overview': api('/api/dashboard/stats').then(renderOverview).catch(()=>{}); break;
+    case 'connections': api('/api/dashboard/connections').then(renderConnections).catch(()=>{}); break;
+    case 'cache': api('/api/dashboard/cache').then(renderCache).catch(()=>{}); break;
+    case 'combo': api('/api/dashboard/combo').then(renderCombo).catch(()=>{}); break;
+    case 'logs': api('/api/dashboard/logs?limit=50').then(renderLogs).catch(()=>{}); break;
+    case 'settings': api('/api/settings').then(renderSettingsDropdowns).catch(()=>{}); break;
+  }
+}
+
+// OVERVIEW
+function renderOverview(d) {
+  if(!d) return;
+  document.getElementById('stat-requests').textContent=(d.total_requests||0).toLocaleString();
+  document.getElementById('stat-connections').textContent=d.active_connections||0;
+  document.getElementById('stat-cache').textContent=(typeof d.cache_hit_rate==='number'?d.cache_hit_rate.toFixed(1):d.cache_hit_rate)||'0%';
+  const lat=d.avg_latency;
+  document.getElementById('stat-latency').textContent=lat!=null?Math.round(lat)+'ms':'--';
+  document.getElementById('uptime').textContent='Uptime: '+(d.uptime||'--');
+}
+
+// CONNECTIONS
+function renderConnections(d) {
+  const arr=Array.isArray(d)?d:(d&&d.data||[]);
+  document.getElementById('conn-count').textContent=arr.length+' total';
+  const tb=document.getElementById('conn-table');
+  if(arr.length===0) {
+    tb.innerHTML='<tr><td colspan="7"><div class="empty">No connections configured</div></td></tr>';
+    return;
+  }
+  tb.innerHTML=arr.map(c=>{
+    const active=c.is_active===1||c.is_active===true;
+    const p=parseInt(c.priority)||0;
+    const pq='priority-'+Math.min(p,3);
+    const lat=c.latency_ewma!=null?Math.round(c.latency_ewma)+'ms':'--';
+    return `<tr>
+      <td><b>${esc(c.name)}</b></td>
+      <td style="color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.base_url)}</td>
+      <td><span class="badge badge-info">${esc(c.format||'openai')}</span></td>
+      <td>${active?'<span class="badge badge-success">Active</span>':'<span class="badge badge-danger">Inactive</span>'}</td>
+      <td><span class="priority ${pq}">P${p}</span></td>
+      <td>${c.models_count||0}</td>
+      <td style="color:var(--text-muted)">${lat}</td>
+    </tr>`;
+  }).join('');
+}
+
+// CACHE
+function renderCache(d) {
+  if(!d) return;
+  const exact=d.exact_hits||0, stream=d.stream_hits||0, semantic=d.semantic_hits||0, misses=d.misses||0;
+  const total=exact+stream+semantic+misses;
+  document.getElementById('lc-exact').textContent=exact;
+  document.getElementById('lc-stream').textContent=stream;
+  document.getElementById('lc-semantic').textContent=semantic;
+  document.getElementById('lc-misses').textContent=misses;
+  document.getElementById('lc-rate').textContent=(d.hit_rate||'0%');
+
+  if(total===0) {
+    document.getElementById('cache-donut').innerHTML='<div style="padding:24px;color:var(--text-muted)">No cache data yet</div>';
+    return;
+  }
+  const segments=[
+    {val:exact,color:'var(--success)'},
+    {val:stream,color:'var(--accent)'},
+    {val:semantic,color:'var(--warning)'},
+    {val:misses,color:'var(--danger)'}
+  ];
+  const circ=2*Math.PI*44;
+  let offset=0;
+  let paths='';
+  segments.forEach(s=>{
+    const pct=total>0?s.val/total:0;
+    const dash=pct*circ;
+    paths+=`<circle cx="70" cy="70" r="44" class="arc" stroke="${s.color}" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="-${offset}" style="transition:stroke-dashoffset .5s"/>`;
+    offset+=dash;
+  });
+  document.getElementById('cache-donut').innerHTML=`<svg viewBox="0 0 140 140"><circle cx="70" cy="70" r="44" class="bg"/><circle cx="70" cy="70" r="44" fill="none" stroke="var(--border)" stroke-width="12"/>${paths}</svg><div class="center">${total}</div>`;
+}
+
+// COMBO
+function renderCombo(d) {
+  const arr=Array.isArray(d)?d:(d&&d.data||[]);
+  const container=document.getElementById('combo-cards');
+  if(arr.length===0) {
+    container.innerHTML='<div class="card"><div class="card-body"><div class="empty">No combo keys configured</div></div></div>';
+    return;
+  }
+  container.innerHTML=arr.map(c=>{
+    const keys=c.keys||[];
+    const activeKeys=keys.filter(k=>k.active).length;
+    return `<div class="card">
+      <div class="card-header">${esc(c.provider||'Unknown')} <span class="badge badge-info">${esc(c.strategy||'first')}</span> <span style="font-size:12px;color:var(--text-muted);font-weight:400">${activeKeys}/${keys.length} active</span></div>
+      <div class="card-body" style="overflow-x:auto">
+        ${keys.length===0?'<div class="empty">No keys</div>':`<table><thead><tr><th>Key ID</th><th>Priority</th><th>Status</th><th>Requests</th></tr></thead><tbody>${keys.map(k=>`<tr><td style="font-family:monospace;font-size:12px">${esc(k.id||'--')}</td><td><span class="priority priority-${Math.min(parseInt(k.priority)||0,3)}">P${k.priority||0}</span></td><td>${k.active?'<span class="badge badge-success">Active</span>':'<span class="badge badge-danger">Inactive</span>'}</td><td>${(k.request_count||0).toLocaleString()}</td></tr>`).join('')}</tbody></table>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// LOGS
+function renderLogs(d) {
+  const arr=Array.isArray(d)?d:(d&&d.data||[]);
+  const tb=document.getElementById('log-table');
+  if(arr.length===0) {
+    tb.innerHTML='<tr><td colspan="6"><div class="empty">No requests yet</div></td></tr>';
+    return;
+  }
+  tb.innerHTML=arr.map(l=>{
+    const statusBadge=l.status>=200&&l.status<300?'badge-success':l.status>=400&&l.status<500?'badge-warning':'badge-danger';
+    const cacheBadge=l.cache_hit?'<span class="badge badge-success">hit</span>':'<span class="badge badge-info">miss</span>';
+    return `<tr>
+      <td style="color:var(--text-muted);white-space:nowrap">${timeAgo(l.timestamp)}</td>
+      <td><b>${esc(l.model||'--')}</b></td>
+      <td style="color:var(--warning)">${formatMs(l.latency_ms)}</td>
+      <td><span class="badge ${statusBadge}">${l.status||'--'}</span></td>
+      <td>${cacheBadge}</td>
+      <td style="color:var(--text-muted)">${formatTokens(l.tokens_in,l.tokens_out)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// SETTINGS
+function renderSettingsDropdowns(d) {
+  const data=(d&&d.data)||d||{};
+  const lb=data.lb_strategy||data.load_balancer_strategy||'priority';
+  const cs=data.combo_strategy||'first';
+  document.getElementById('lb-strategy').value=lb;
+  document.getElementById('combo-strategy').value=cs;
+}
+
+async function updateSetting(key,value) {
+  try {
+    await fetch('/api/dashboard/settings',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({[key]:value})
+    });
+    document.getElementById('settings-status').textContent='Saved '+key+': '+value;
+    setTimeout(()=>document.getElementById('settings-status').textContent='',2000);
+  } catch(e) {
+    document.getElementById('settings-status').textContent='Error saving';
+    document.getElementById('settings-status').style.color='var(--danger)';
+  }
+}
+
+function esc(s) {
+  if(!s) return '';
+  const d=document.createElement('div');
+  d.textContent=s;
+  return d.innerHTML;
+}
+
+// Initialize
+fetchAll();
+setInterval(fetchAll,3000);
+</script>
+</body>
+</html>

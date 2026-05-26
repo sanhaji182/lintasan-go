@@ -2,5 +2,5 @@ package dashboard
 
 import "embed"
 
-//go:embed dist/*
+//go:embed index.html
 var Assets embed.FS
