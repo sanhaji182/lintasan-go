@@ -6,6 +6,7 @@ import (
 
 	"github.com/sanhaji182/lintasan-go/internal/config"
 	"github.com/sanhaji182/lintasan-go/internal/db"
+	"github.com/sanhaji182/lintasan-go/internal/mitm"
 	"github.com/sanhaji182/lintasan-go/internal/server"
 	"github.com/spf13/cobra"
 )
@@ -33,6 +34,17 @@ func main() {
 				return fmt.Errorf("failed to open database: %w", err)
 			}
 			defer database.Close()
+
+			// Start MITM proxy bridge if configured
+			if cfg.MITMPort > 0 {
+				mitmProxy := mitm.New(cfg.MITMPort, cfg.Port, database)
+				go func() {
+					if err := mitmProxy.Start(); err != nil {
+						fmt.Fprintf(os.Stderr, "MITM proxy error: %v\n", err)
+					}
+				}()
+				defer mitmProxy.Stop()
+			}
 
 			srv := server.New(cfg, database)
 			fmt.Printf("🚀 Lintasan v%s listening on :%d\n", version, cfg.Port)
@@ -87,6 +99,6 @@ func runSetup() error {
 }
 
 func runMITM(cfg *config.Config, database *db.DB) error {
-	fmt.Println("🔒 MITM Bridge - TODO")
-	return nil
+	mitmProxy := mitm.New(cfg.MITMPort, cfg.Port, database)
+	return mitmProxy.Start()
 }

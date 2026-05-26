@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sanhaji182/lintasan-go/internal/models"
 )
 
 // Models endpoint - OpenAI compatible
@@ -19,11 +20,6 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 		WHERE m.is_active = 1 AND c.is_active = 1
 		ORDER BY m.model_id
 	`)
-	if err != nil {
-		http.Error(w, `{"error":"failed to query models"}`, http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
 
 	type Model struct {
 		ID      string `json:"id"`
@@ -32,29 +28,108 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 		OwnedBy string `json:"owned_by"`
 	}
 
-	var models []Model
-	for rows.Next() {
-		var modelID, connName string
-		var ownedBy sql.NullString
-		rows.Scan(&modelID, &connName, &ownedBy)
-		owner := connName
-		if ownedBy.Valid && ownedBy.String != "" {
-			owner = ownedBy.String
+	var modelsList []Model
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var modelID, connName string
+			var ownedBy sql.NullString
+			rows.Scan(&modelID, &connName, &ownedBy)
+			owner := connName
+			if ownedBy.Valid && ownedBy.String != "" {
+				owner = ownedBy.String
+			}
+			modelsList = append(modelsList, Model{
+				ID:      modelID,
+				Object:  "model",
+				Created: time.Now().Unix(),
+				OwnedBy: owner,
+			})
 		}
-		models = append(models, Model{
-			ID:      modelID,
-			Object:  "model",
-			Created: time.Now().Unix(),
-			OwnedBy: owner,
-		})
 	}
 
-	if models == nil {
-		models = []Model{}
+	// When no DB discovered models, fill from the embedded provider catalog
+	if len(modelsList) == 0 {
+		for _, p := range models.Catalog() {
+			for _, m := range p.Models {
+				modelsList = append(modelsList, Model{
+					ID:      m.ID,
+					Object:  "model",
+					Created: time.Now().Unix(),
+					OwnedBy: p.Name,
+				})
+			}
+		}
+	}
+
+	if modelsList == nil {
+		modelsList = []Model{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": models})
+	json.NewEncoder(w).Encode(map[string]any{"data": modelsList})
+}
+
+// GET /api/models/catalog — returns full catalog with pricing
+func (s *Server) handleModelsCatalog(w http.ResponseWriter, r *http.Request) {
+	catalog := models.Catalog()
+
+	// Build response with providers and models including pricing
+	type ModelResponse struct {
+		ID            string   `json:"id"`
+		Name          string   `json:"name"`
+		Provider      string   `json:"provider"`
+		ContextWindow int      `json:"context_window"`
+		MaxTokens     int      `json:"max_tokens"`
+		InputPrice    float64  `json:"input_price_per_1m"`
+		OutputPrice   float64  `json:"output_price_per_1m"`
+		Capabilities  []string `json:"capabilities"`
+	}
+
+	type ProviderResponse struct {
+		ID         string          `json:"id"`
+		Name       string          `json:"name"`
+		BaseURL    string          `json:"base_url"`
+		Format     string          `json:"format"`
+		ModelCount int             `json:"model_count"`
+		Models     []ModelResponse `json:"models"`
+	}
+
+	var providers []ProviderResponse
+	totalModels := 0
+	for _, p := range catalog {
+		pr := ProviderResponse{
+			ID:         p.ID,
+			Name:       p.Name,
+			BaseURL:    p.BaseURL,
+			Format:     p.Format,
+			ModelCount: len(p.Models),
+			Models:     make([]ModelResponse, 0, len(p.Models)),
+		}
+		for _, m := range p.Models {
+			pr.Models = append(pr.Models, ModelResponse{
+				ID:            m.ID,
+				Name:          m.Name,
+				Provider:      p.Name,
+				ContextWindow: m.ContextWindow,
+				MaxTokens:     m.MaxTokens,
+				InputPrice:    m.InputPrice,
+				OutputPrice:   m.OutputPrice,
+				Capabilities:  m.Capabilities,
+			})
+		}
+		totalModels += len(p.Models)
+		providers = append(providers, pr)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"data": providers,
+		"meta": map[string]any{
+			"total_providers": len(catalog),
+			"total_models":    totalModels,
+		},
+	})
 }
 
 // Connections CRUD

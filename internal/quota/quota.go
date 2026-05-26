@@ -2,8 +2,66 @@ package quota
 
 import (
 	"database/sql"
+	"sync"
 	"time"
 )
+
+// QuotaTracker tracks per-connection and global token/resource usage.
+type QuotaTracker struct {
+	db       *sql.DB
+	mu       sync.RWMutex
+	limits   map[string]*QuotaLimit
+}
+
+// QuotaLimit defines limits for a connection.
+type QuotaLimit struct {
+	MaxTokensPerDay   int64
+	MaxTokensPerMonth int64
+	MaxRequestsPerDay  int64
+	MaxRequestsPerMonth int64
+}
+
+// NewTracker creates a new QuotaTracker backed by the given DB connection.
+func NewTracker(db *sql.DB) *QuotaTracker {
+	return &QuotaTracker{
+		db:     db,
+		limits: make(map[string]*QuotaLimit),
+	}
+}
+
+// Allow checks whether a connection has remaining quota and records usage.
+func (qt *QuotaTracker) Allow(connID string, tokens int) bool {
+	qt.mu.RLock()
+	limit, hasLimit := qt.limits[connID]
+	qt.mu.RUnlock()
+
+	if !hasLimit {
+		return true // no limit configured
+	}
+
+	usage := GetQuota(qt.db, connID)
+	tokensToday, _ := usage["tokens_today"].(int)
+
+	if limit.MaxTokensPerDay > 0 && int64(tokensToday+int(tokens)) > limit.MaxTokensPerDay {
+		return false
+	}
+
+	return true
+}
+
+// SetLimit sets a quota limit for a connection.
+func (qt *QuotaTracker) SetLimit(connID string, limit *QuotaLimit) {
+	qt.mu.Lock()
+	qt.limits[connID] = limit
+	qt.mu.Unlock()
+}
+
+// GetLimit returns the quota limit for a connection.
+func (qt *QuotaTracker) GetLimit(connID string) *QuotaLimit {
+	qt.mu.RLock()
+	defer qt.mu.RUnlock()
+	return qt.limits[connID]
+}
 
 func InitQuotaSchema(db *sql.DB) {
 	db.Exec(`CREATE TABLE IF NOT EXISTS quota_usage (

@@ -35,6 +35,7 @@ type ProxyHandler struct {
 	db     *db.DB
 	pm     *plugin.Manager
 	wm     *webhook.Manager
+	quota  *quota.QuotaTracker
 	client *http.Client
 
 	rl        *ratelimit.Limiter          // rate limiter
@@ -51,6 +52,7 @@ func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
 		db:  database,
 		pm:  plugin.NewManager(database.Conn()),
 		wm:  webhook.NewManager(database.Conn()),
+		quota: quota.NewTracker(database.Conn()),
 		client: &http.Client{
 			Timeout: 300 * time.Second,
 			Transport: &http.Transport{

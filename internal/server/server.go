@@ -45,11 +45,15 @@ func (s *Server) routes() {
 	// Register Node.js feature-parity management routes
 	s.registerParityRoutes()
 
+	// Register OAuth routes
+	s.registerOAuthRoutes()
+
 	// Health
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 
 	// OpenAI-compatible API
 	s.mux.HandleFunc("GET /v1/models", s.handleModels)
+	s.mux.HandleFunc("GET /api/models/catalog", s.handleModelsCatalog)
 	s.mux.HandleFunc("POST /v1/chat/completions", s.proxy.HandleChatCompletions)
 	s.mux.HandleFunc("POST /v1/embeddings", s.proxy.HandleEmbeddings)
 	// OpenAI-compatible media endpoints (Node.js exposes these through API routes; Go exposes root /v1 too)
@@ -144,6 +148,12 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		// Skip auth for health, dashboard, and dashboard API
 		if r.URL.Path == "/health" || r.URL.Path == "/" ||
 			strings.HasPrefix(r.URL.Path, "/api/dashboard/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// MITM bridge bypass: requests from IDE proxy
+		if r.Header.Get("X-Lintasan-MITM") == "true" {
 			next.ServeHTTP(w, r)
 			return
 		}
