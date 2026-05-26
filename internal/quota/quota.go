@@ -22,12 +22,17 @@ func RecordQuota(db *sql.DB, connID string, tokens int) {
 	day := time.Now().Format("2006-01-02")
 	month := time.Now().Format("2006-01")
 	
-	res, _ := db.Exec(`
+	res, err := db.Exec(`
 		UPDATE quota_usage 
 		SET tokens_today=tokens_today+?, tokens_month=tokens_month+?, requests_today=requests_today+1, requests_month=requests_month+1, updated_at=datetime('now')
 		WHERE connection_id=? AND last_reset_day=? AND last_reset_month=?
 	`, tokens, tokens, connID, day, month)
 	
+	if err != nil || res == nil {
+		// Table may not exist, try to create it
+		InitQuotaSchema(db)
+		return
+	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		db.Exec(`
 			INSERT OR REPLACE INTO quota_usage(connection_id, tokens_today, tokens_month, requests_today, requests_month, last_reset_day, last_reset_month)
