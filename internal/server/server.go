@@ -4,26 +4,76 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/sanhaji182/lintasan-go/internal/config"
-	"github.com/sanhaji182/lintasan-go/internal/dashboard"
 	"github.com/sanhaji182/lintasan-go/internal/db"
 )
 
 type Server struct {
-	cfg    *config.Config
-	db     *db.DB
-	mux    *http.ServeMux
-	proxy  *ProxyHandler
+	cfg        *config.Config
+	db         *db.DB
+	mux        *http.ServeMux
+	proxy      *ProxyHandler
+	nodeProxy  *httputil.ReverseProxy // reverse-proxy to Node dashboard at :20180
 }
 
 func New(cfg *config.Config, database *db.DB) *Server {
+	nodeURL, _ := url.Parse("http://127.0.0.1:20180")
 	s := &Server{
-		cfg: cfg,
-		db:  database,
-		mux: http.NewServeMux(),
+		cfg:       cfg,
+		db:        database,
+		mux:       http.NewServeMux(),
+		nodeProxy: httputil.NewSingleHostReverseProxy(nodeURL),
+	}
+	// Patch node proxy to rewrite Set-Cookie domain and inject auth bypass
+	s.nodeProxy.ModifyResponse = func(r *http.Response) error {
+		// Auth bypass: set SR_SESSION cookie so Node thinks user is logged in
+		if strings.HasPrefix(r.Request.URL.Path, "/dashboard") ||
+			r.Request.URL.Path == "/" ||
+			strings.HasPrefix(r.Request.URL.Path, "/_next") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/auth/") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/overview-stats") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/stats") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/logs") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/connections") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/combos") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/keys") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/settings") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/analytics") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/usage") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/fallback") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/backup") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/teams") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/users") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/webhooks") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/plugins") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/routing") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/load-balancer") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/providers") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/models") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/aliases") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/features") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/cache") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/costs") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/quota") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/audit") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/export") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/sync") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/marketplace") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/oauth") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/chat-test") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/prompt-routing") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/prompt-optimizer") ||
+			strings.HasPrefix(r.Request.URL.Path, "/api/web-search") ||
+			strings.HasPrefix(r.Request.URL.Path, "/favicon.ico") {
+			// Inject auth cookie to bypass login
+			r.Header.Set("Set-Cookie", "SR_SESSION=auto; Path=/; HttpOnly; SameSite=Lax")
+		}
+		return nil
 	}
 	s.proxy = NewProxyHandler(cfg, database)
 	s.routes()
@@ -106,16 +156,22 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/dashboard/logs", s.handleDashboardLogs)
 	s.mux.HandleFunc("PUT /api/dashboard/settings", s.handleDashboardSettings)
 
-	// Dashboard (embedded SPA) — serve index.html for all non-API paths
+	// Dashboard — reverse-proxy everything else to Node :20180
+	// This includes: /, /dashboard/*, /_next/*, /favicon.ico
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// API routes already matched above; this catches browser requests
-		f, err := dashboard.Assets.ReadFile("index.html")
-		if err != nil {
-			http.Error(w, "dashboard not found", http.StatusNotFound)
+		// Go-specific paths stay local
+		if strings.HasPrefix(r.URL.Path, "/v1/") ||
+			strings.HasPrefix(r.URL.Path, "/health") ||
+			strings.HasPrefix(r.URL.Path, "/api/dashboard/") ||
+			strings.HasPrefix(r.URL.Path, "/api/oauth/") ||
+			strings.HasPrefix(r.URL.Path, "/api/models/catalog") {
+			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(f)
+		// Everything else → proxy to Node dashboard
+		// Inject auth bypass header
+		r.Header.Set("Cookie", "SR_SESSION=auto")
+		s.nodeProxy.ServeHTTP(w, r)
 	})
 }
 
