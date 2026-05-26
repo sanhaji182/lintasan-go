@@ -10,17 +10,22 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sanhaji182/lintasan-go/internal/cache"
+	"github.com/sanhaji182/lintasan-go/internal/circuit"
 	"github.com/sanhaji182/lintasan-go/internal/config"
 	"github.com/sanhaji182/lintasan-go/internal/db"
-	"github.com/sanhaji182/lintasan-go/internal/cache"
-	"github.com/sanhaji182/lintasan-go/internal/quota"
+	"github.com/sanhaji182/lintasan-go/internal/fallback"
 	"github.com/sanhaji182/lintasan-go/internal/optimizer"
 	"github.com/sanhaji182/lintasan-go/internal/plugin"
-	"github.com/sanhaji182/lintasan-go/internal/webhook"
+	"github.com/sanhaji182/lintasan-go/internal/quota"
+	"github.com/sanhaji182/lintasan-go/internal/ratelimit"
 	"github.com/sanhaji182/lintasan-go/internal/reasoning"
+	"github.com/sanhaji182/lintasan-go/internal/retry"
+	"github.com/sanhaji182/lintasan-go/internal/webhook"
 )
 
 type ProxyHandler struct {
@@ -29,10 +34,15 @@ type ProxyHandler struct {
 	pm     *plugin.Manager
 	wm     *webhook.Manager
 	client *http.Client
+
+	rl        *ratelimit.Limiter          // rate limiter
+	fb        *fallback.Engine            // fallback chain engine
+	breakers  map[string]*circuit.Breaker // per-connection circuit breakers
+	breakerMu sync.RWMutex               // protects breakers map
 }
 
 func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
-	return &ProxyHandler{
+	ph := &ProxyHandler{
 		cfg: cfg,
 		db:  database,
 		pm:  plugin.NewManager(database.Conn()),
@@ -47,6 +57,11 @@ func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
 			},
 		},
 	}
+	ph.rl = ratelimit.New(60, 30)
+	ph.fb = fallback.New(database)
+	ph.fb.LoadChains()
+	ph.breakers = make(map[string]*circuit.Breaker)
+	return ph
 }
 
 type Connection struct {
@@ -66,6 +81,24 @@ func (p *ProxyHandler) getSetting(key, def string) string {
 	val, err := p.db.GetSetting(key)
 	if err != nil || val == "" { return def }
 	return val
+}
+
+func (p *ProxyHandler) getBreaker(connID string) *circuit.Breaker {
+	p.breakerMu.RLock()
+	if b, ok := p.breakers[connID]; ok {
+		p.breakerMu.RUnlock()
+		return b
+	}
+	p.breakerMu.RUnlock()
+
+	p.breakerMu.Lock()
+	defer p.breakerMu.Unlock()
+	if b, ok := p.breakers[connID]; ok {
+		return b
+	}
+	b := circuit.New(3, 30*time.Second)
+	p.breakers[connID] = b
+	return b
 }
 
 func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Request) {
@@ -101,6 +134,32 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	
 	stream, _ := req["stream"].(bool)
 	messages, _ := req["messages"].([]any)
+
+	// Rate Limiter
+	if p.rl != nil {
+		apiKey := r.Header.Get("Authorization")
+		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
+		clientIP := r.Header.Get("X-Forwarded-For")
+		if clientIP == "" {
+			clientIP = r.RemoteAddr
+		}
+
+		// Check per-key
+		allowed, remaining := p.rl.AllowKey(apiKey, 0)
+		if !allowed {
+			w.Header().Set("X-RateLimit-Remaining", "0")
+			w.Header().Set("Retry-After", "60")
+			http.Error(w, `{"error":{"message":"rate limit exceeded","type":"rate_limit"}}`, http.StatusTooManyRequests)
+			return
+		}
+		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+
+		// Check per-IP
+		if !p.rl.AllowIP(clientIP) {
+			http.Error(w, `{"error":{"message":"rate limit exceeded","type":"rate_limit"}}`, http.StatusTooManyRequests)
+			return
+		}
+	}
 	
 	// Global max_tokens floor — reasoning models need room after system prompt
 	if mt, ok := req["max_tokens"].(float64); !ok || mt < 8192 {
@@ -153,26 +212,102 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	body, _ = json.Marshal(req)
 
 	var lastErr string
+	var lastStatusCode int
 	for i, conn := range candidates {
-		resp, err := p.doUpstream(r, conn, body)
-		if err != nil {
-			lastErr = err.Error()
-			p.logRequest(resolvedModel, conn.ID, conn.Name, 502, time.Since(start).Milliseconds(), 0, 0, false, lastErr)
+		// Circuit breaker check
+		breaker := p.getBreaker(conn.ID)
+		if !breaker.Allow() {
+			lastErr = fmt.Sprintf("circuit breaker open for %s", conn.ID)
+			lastStatusCode = 503
+			p.logRequest(resolvedModel, conn.ID, conn.Name, 503, time.Since(start).Milliseconds(), 0, 0, false, lastErr)
+			if p.fb != nil {
+				p.fb.RecordEvent(resolvedModel, "", fallback.ReasonCircuit, 503)
+			}
+			// Try fallback connections
+			if fallbackConns := p.fb.GetConnFallback(conn.ID); len(fallbackConns) > 0 {
+				for _, fbID := range fallbackConns {
+					fbConn, err := p.findConnectionByID(fbID)
+					if err != nil {
+						continue
+					}
+					candidates = append(candidates, fbConn)
+				}
+			}
 			continue
 		}
+
+		// Retry wrapper around upstream call
+		var resp *http.Response
+		retryErr := retry.Do(r.Context(), retry.DefaultConfig(), func() (bool, error) {
+			var err error
+			resp, err = p.doUpstream(r, conn, body)
+			if err != nil {
+				return true, err // retry on connection errors
+			}
+			if resp.StatusCode == 429 || resp.StatusCode >= 500 {
+				resp.Body.Close()
+				return true, fmt.Errorf("upstream returned %d", resp.StatusCode)
+			}
+			return false, nil // success, don't retry
+		})
+
+		if retryErr != nil {
+			lastErr = retryErr.Error()
+			breaker.Failure()
+			p.logRequest(resolvedModel, conn.ID, conn.Name, 502, time.Since(start).Milliseconds(), 0, 0, false, lastErr)
+			if p.fb != nil {
+				if should, reason := fallback.ShouldTriggerFallback(502, false, false); should {
+					p.fb.RecordEvent(resolvedModel, "", reason, 502)
+				}
+			}
+			continue
+		}
+
 		defer resp.Body.Close()
+		lastStatusCode = resp.StatusCode
+
+		// On 5xx with more candidates: fallback
 		if resp.StatusCode >= 500 && i < len(candidates)-1 {
 			b, _ := io.ReadAll(resp.Body)
 			lastErr = string(b)
+			breaker.Failure()
 			p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, lastErr)
+			if p.fb != nil {
+				if should, reason := fallback.ShouldTriggerFallback(resp.StatusCode, false, false); should {
+					p.fb.RecordEvent(resolvedModel, "", reason, resp.StatusCode)
+				}
+			}
 			continue
 		}
 
-		// Quota success
-		if resp.StatusCode == 200 { quota.RecordQuota(p.db.Conn(), conn.ID, 0) } // Token parsing later
+		// On 429: circuit breaker + fallback
+		if resp.StatusCode == 429 {
+			b, _ := io.ReadAll(resp.Body)
+			lastErr = string(b)
+			breaker.Failure()
+			p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, lastErr)
+			if p.fb != nil {
+				p.fb.RecordEvent(resolvedModel, "", fallback.Reason429, resp.StatusCode)
+			}
+			continue
+		}
+
+		// Success! Record to breaker
+		breaker.Success()
+
+		// Token counting from response headers
+		var tokensIn, tokensOut int
+		if ct := resp.Header.Get("x-tokens-input"); ct != "" {
+			fmt.Sscanf(ct, "%d", &tokensIn)
+		}
+		if ct := resp.Header.Get("x-tokens-output"); ct != "" {
+			fmt.Sscanf(ct, "%d", &tokensOut)
+		}
 
 		for k, v := range resp.Header {
-			for _, vv := range v { w.Header().Add(k, vv) }
+			for _, vv := range v {
+				w.Header().Add(k, vv)
+			}
 		}
 
 		if stream {
@@ -181,9 +316,9 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 			w.Header().Set("Connection", "keep-alive")
 			w.WriteHeader(resp.StatusCode)
 			flusher, ok := w.(http.Flusher)
-			
+
 			var streamBuffer []byte
-			if !ok { 
+			if !ok {
 				b, _ := io.ReadAll(resp.Body)
 				w.Write(b)
 				streamBuffer = b
@@ -191,17 +326,32 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 				buf := make([]byte, 4096)
 				for {
 					n, er := resp.Body.Read(buf)
-					if n > 0 { 
+					if n > 0 {
 						w.Write(buf[:n])
-						flusher.Flush() 
+						flusher.Flush()
 						streamBuffer = append(streamBuffer, buf[:n]...)
 					}
-					if er != nil { break }
+					if er != nil {
+						break
+					}
 				}
 			}
-			
-			p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, "")
-			
+
+			// Approximate stream token counts
+			if tokensOut == 0 {
+				tokensOut = len(streamBuffer) / 4
+			}
+			if tokensIn == 0 {
+				tokensIn = len(body) / 4
+			}
+
+			// Quota recording with actual tokens
+			if resp.StatusCode == 200 {
+				quota.RecordQuota(p.db.Conn(), conn.ID, tokensIn+tokensOut)
+			}
+
+			p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), tokensIn, tokensOut, false, "")
+
 			if semanticEnabled && resp.StatusCode == 200 {
 				cache.SaveSemanticMatch(p.db.Conn(), model, messages, string(streamBuffer), 3600)
 			}
@@ -218,31 +368,61 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		// Reasoning extraction: DeepSeek V4 Pro puts answer in reasoning_content not content
 		b = reasoning.ExtractReasoningContent(b)
 
+		// Approximate token counts for non-stream
+		if tokensOut == 0 {
+			tokensOut = len(b) / 4
+		}
+		if tokensIn == 0 {
+			tokensIn = len(body) / 4
+		}
+
+		// Quota recording with actual tokens
+		if resp.StatusCode == 200 {
+			quota.RecordQuota(p.db.Conn(), conn.ID, tokensIn+tokensOut)
+		}
+
 		w.WriteHeader(resp.StatusCode)
 		w.Write(b)
-		p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), 0, 0, false, "")
-		
+		p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), tokensIn, tokensOut, false, "")
+
 		if p.wm != nil {
 			p.wm.Fire("request.success", map[string]interface{}{
 				"model": resolvedModel,
 				"status": resp.StatusCode,
 			})
 		}
-		
+
 		if semanticEnabled && resp.StatusCode == 200 {
 			cache.SaveSemanticMatch(p.db.Conn(), model, messages, string(b), 3600)
 		}
 		return
 	}
-	
-		if p.wm != nil {
-			p.wm.Fire("request.error", map[string]interface{}{
-				"model": model,
-				"error": lastErr, // lastErr is already a string in Go implementation
-			})
-		}
-	
+
+	if p.wm != nil {
+		p.wm.Fire("request.error", map[string]interface{}{
+			"model": model,
+			"error": lastErr,
+		})
+	}
+
+	_ = lastStatusCode
 	http.Error(w, fmt.Sprintf(`{"error":{"message":"all routes failed","details":%q}}`, lastErr), http.StatusBadGateway)
+}
+
+func (p *ProxyHandler) findConnectionByID(id string) (*Connection, error) {
+	row := p.db.Conn().QueryRow(`
+		SELECT id, name, base_url, api_key, format, chat_path, auth_header, auth_prefix, is_active, priority
+		FROM connections
+		WHERE id = ? AND is_active = 1
+		LIMIT 1
+	`, id)
+
+	var conn Connection
+	err := row.Scan(&conn.ID, &conn.Name, &conn.BaseURL, &conn.APIKey, &conn.Format, &conn.ChatPath, &conn.AuthHeader, &conn.AuthPrefix, &conn.IsActive, &conn.Priority)
+	if err != nil {
+		return nil, fmt.Errorf("connection not found: %s", id)
+	}
+	return &conn, nil
 }
 
 func (p *ProxyHandler) doUpstream(r *http.Request, conn *Connection, body []byte) (*http.Response, error) {
