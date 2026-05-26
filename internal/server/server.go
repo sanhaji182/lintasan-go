@@ -23,57 +23,21 @@ type Server struct {
 
 func New(cfg *config.Config, database *db.DB) *Server {
 	nodeURL, _ := url.Parse("http://127.0.0.1:20180")
+	nodeProxy := &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(nodeURL)
+			pr.Out.Host = nodeURL.Host
+			// Inject auth cookie so all requests (including client-side fetches) bypass login
+			pr.Out.Header.Set("Cookie", "SR_SESSION=auto")
+		},
+		FlushInterval: -1,
+	}
+
 	s := &Server{
 		cfg:       cfg,
 		db:        database,
 		mux:       http.NewServeMux(),
-		nodeProxy: httputil.NewSingleHostReverseProxy(nodeURL),
-	}
-	// Patch node proxy to rewrite Set-Cookie domain and inject auth bypass
-	s.nodeProxy.ModifyResponse = func(r *http.Response) error {
-		// Auth bypass: set SR_SESSION cookie so Node thinks user is logged in
-		if strings.HasPrefix(r.Request.URL.Path, "/dashboard") ||
-			r.Request.URL.Path == "/" ||
-			strings.HasPrefix(r.Request.URL.Path, "/_next") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/auth/") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/overview-stats") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/stats") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/logs") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/connections") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/combos") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/keys") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/settings") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/analytics") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/usage") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/fallback") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/backup") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/teams") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/users") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/webhooks") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/plugins") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/routing") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/load-balancer") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/providers") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/models") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/aliases") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/features") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/cache") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/costs") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/quota") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/audit") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/export") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/sync") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/marketplace") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/oauth") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/chat-test") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/prompt-routing") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/prompt-optimizer") ||
-			strings.HasPrefix(r.Request.URL.Path, "/api/web-search") ||
-			strings.HasPrefix(r.Request.URL.Path, "/favicon.ico") {
-			// Inject auth cookie to bypass login
-			r.Header.Set("Set-Cookie", "SR_SESSION=auto; Path=/; HttpOnly; SameSite=Lax")
-		}
-		return nil
+		nodeProxy: nodeProxy,
 	}
 	s.proxy = NewProxyHandler(cfg, database)
 	s.routes()
@@ -159,7 +123,7 @@ func (s *Server) routes() {
 	// Dashboard — reverse-proxy everything else to Node :20180
 	// This includes: /, /dashboard/*, /_next/*, /favicon.ico
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Go-specific paths stay local
+		// Go-specific paths stay local — ONLY paths Go owns
 		if strings.HasPrefix(r.URL.Path, "/v1/") ||
 			strings.HasPrefix(r.URL.Path, "/health") ||
 			strings.HasPrefix(r.URL.Path, "/api/dashboard/") ||
@@ -168,9 +132,12 @@ func (s *Server) routes() {
 			http.NotFound(w, r)
 			return
 		}
+		// Redirect analytics → usage (analytics page has Next.js 16 RSC streaming bug)
+		if r.URL.Path == "/dashboard/analytics" {
+			http.Redirect(w, r, "/dashboard/usage", http.StatusMovedPermanently)
+			return
+		}
 		// Everything else → proxy to Node dashboard
-		// Inject auth bypass header
-		r.Header.Set("Cookie", "SR_SESSION=auto")
 		s.nodeProxy.ServeHTTP(w, r)
 	})
 }
