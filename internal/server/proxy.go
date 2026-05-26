@@ -253,7 +253,12 @@ func (p *ProxyHandler) doUpstream(r *http.Request, conn *Connection, body []byte
 	// Format translation: OpenAI body → commandcode body
 	requestBody := body
 	if conn.Format == "commandcode" {
-		requestBody = transformForCommandCode(body)
+		// Read thinking mode setting
+		thinkingMode := "auto"
+		if v, err := p.db.GetSetting("thinking_mode"); err == nil && v != "" {
+			thinkingMode = v
+		}
+		requestBody = transformForCommandCode(body, thinkingMode)
 	}
 
 	upReq, err := http.NewRequestWithContext(r.Context(), "POST", upstreamURL, strings.NewReader(string(requestBody)))
@@ -274,7 +279,8 @@ func (p *ProxyHandler) doUpstream(r *http.Request, conn *Connection, body []byte
 
 // transformForCommandCode converts an OpenAI-format chat completions body
 // into the CommandCode Alpha format (threadId/config/params).
-func transformForCommandCode(body []byte) []byte {
+// thinkingMode: "auto" (default), "enabled" (force reasoning), "disabled" (no reasoning)
+func transformForCommandCode(body []byte, thinkingMode string) []byte {
 	var req map[string]any
 	if err := json.Unmarshal(body, &req); err != nil {
 		return body
@@ -286,6 +292,9 @@ func transformForCommandCode(body []byte) []byte {
 	if strings.HasPrefix(model, "deepseek-v4") && !strings.Contains(model, "/") {
 		model = "deepseek/" + model
 	}
+
+	// Detect DeepSeek reasoning models for thinking control
+	isDeepSeekReasoning := strings.Contains(model, "deepseek-v4-pro") || strings.Contains(model, "deepseek-r1")
 
 	// Extract system prompt from messages
 	var systemPrompt string
@@ -305,15 +314,18 @@ func transformForCommandCode(body []byte) []byte {
 	}
 	systemPrompt = strings.TrimSpace(systemPrompt)
 
-	// Max tokens — default high for reasoning models (DeepSeek V4 Pro uses
-	// reasoning_content which eats into the output budget). Floor at 8192
-	// so reasoning + content both fit.
+	// Max tokens — dynamic floor based on thinking mode
+	// When thinking is disabled, lower floor since no reasoning tokens needed
+	floorTokens := 8192.0
+	if isDeepSeekReasoning && thinkingMode == "disabled" {
+		floorTokens = 1024
+	}
 	maxTokens := 16384.0
 	if mt, ok := req["max_tokens"].(float64); ok && mt > 0 {
 		if mt > 200000 {
 			maxTokens = 200000
-		} else if mt < 8192 {
-			maxTokens = 8192 // floor: reasoning models need headroom
+		} else if mt < floorTokens {
+			maxTokens = floorTokens
 		} else {
 			maxTokens = mt
 		}
@@ -329,6 +341,14 @@ func transformForCommandCode(body []byte) []byte {
 		"system":     systemPrompt,
 		"max_tokens": int(maxTokens),
 		"stream":     stream,
+	}
+
+	// Thinking mode control for DeepSeek models (mirrors 9router's thinking.type injection)
+	if isDeepSeekReasoning && thinkingMode != "auto" {
+		params["thinking"] = map[string]any{"type": thinkingMode}
+		if thinkingMode == "enabled" {
+			params["reasoning_effort"] = "max"
+		}
 	}
 
 	out := map[string]any{
