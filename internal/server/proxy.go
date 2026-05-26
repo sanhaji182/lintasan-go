@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sanhaji182/lintasan-go/internal/cache"
 	"github.com/sanhaji182/lintasan-go/internal/circuit"
+	"github.com/sanhaji182/lintasan-go/internal/combo"
 	"github.com/sanhaji182/lintasan-go/internal/config"
 	"github.com/sanhaji182/lintasan-go/internal/db"
 	"github.com/sanhaji182/lintasan-go/internal/fallback"
@@ -37,6 +38,7 @@ type ProxyHandler struct {
 
 	rl        *ratelimit.Limiter          // rate limiter
 	fb        *fallback.Engine            // fallback chain engine
+	cmb       *combo.Engine               // hybrid combo engine
 	breakers  map[string]*circuit.Breaker // per-connection circuit breakers
 	breakerMu sync.RWMutex               // protects breakers map
 }
@@ -60,6 +62,10 @@ func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
 	ph.rl = ratelimit.New(60, 30)
 	ph.fb = fallback.New(database)
 	ph.fb.LoadChains()
+	ph.cmb = combo.New()
+	if cbJSON, err := database.GetSetting("combos"); err == nil && cbJSON != "" {
+		ph.cmb.LoadFromSettings(cbJSON)
+	}
 	ph.breakers = make(map[string]*circuit.Breaker)
 	return ph
 }
@@ -242,7 +248,7 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	candidates, resolvedModel, err := p.resolveRoute(model)
+	candidates, resolvedModel, comboName, err := p.resolveRoute(model)
 	if err != nil || len(candidates) == 0 {
 		http.Error(w, fmt.Sprintf(`{"error":"no route found for model %s"}`, model), http.StatusNotFound)
 		return
@@ -391,6 +397,10 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 
 			p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), tokensIn, tokensOut, false, "")
 
+			if comboName != "" && resp.StatusCode == 200 {
+				p.cmb.RecordSuccess(comboName)
+			}
+
 			if semanticEnabled && resp.StatusCode == 200 {
 				cache.SaveSemanticMatch(p.db.Conn(), model, messages, string(streamBuffer), 3600)
 			}
@@ -423,6 +433,10 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		w.WriteHeader(resp.StatusCode)
 		w.Write(b)
 		p.logRequest(resolvedModel, conn.ID, conn.Name, resp.StatusCode, time.Since(start).Milliseconds(), tokensIn, tokensOut, false, "")
+
+		if comboName != "" && resp.StatusCode == 200 {
+			p.cmb.RecordSuccess(comboName)
+		}
 
 		if p.wm != nil {
 			p.wm.Fire("request.success", map[string]interface{}{
@@ -704,12 +718,12 @@ func translateCCAlphaToOpenAI(raw []byte) []byte {
 	return out
 }
 
-func (p *ProxyHandler) resolveRoute(model string) ([]*Connection, string, error) {
+func (p *ProxyHandler) resolveRoute(model string) ([]*Connection, string, string, error) {
 	model = p.resolveAlias(model)
-	if conns, resolved, ok := p.resolveCombo(model); ok && len(conns) > 0 { return conns, resolved, nil }
+	if conns, resolved, ok := p.resolveCombo(model); ok && len(conns) > 0 { return conns, resolved, model, nil }
 	conn, err := p.findConnectionForModel(model)
-	if err != nil { return nil, model, err }
-	return []*Connection{conn}, model, nil
+	if err != nil { return nil, model, "", err }
+	return []*Connection{conn}, model, "", nil
 }
 
 func (p *ProxyHandler) resolveAlias(model string) string {
@@ -727,39 +741,32 @@ func (p *ProxyHandler) resolveAlias(model string) string {
 }
 
 func (p *ProxyHandler) resolveCombo(name string) ([]*Connection, string, bool) {
-	v, _ := p.db.GetSetting("combos")
-	if v == "" { return nil, name, false }
-	var combos []map[string]any
-	if json.Unmarshal([]byte(v), &combos) != nil { return nil, name, false }
-	for _, c := range combos {
-		if c["name"] != name { continue }
-		entries, _ := c["entries"].([]any)
-		strategy, _ := c["strategy"].(string)
-		if strategy == "round-robin" && len(entries) > 1 {
-			idx := p.nextRoundRobinIndex("combo_rr_"+name, len(entries))
-			entries = append(entries[idx:], entries[:idx]...)
-		}
-		var out []*Connection
-		resolvedModel := name
-		for _, e := range entries {
-			em, _ := e.(map[string]any); if em == nil { continue }
-			m, _ := em["model"].(string); if m == "" { continue }
-			if resolvedModel == name { resolvedModel = m }
-			ids := stringSlice(em["connection_ids"])
-			conns := p.connectionsForModelAndIDs(m, ids)
-			out = append(out, conns...)
-		}
-		return out, resolvedModel, true
+	resolved, err := p.cmb.Resolve(name)
+	if err != nil {
+		return nil, name, false
 	}
-	return nil, name, false
+
+	// Determine the resolved model from the first entry
+	resolvedModel := resolved[0].Model
+
+	var out []*Connection
+	for _, entry := range resolved {
+		conns := p.connectionsForModelAndIDs(entry.Model, []string{entry.ConnectionID})
+		// If the combo entry specifies an API key, override the connection's key
+		if entry.APIKey != "" {
+			for _, c := range conns {
+				c.APIKey = entry.APIKey
+			}
+		}
+		out = append(out, conns...)
+	}
+	if len(out) == 0 {
+		return nil, name, false
+	}
+	return out, resolvedModel, true
 }
 
 func stringSlice(v any) []string { arr, _ := v.([]any); out := []string{}; for _, x := range arr { if s, ok := x.(string); ok { out = append(out, s) } }; return out }
-
-func (p *ProxyHandler) nextRoundRobinIndex(key string, n int) int {
-	if n <= 1 { return 0 }
-	v, _ := p.db.GetSetting(key); var i int; fmt.Sscanf(v, "%d", &i); next := (i+1)%n; p.db.SetSetting(key, fmt.Sprintf("%d", next)); return i % n
-}
 
 func (p *ProxyHandler) connectionsForModelAndIDs(model string, ids []string) []*Connection {
 	query := `SELECT c.id, c.name, c.base_url, c.api_key, c.format, c.chat_path, c.auth_header, c.auth_prefix, c.is_active, c.priority FROM discovered_models m JOIN connections c ON m.connection_id=c.id WHERE m.model_id=? AND m.is_active=1 AND c.is_active=1`
