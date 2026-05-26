@@ -21,6 +21,7 @@ import (
 	"github.com/sanhaji182/lintasan-go/internal/db"
 	"github.com/sanhaji182/lintasan-go/internal/fallback"
 	"github.com/sanhaji182/lintasan-go/internal/lb"
+	"github.com/sanhaji182/lintasan-go/internal/memory"
 	"github.com/sanhaji182/lintasan-go/internal/optimizer"
 	"github.com/sanhaji182/lintasan-go/internal/plugin"
 	"github.com/sanhaji182/lintasan-go/internal/quota"
@@ -44,6 +45,7 @@ type ProxyHandler struct {
 	lb        *lb.LoadBalancer            // load balancer
 	breakers  map[string]*circuit.Breaker // per-connection circuit breakers
 	breakerMu sync.RWMutex               // protects breakers map
+	mem       *memory.MemoryStore         // vector memory (nil if Redis unavailable)
 }
 
 func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
@@ -72,6 +74,7 @@ func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
 	}
 	ph.breakers = make(map[string]*circuit.Breaker)
 	ph.lb = ph.initLoadBalancer()
+	ph.mem = memory.NewLazy(memory.Config{Addr: ""})
 	return ph
 }
 
@@ -258,6 +261,38 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		msgs, saved := optimizer.OptimizeMessages(messages)
 		req["messages"] = msgs
 		_ = saved
+	}
+
+	// Vector Memory — Prompt Injection
+	// Search for similar past successes and inject as system context.
+	var injectedMemories []memory.Memory
+	if p.mem != nil && p.mem.Available() {
+		promptText := buildPromptText(messages)
+		if promptText != "" {
+			queryEmb := memory.Embed(promptText)
+			results, searchErr := p.mem.Store.Search(queryEmb, 3)
+			if searchErr == nil {
+				for _, m := range results {
+					if m.Similarity > 0.75 {
+						injectedMemories = append(injectedMemories, m)
+					}
+				}
+				if len(injectedMemories) > 0 {
+					// Inject context as a system message
+					ctxLines := []string{"[Memory context from past Lintasan completions]"}
+					for _, m := range injectedMemories {
+						ctxLines = append(ctxLines, fmt.Sprintf("- %s (similarity: %.2f)", truncate(m.Text, 200), m.Similarity))
+					}
+					ctxMsg := map[string]any{"role": "system", "content": strings.Join(ctxLines, "\n")}
+					msgs, ok := req["messages"].([]any)
+					if !ok {
+						msgs = []any{}
+					}
+					// Insert at position 0 so it comes before user messages
+					req["messages"] = append([]any{ctxMsg}, msgs...)
+				}
+			}
+		}
 	}
 	
 	// Exact Hash Cache (fastest — check before semantic)
@@ -501,6 +536,10 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 			if semanticEnabled && resp.StatusCode == 200 {
 				cache.SaveSemanticMatch(p.db.Conn(), model, messages, string(streamBuffer), 3600)
 			}
+
+			// Auto-Indexing: embed and store completion if header set
+			p.autoIndex(r, model, messages, string(streamBuffer), tokensIn, tokensOut)
+
 			return
 		}
 
@@ -545,6 +584,10 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		if semanticEnabled && resp.StatusCode == 200 {
 			cache.SaveSemanticMatch(p.db.Conn(), model, messages, string(b), 3600)
 		}
+
+		// Auto-Indexing: embed and store completion if header set
+		p.autoIndex(r, model, messages, string(b), tokensIn, tokensOut)
+
 		return
 	}
 
@@ -967,3 +1010,58 @@ func (p *ProxyHandler) proxyPath(w http.ResponseWriter, r *http.Request, upstrea
 func (p *ProxyHandler) HandleImages(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/images/generations") }
 func (p *ProxyHandler) HandleAudioSpeech(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/audio/speech") }
 func (p *ProxyHandler) HandleAudioTranscriptions(w http.ResponseWriter,r *http.Request){ p.proxyPath(w,r,"/v1/audio/transcriptions") }
+
+// buildPromptText extracts the user-facing text from chat messages for memory embedding.
+func buildPromptText(messages []any) string {
+	var b strings.Builder
+	for _, m := range messages {
+		msg, ok := m.(map[string]any)
+		if !ok {
+			continue
+		}
+		role, _ := msg["role"].(string)
+		content, _ := msg["content"].(string)
+		if content != "" && (role == "user" || role == "system") {
+			b.WriteString(content)
+			b.WriteString(" ")
+		}
+	}
+	return strings.TrimSpace(b.String())
+}
+
+// truncate shortens text to maxLen characters.
+func truncate(s string, maxLen int) string {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
+	}
+	return string(runes[:maxLen]) + "..."
+}
+
+// autoIndex stores a completion in vector memory when X-Lintasan-Index header is "true".
+func (p *ProxyHandler) autoIndex(r *http.Request, model string, messages []any, response string, promptTokens, completionTokens int) {
+	if r.Header.Get("X-Lintasan-Index") != "true" {
+		return
+	}
+	if p.mem == nil || !p.mem.Available() {
+		return
+	}
+
+	// Build prompt from messages
+	prompt := memory.Prompt{Model: model}
+	for _, m := range messages {
+		msg, ok := m.(map[string]any)
+		if !ok {
+			continue
+		}
+		role, _ := msg["role"].(string)
+		content, _ := msg["content"].(string)
+		prompt.Messages = append(prompt.Messages, memory.Message{Role: role, Content: content})
+	}
+
+	tags := []string{model, time.Now().UTC().Format("2006-01-02")}
+	_, _, err := p.mem.Store.IndexCompletion(prompt, response, 0, tags, promptTokens, completionTokens)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "memory: auto-index failed: %v\n", err)
+	}
+}

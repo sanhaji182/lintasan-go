@@ -14,11 +14,12 @@ import (
 )
 
 type Server struct {
-	cfg        *config.Config
-	db         *db.DB
-	mux        *http.ServeMux
-	proxy      *ProxyHandler
-	nodeProxy  *httputil.ReverseProxy // reverse-proxy to Node dashboard at :20180
+	cfg       *config.Config
+	db        *db.DB
+	mux       *http.ServeMux
+	proxy     *ProxyHandler
+	nodeProxy *httputil.ReverseProxy // reverse-proxy to Node dashboard at :20180
+	memHandler *MemoryHandler        // vector memory API handler
 }
 
 func New(cfg *config.Config, database *db.DB) *Server {
@@ -40,6 +41,7 @@ func New(cfg *config.Config, database *db.DB) *Server {
 		nodeProxy: nodeProxy,
 	}
 	s.proxy = NewProxyHandler(cfg, database)
+	s.memHandler = NewMemoryHandler(s.proxy.mem)
 	s.routes()
 	return s
 }
@@ -70,6 +72,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/models/catalog", s.handleModelsCatalog)
 	s.mux.HandleFunc("POST /v1/chat/completions", s.proxy.HandleChatCompletions)
 	s.mux.HandleFunc("POST /v1/embeddings", s.proxy.HandleEmbeddings)
+
+	// Vector Memory API
+	s.mux.HandleFunc("GET /v1/memory/search", s.memHandler.HandleMemorySearch)
+	s.mux.HandleFunc("POST /v1/memory", s.memHandler.HandleMemoryStore)
+	s.mux.HandleFunc("GET /v1/memory/stats", s.memHandler.HandleMemoryStats)
 	// OpenAI-compatible media endpoints (Node.js exposes these through API routes; Go exposes root /v1 too)
 	s.mux.HandleFunc("POST /v1/images/generations", s.proxy.HandleImages)
 	s.mux.HandleFunc("POST /v1/audio/speech", s.proxy.HandleAudioSpeech)
