@@ -173,6 +173,45 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		_ = saved
 	}
 	
+	// Exact Hash Cache (fastest — check before semantic)
+	exactCacheEnabled := p.getSetting("exact_cache_enabled", "true") == "true"
+	if exactCacheEnabled {
+		params := map[string]any{
+			"temperature": req["temperature"],
+			"max_tokens":  req["max_tokens"],
+			"top_p":       req["top_p"],
+		}
+		if respBody, ok := cache.GetExactMatch(p.db.Conn(), model, messages, params); ok {
+			p.logRequest(model, "exact-cache", "cache", 200, time.Since(start).Milliseconds(), 0, 0, true, "")
+			if stream {
+				w.Header().Set("Content-Type", "text/event-stream")
+				w.Header().Set("Cache-Control", "no-cache")
+				w.Header().Set("X-Cache", "EXACT-HIT")
+				w.WriteHeader(200)
+				w.Write([]byte("data: " + respBody + "\n\n"))
+				w.Write([]byte("data: [DONE]\n\n"))
+				if flusher, ok := w.(http.Flusher); ok {
+					flusher.Flush()
+				}
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("X-Cache", "EXACT-HIT")
+				w.Write([]byte(respBody))
+			}
+			return
+		}
+	}
+
+	// Stream Cache (check before semantic for streaming requests)
+	streamCacheEnabled := p.getSetting("stream_cache_enabled", "true") == "true"
+	if stream && streamCacheEnabled {
+		if chunks, totalTokens, ok := cache.GetStreamMatch(p.db.Conn(), model, messages); ok {
+			p.logRequest(model, "stream-cache", "cache", 200, time.Since(start).Milliseconds(), 0, totalTokens, true, "")
+			cache.ReplayStream(w, chunks)
+			return
+		}
+	}
+
 	// Semantic Cache
 	semanticEnabled := p.getSetting("semantic_cache_enabled", "true") == "true"
 	if semanticEnabled {
