@@ -102,6 +102,11 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	stream, _ := req["stream"].(bool)
 	messages, _ := req["messages"].([]any)
 	
+	// Global max_tokens floor — reasoning models need room after system prompt
+	if mt, ok := req["max_tokens"].(float64); !ok || mt < 8192 {
+		req["max_tokens"] = 16384.0
+	}
+	
 	// Optimizer
 	if p.getSetting("prompt_optimizer_enabled", "false") == "true" {
 		msgs, saved := optimizer.OptimizeMessages(messages)
