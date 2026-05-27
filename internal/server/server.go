@@ -83,9 +83,11 @@ func New(cfg *config.Config, database *db.DB) *Server {
 	// Wire dashboard engine
 	engine, err := NewDashboardEngine()
 	if err != nil {
-		fmt.Printf("WARNING: dashboard engine init failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[DASHBOARD] engine init FAILED: %v\n", err)
+		s.dashboardEngine = nil
 	} else {
 		s.dashboardEngine = engine
+		fmt.Fprintf(os.Stderr, "[DASHBOARD] engine init OK\n")
 	}
 
 	// Wire MITM proxy if MITM_PORT env set

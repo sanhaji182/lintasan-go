@@ -1,5 +1,4 @@
-{{define "pages/analytics.gohtml"}}
-<div x-data="analyticsData()" x-init="fetchData()">
+<div x-data="analyticsData()" x-init="fetchData.call($data); window.datascope = $data">
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
     <div style="display:flex;align-items:center;gap:10px">
@@ -18,15 +17,15 @@
     <button type="button"
       class="btn btn-sm"
       :class="period === 'daily' ? 'btn-primary' : 'btn-secondary'"
-      @click="period='daily'; fetchData()">Daily</button>
+      onclick="window.analyticsScope.period='daily'; fetchData()">Daily</button>
     <button type="button"
       class="btn btn-sm"
       :class="period === 'weekly' ? 'btn-primary' : 'btn-secondary'"
-      @click="period='weekly'; fetchData()">Weekly</button>
+      onclick="window.analyticsScope.period='weekly'; fetchData()">Weekly</button>
     <button type="button"
       class="btn btn-sm"
       :class="period === 'monthly' ? 'btn-primary' : 'btn-secondary'"
-      @click="period='monthly'; fetchData()">Monthly</button>
+      onclick="window.analyticsScope.period='monthly'; fetchData()">Monthly</button>
   </div>
 
   <!-- Summary Cards -->
@@ -409,5 +408,6 @@ function analyticsData() {
     }
   };
 }
+
+
 </script>
-{{end}}

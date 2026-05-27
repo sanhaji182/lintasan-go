@@ -1,13 +1,29 @@
-{{define "components/toast.gohtml"}}
-<div x-data="{ toasts: [], show: false }"
-     x-on:htmx:trigger.window="$event.detail.toast && (toasts.push($event.detail.toast), show=true)"
-     x-on:toast.window="toasts.push($event.detail), show=true"
-     style="position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px;">
-  <template x-for="(t, i) in toasts" :key="i">
-    <div class="toast"
-         :class="'toast-' + t.type"
-         x-init="setTimeout(() => toasts.splice(i, 1), 3000)"
-         x-text="t.message"></div>
-  </template>
-</div>
-{{end}}
+1|2|<div x-data="{ toasts: [], show: false }"
+     3|     x-on:htmx:trigger.window="$event.detail.toast && (toasts.push($event.detail.toast), show=true)"
+     4|     x-on:toast.window="toasts.push($event.detail), show=true"
+     5|     style="position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px;">
+     6|  <template x-for="(t, i) in toasts" :key="i">
+     7|    <div class="toast"
+     8|         :class="'toast-' + t.type"
+     9|         x-init="setTimeout(() => toasts.splice(i, 1), 3000)"
+    10|         x-text="t.message"></div>
+    11|  </template>
+    12|</div>
+    13|}
+    14|
+    15|<!-- SCOPE BRIDGE: exposes Alpine data to window.toastScope for onclick handlers -->
+    16|<script>
+    17|(function() {
+    18|  var el = document.querySelector('[x-data]');
+    19|  if (!el) return;
+    20|  var check = setInterval(function() {
+    21|    try {
+    22|      var data = Alpine.$data ? Alpine.$data(el) : null;
+    23|      if (data && Object.keys(data).length > 0) {
+    24|        window.toastScope = data;
+    25|        clearInterval(check);
+    26|      }
+    27|    } catch(e) {}
+    28|  }, 100);
+    29|})();
+    30|</script>

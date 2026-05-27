@@ -1,5 +1,4 @@
-{{define "pages/webhooks.gohtml"}}
-<div x-data="{ showCreateModal: false, form: { name: '', url: '', events: 'completion' }, webhooks: null, toasts: [] }" x-init="fetchWebhooks()">
+<div x-data="{ showCreateModal: false, form: { name: '', url: '', events: 'completion' }, webhooks: null, toasts: [] }" x-init="fetchWebhooks.call($data); window.webhooksscope = $data">
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
@@ -20,7 +19,7 @@
       </h1>
       <p class="pg-sub">Configure webhook endpoints for event notifications.</p>
     </div>
-    <button class="btn btn-primary" x-on:click="showCreateModal = true; form = { name: '', url: '', events: 'completion' }">+ Add Webhook</button>
+    <button class="btn btn-primary" onclick="window.webhooksScope.showCreateModal = true; form = { name: '', url: '', events: 'completion' }">+ Add Webhook</button>
   </div>
 
   <!-- Webhooks Table -->
@@ -51,8 +50,8 @@
             <td><span class="badge" :class="wh.is_active ? 'badge-success' : 'badge-danger'" x-text="wh.is_active ? 'Active' : 'Inactive'"></span></td>
             <td style="font-size:12px;color:var(--color-fg-3)" x-text="wh.last_triggered || 'Never'"></td>
             <td>
-              <button class="btn btn-ghost btn-sm" x-on:click="editWebhook(wh)">Edit</button>
-              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" x-on:click="deleteWebhook(wh.id)">Delete</button>
+              <button class="btn btn-ghost btn-sm" onclick="window.webhooksScope.editWebhook(wh)">Edit</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="window.webhooksScope.deleteWebhook(wh.id)">Delete</button>
             </td>
           </tr>
         </template>
@@ -63,15 +62,15 @@
   <!-- Create Webhook Modal -->
   <template x-if="showCreateModal">
     <div>
-      <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
-      <div class="modal-panel" x-on:click.outside="showCreateModal = false">
+      <div class="modal-backdrop" onclick="window.webhooksScope.showCreateModal = false"></div>
+      <div class="modal-panel" onclick="window.webhooksScope.showCreateModal = false">
         <div class="modal-hdr">
           <h2 class="modal-title" x-text="editMode ? 'Edit Webhook' : 'Add Webhook'"></h2>
-          <button class="btn-icon" style="font-size:18px" x-on:click="showCreateModal = false">&times;</button>
+          <button class="btn-icon" style="font-size:18px" onclick="window.webhooksScope.showCreateModal = false">&times;</button>
         </div>
-        <form x-on:submit="saveWebhook()">
+        <form onsubmit="event.preventDefault(); saveWebhook.call(window.webhooksScope)">
           <template x-if="editMode">
-            <input type="hidden" name="id" x-bind:value="editId">
+            <input type="hidden" name="id" :value="editId">
           </template>
           <label>Name</label>
           <input type="text" name="name" x-model="form.name" placeholder="e.g., Slack Notifications">
@@ -87,8 +86,8 @@
           </select>
 
           <div class="btn-row">
-            <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" x-bind:disabled="!form.name.trim() || !form.url.trim()">Create</button>
+            <button type="button" class="btn btn-secondary" onclick="window.webhooksScope.showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="!form.name.trim() || !form.url.trim()" onclick="saveWebhook.call(window.webhooksScope)">Create</button>
           </div>
         </form>
       </div>
@@ -151,5 +150,6 @@ async function deleteWebhook(id) {
     }
   } catch(e) { console.error('Delete webhook failed', e); }
 }
+
+
 </script>
-{{end}}

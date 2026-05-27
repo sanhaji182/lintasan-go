@@ -1,4 +1,3 @@
-{{define "pages/playground.gohtml"}}
 <div x-data="{
   model: '',
   models: [],
@@ -14,6 +13,8 @@
   abortController: null,
 
   async init() {
+        window.playgroundScope = this;
+      window.playgroundScope = this;
     try {
       let r = await fetch('/v1/models');
       let data = await r.json();
@@ -254,10 +255,10 @@
       <select x-model="model" class="form-select" style="width: auto; min-width: 180px;">
         <option value="">-- Select Model --</option>
         <template x-for="m in models" :key="m.id || m.name">
-          <option x-bind:value="m.id || m.name" x-text="m.name || m.id"></option>
+          <option :value="m.id || m.name" x-text="m.name || m.id"></option>
         </template>
       </select>
-      <button class="btn btn-secondary" x-on:click="showSettings = !showSettings">
+      <button class="btn btn-secondary" onclick="window.playgroundScope.showSettings = !showSettings">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
@@ -306,14 +307,14 @@
     </template>
 
     <template x-for="(msg, i) in messages" :key="i">
-      <div class="message" x-bind:class="msg.role === 'user' ? 'message-user' : ''">
+      <div class="message" :class="msg.role === 'user' ? 'message-user' : ''">
         <div class="message-role" x-text="msg.error ? 'ERROR' : msg.role === 'user' ? 'You' : 'Assistant'"></div>
         <div class="message-bubble"
-             x-bind:class="msg.error ? 'message-bubble-error' : (msg.role === 'user' ? 'message-bubble-user' : 'message-bubble-assistant')"
+             :class="msg.error ? 'message-bubble-error' : (msg.role === 'user' ? 'message-bubble-user' : 'message-bubble-assistant')"
              x-text="msg.content"></div>
         <div class="message-actions" x-show="msg.role === 'assistant' && !msg.error">
           <button class="btn btn-ghost btn-sm"
-                  x-on:click="copy(msg.content)"
+                  onclick="window.playgroundScope.copy(msg.content)"
                   title="Copy to clipboard">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -343,17 +344,17 @@
   <div class="card input-area">
     <div class="input-row">
       <textarea x-model="input" placeholder="Type your message..." rows="1"
-                x-on:keydown.enter.prevent="if(!$event.shiftKey) { send(); }"
-                x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px';"
-                x-bind:disabled="loading" class="input-textarea"></textarea>
-      <button x-show="!loading" class="btn btn-primary" style="padding: 10px 20px;" x-on:click="send()" x-bind:disabled="!input.trim()">
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.playgroundScope.send()}"
+              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,300)+'px'"
+                :disabled="loading" class="input-textarea"></textarea>
+      <button x-show="!loading" class="btn btn-primary" style="padding: 10px 20px;" onclick="window.playgroundScope.send()" :disabled="!input.trim()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="22" y1="2" x2="11" y2="13"/>
           <polygon points="22 2 15 22 11 13 2 9 22 2"/>
         </svg>
         Send
       </button>
-      <button x-show="loading" class="btn btn-danger" style="padding: 10px 20px;" x-on:click="abort()">
+      <button x-show="loading" class="btn btn-danger" style="padding: 10px 20px;" onclick="window.playgroundScope.abort()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
         </svg>
@@ -361,7 +362,7 @@
       </button>
     </div>
     <div class="input-actions">
-      <button class="btn btn-ghost btn-sm" x-on:click="clear()">
+      <button class="btn btn-ghost btn-sm" onclick="window.playgroundScope.clear()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
@@ -373,4 +374,3 @@
     </div>
   </div>
 </div>
-{{end}}

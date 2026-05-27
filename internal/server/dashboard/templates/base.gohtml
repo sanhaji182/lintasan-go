@@ -380,9 +380,9 @@
     {{.Content}}
   </main>
 
-  <!-- ═══════ Scripts ═══════ -->
-  <!-- Alpine (deferred) + HTMX re-init bridge -->
-  <script src="/static/alpine.min.js" defer></script>
+    <!-- ═══════ Scripts ═══════ -->
+  <!-- Alpine (synchronous — must load before inline scripts) -->
+  <script src="/static/alpine.min.js"></script>
   <script>
     // ── Sidebar Dark Mode Toggle ──
     (function() {
@@ -421,24 +421,23 @@
       updateThemeButton(document.documentElement.classList.contains('dark'));
     })();
 
-    // ── HTMX afterSettle: re-init Alpine components ──
-    document.addEventListener('htmx:afterSettle', function() {
-      if (window.Alpine) {
-        document.querySelectorAll('[x-data]:not([x-data=""]):not([data-alpine-ok])').forEach(function(el) {
-          el.setAttribute('data-alpine-ok', '1');
-        });
-        Alpine.initTree(document.body);
+    // ── HTMX + Alpine bridge: start() re-scans entire doc after swaps ──
+    (function() {
+      function boot() {
+        if (!window.Alpine) { setTimeout(boot, 50); return; }
+        try { Alpine.start(); } catch(e) {}
       }
-
-      // Re-run sidebar dark-mode button label update (in case it was swapped)
-      const isDark = document.documentElement.classList.contains('dark');
-      const icon = document.getElementById('theme-icon');
-      const label = document.getElementById('theme-label');
-      if (icon && label) {
-        icon.textContent = isDark ? '☀️' : '🌙';
-        label.textContent = isDark ? 'Light Mode' : 'Dark Mode';
-      }
-    });
+      if (document.readyState !== 'loading') setTimeout(boot, 10);
+      document.addEventListener('DOMContentLoaded', boot);
+      document.addEventListener('htmx:afterSettle', function() {
+        if (window.Alpine) { try { Alpine.start(); } catch(e) {} }
+        var d = document.documentElement.classList.contains('dark');
+        var i = document.getElementById('theme-icon');
+        var l = document.getElementById('theme-label');
+        if (i) i.textContent = d ? '☀️' : '🌙';
+        if (l) l.textContent = d ? 'Light Mode' : 'Dark Mode';
+      });
+    })();
   </script>
   <script src="/static/app.js"></script>
 </body>

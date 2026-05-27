@@ -1,5 +1,4 @@
-{{define "pages/teams.gohtml"}}
-<div x-data="{ showCreateModal: false, newTeamName: '', teams: null, toasts: [] }" x-init="fetchTeams()">
+<div x-data="{ showCreateModal: false, newTeamName: '', teams: null, toasts: [] }" x-init="fetchTeams.call($data); window.teamsscope = $data">
   <div class="page-header">
     <div>
       <h1 class="page-title">
@@ -8,7 +7,7 @@
       </h1>
       <p class="page-desc">Manage teams and their rate limits.</p>
     </div>
-    <button class="btn btn-primary" x-on:click="showCreateModal = true">
+    <button class="btn btn-primary" onclick="window.teamsScope.showCreateModal = true">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Create Team
     </button>
@@ -40,8 +39,8 @@
             <td class="cell-meta" x-text="team.rate_limit ? team.rate_limit + '/min' : 'Unlimited'"></td>
             <td class="cell-date" x-text="team.created_at || '—'"></td>
             <td class="cell-actions">
-              <button class="btn btn-ghost btn-sm" x-on:click="editTeam(team)">Edit</button>
-              <button class="btn btn-ghost btn-sm btn-danger-text" x-on:click="deleteTeam(team.id)">Delete</button>
+              <button class="btn btn-ghost btn-sm" onclick="window.teamsScope.editTeam(team)">Edit</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text" onclick="window.teamsScope.deleteTeam(team.id)">Delete</button>
             </td>
           </tr>
         </template>
@@ -52,25 +51,25 @@
   <!-- Create Team Modal -->
   <template x-if="showCreateModal">
     <div>
-      <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
-      <div class="modal-panel" x-on:click.outside="showCreateModal = false">
+      <div class="modal-backdrop" onclick="window.teamsScope.showCreateModal = false"></div>
+      <div class="modal-panel" onclick="window.teamsScope.showCreateModal = false">
         <div class="modal-header">
           <h2 class="modal-title" x-text="editMode ? 'Edit Team' : 'Create Team'"></h2>
-          <button class="btn-icon" x-on:click="showCreateModal = false">
+          <button class="btn-icon" onclick="window.teamsScope.showCreateModal = false">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <form x-on:submit="saveTeam()">
+        <form onsubmit="event.preventDefault(); saveTeam.call(window.teamsScope)">
           <template x-if="editMode">
-            <input type="hidden" name="id" x-bind:value="editId">
+            <input type="hidden" name="id" :value="editId">
           </template>
           <label class="form-label">Team Name</label>
           <input type="text" name="name" x-model="newTeamName" placeholder="e.g., Engineering, Support" class="form-input">
           <label class="form-label">Rate Limit (requests/min)</label>
           <input type="number" name="rate_limit" x-model="newRateLimit" placeholder="Leave empty for unlimited" min="0" class="form-input">
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" x-bind:disabled="!newTeamName.trim()" x-text="editMode ? 'Update' : 'Create'"></button>
+            <button type="button" class="btn btn-secondary" onclick="window.teamsScope.showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="!newTeamName.trim()" x-text="editMode ? 'Update' : 'Create'" onclick="saveTeam.call(window.teamsScope)"></button>
           </div>
         </form>
       </div>
@@ -135,6 +134,8 @@ async function deleteTeam(id) {
     }
   } catch(e) { console.error('Delete team failed', e); }
 }
+
+
 </script>
 
 <style>
@@ -165,4 +166,3 @@ async function deleteTeam(id) {
 .spinner-sm { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border-light); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 4px; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
-{{end}}

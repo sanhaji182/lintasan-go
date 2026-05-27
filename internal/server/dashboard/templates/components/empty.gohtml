@@ -1,9 +1,25 @@
-{{define "components/empty.gohtml"}}
-<div class="empty-state">
-  <div class="empty-state-icon">{{.Icon}}</div>
-  <p style="font-size:14px; margin-bottom:4px;">{{.Message}}</p>
-  {{if .Action}}
-  <button class="btn btn-primary" style="margin-top:12px;" {{if .ActionHxGet}}hx-get="{{.ActionHxGet}}"{{end}} {{if .ActionOnClick}}x-on:click="{{.ActionOnClick}}"{{end}}>{{.Action}}</button>
-  {{end}}
-</div>
-{{end}}
+1|2|<div class="empty-state">
+     3|  <div class="empty-state-icon">{{.Icon}}</div>
+     4|  <p style="font-size:14px; margin-bottom:4px;">{{.Message}}</p>
+     5|  {{if .Action}}
+     6|  <button class="btn btn-primary" style="margin-top:12px;" {{if .ActionHxGet}}hx-get="{{.ActionHxGet}}"{{end}} {{if .ActionOnClick}}onclick="window.emptyScope.{{.ActionOnClick}}"{{end}}>{{.Action}}</button>
+     7|  {{end}}
+     8|</div>
+     9|}
+    10|
+    11|<!-- SCOPE BRIDGE: exposes Alpine data to window.emptyScope for onclick handlers -->
+    12|<script>
+    13|(function() {
+    14|  var el = document.querySelector('[x-data]');
+    15|  if (!el) return;
+    16|  var check = setInterval(function() {
+    17|    try {
+    18|      var data = Alpine.$data ? Alpine.$data(el) : null;
+    19|      if (data && Object.keys(data).length > 0) {
+    20|        window.emptyScope = data;
+    21|        clearInterval(check);
+    22|      }
+    23|    } catch(e) {}
+    24|  }, 100);
+    25|})();
+    26|</script>

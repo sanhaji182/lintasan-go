@@ -1,3 +1,19 @@
-{{define "components/badge.gohtml"}}
-<span class="badge badge-{{.Type}}">{{.Label}}</span>
-{{end}}
+1|2|<span class="badge badge-{{.Type}}">{{.Label}}</span>
+     3|}
+     4|
+     5|<!-- SCOPE BRIDGE: exposes Alpine data to window.badgeScope for onclick handlers -->
+     6|<script>
+     7|(function() {
+     8|  var el = document.querySelector('[x-data]');
+     9|  if (!el) return;
+    10|  var check = setInterval(function() {
+    11|    try {
+    12|      var data = Alpine.$data ? Alpine.$data(el) : null;
+    13|      if (data && Object.keys(data).length > 0) {
+    14|        window.badgeScope = data;
+    15|        clearInterval(check);
+    16|      }
+    17|    } catch(e) {}
+    18|  }, 100);
+    19|})();
+    20|</script>

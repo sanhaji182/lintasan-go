@@ -1,5 +1,4 @@
-{{define "pages/overview.gohtml"}}
-<div x-data="overviewData()" x-init="fetchStats()" class="fade-in">
+<div x-data="overviewData()" x-init="fetchStats.call($data); window.statsscope = $data" class="fade-in">
   <div class="dashboard-header">
     <h1>Overview</h1>
     <div style="display:flex;align-items:center;gap:16px;">
@@ -24,7 +23,7 @@
           <p style="font-size:11px;color:var(--fg-3);margin:4px 0 0">Use this URL as your <code style="font-family:var(--mono);font-size:11px;color:var(--primary);background:var(--primary-light);padding:1px 5px;border-radius:3px">baseURL</code> in SDKs</p>
         </div>
       </div>
-      <button @click="copyUrl()" class="btn" :class="copied ? 'btn-success' : 'btn-secondary'" style="flex-shrink:0">
+      <button onclick="window.overviewScope.copyUrl()" class="btn" :class="copied ? 'btn-success' : 'btn-secondary'" style="flex-shrink:0">
         <span x-show="!copied">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </span>
@@ -325,5 +324,6 @@ function overviewData() {
     }
   };
 }
+
+
 </script>
-{{end}}

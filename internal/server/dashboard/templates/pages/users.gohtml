@@ -1,5 +1,4 @@
-{{define "pages/users.gohtml"}}
-<div x-data="{ showCreateModal: false, newUserName: '', newUserEmail: '', users: null, toasts: [] }" x-init="fetchUsers()">
+<div x-data="{ showCreateModal: false, newUserName: '', newUserEmail: '', users: null, toasts: [] }" x-init="fetchUsers.call($data); window.usersscope = $data">
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
@@ -19,7 +18,7 @@
       </h1>
       <p class="pg-sub">Manage dashboard and API users.</p>
     </div>
-    <button class="btn btn-primary" x-on:click="showCreateModal = true">+ Add User</button>
+    <button class="btn btn-primary" onclick="window.usersScope.showCreateModal = true">+ Add User</button>
   </div>
 
   <!-- Users Table -->
@@ -50,7 +49,7 @@
             <td style="font-size:12px;color:var(--color-fg-2)" x-text="user.team_name || '—'"></td>
             <td style="font-size:12px;color:var(--color-fg-3)" x-text="user.created_at || '—'"></td>
             <td>
-              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" x-on:click="deleteUser(user.id)">Remove</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="window.usersScope.deleteUser(user.id)">Remove</button>
             </td>
           </tr>
         </template>
@@ -61,13 +60,13 @@
   <!-- Create User Modal -->
   <template x-if="showCreateModal">
     <div>
-      <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
-      <div class="modal-panel" x-on:click.outside="showCreateModal = false">
+      <div class="modal-backdrop" onclick="window.usersScope.showCreateModal = false"></div>
+      <div class="modal-panel" onclick="window.usersScope.showCreateModal = false">
         <div class="modal-hdr">
           <h2 class="modal-title">Add User</h2>
-          <button class="btn-icon" style="font-size:18px" x-on:click="showCreateModal = false">&times;</button>
+          <button class="btn-icon" style="font-size:18px" onclick="window.usersScope.showCreateModal = false">&times;</button>
         </div>
-        <form x-on:submit="createUser()">
+        <form onsubmit="event.preventDefault(); createUser.call(window.usersScope)">
           <label>Name</label>
           <input type="text" name="name" x-model="newUserName" placeholder="Full name">
           <label>Email</label>
@@ -78,8 +77,8 @@
             <option value="admin">Admin</option>
           </select>
           <div class="btn-row">
-            <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" x-bind:disabled="!newUserName.trim() || !newUserEmail.trim()">Add User</button>
+            <button type="button" class="btn btn-secondary" onclick="window.usersScope.showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="!newUserName.trim() || !newUserEmail.trim()" onclick="createUser.call(window.usersScope)">Add User</button>
           </div>
         </form>
       </div>
@@ -135,5 +134,6 @@ async function deleteUser(id) {
     }
   } catch(e) { console.error('Delete user failed', e); }
 }
+
+
 </script>
-{{end}}

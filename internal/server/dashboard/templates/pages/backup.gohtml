@@ -1,5 +1,4 @@
-{{define "pages/backup.gohtml"}}
-<div x-data="backupData()" x-init="fetchBackup()">
+<div x-data="backupData()" x-init="fetchBackup.call($data); window.backupscope = $data">
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
@@ -49,8 +48,8 @@
       Create a full backup of your Lintasan database including all settings, keys, teams, users, and routing configuration.
     </p>
     <button class="btn btn-primary"
-            x-on:click="createBackup()"
-            x-bind:disabled="loading">
+            onclick="window.backupScope.createBackup()"
+            :disabled="loading">
       <span x-show="loading" class="spinner spinner-inline"></span>
       <span x-text="loading ? 'Creating...' : 'Create Backup Now'"></span>
     </button>
@@ -82,5 +81,6 @@ function backupData() {
     }
   };
 }
+
+
 </script>
-{{end}}

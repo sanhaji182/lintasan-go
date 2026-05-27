@@ -1,4 +1,3 @@
-{{define "pages/connections.gohtml"}}
 <div
   x-data="connectionsPage()"
   x-init="init()"
@@ -16,8 +15,8 @@
     <div style="display:flex;gap:8px">
       <button
         class="btn btn-secondary"
-        x-on:click="syncAll()"
-        x-bind:disabled="syncLoading"
+        onclick="syncAll()"
+        :disabled="syncLoading"
       >
         <span x-show="!syncLoading" style="display:flex;align-items:center;gap:6px">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -30,7 +29,7 @@
       </button>
       <button
         class="btn btn-primary"
-        x-on:click="openAddModal()"
+        onclick="openAddModal()"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         Add Provider
@@ -70,7 +69,7 @@
             </td>
           </tr>
         </template>
-        <template x-for="conn in connections" x-bind:key="conn.id">
+        <template x-for="conn in connections" :key="conn.id">
           <tr>
             <td style="font-size:13px;font-weight:500" x-text="conn.name"></td>
             <td style="font-size:12px;color:var(--fg-2)" x-text="conn.provider"></td>
@@ -80,7 +79,7 @@
             <td>
               <span
                 class="badge"
-                x-bind:class="conn.is_active ? 'badge-success' : 'badge-danger'"
+                :class="conn.is_active ? 'badge-success' : 'badge-danger'"
                 x-text="conn.is_active ? 'Active' : 'Inactive'"
               ></span>
             </td>
@@ -89,11 +88,11 @@
             </td>
             <td>
               <div style="display:flex;gap:4px">
-                <button class="btn btn-ghost btn-sm" x-on:click="openEditModal(conn)">
+                <button class="btn btn-ghost btn-sm" onclick="openEditModal(conn)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   Edit
                 </button>
-                <button class="btn btn-ghost btn-sm" style="color:var(--error)" x-on:click="confirmDelete(conn)">
+                <button class="btn btn-ghost btn-sm" style="color:var(--error)" onclick="confirmDelete(conn)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                   Delete
                 </button>
@@ -110,18 +109,18 @@
   <!-- ════════════════════════════════════════════ -->
   <template x-if="showModal">
     <div>
-      <div class="modal-backdrop" x-on:click="closeModal()"></div>
+      <div class="modal-backdrop" onclick="closeModal()"></div>
       <div
         class="modal-panel"
         style="max-width:640px"
-        x-on:click.outside="closeModal()"
+        onclick="window.connScope.closeModal()"
       >
         <!-- header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0" x-text="modalTitle"></h2>
           <button
             style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
-            x-on:click="closeModal()"
+            onclick="closeModal()"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -146,19 +145,19 @@
             <template x-if="presets && presets._error">
               <div style="text-align:center;padding:16px 0">
                 <p style="font-size:13px;color:var(--error);margin:0" x-text="presets._error"></p>
-                <button class="btn btn-ghost btn-sm" style="margin-top:8px" x-on:click="loadPresets()">Retry</button>
+                <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="loadPresets()">Retry</button>
               </div>
             </template>
 
             <!-- preset cards grid -->
             <template x-if="presets && !presets._error && presets.length">
               <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;max-height:360px;overflow-y:auto;padding-right:4px">
-                <template x-for="p in presets" x-bind:key="p.provider || p.name">
+                <template x-for="p in presets" :key="p.provider || p.name">
                   <button
                     type="button"
                     class="btn btn-secondary btn-sm"
                     style="justify-content:flex-start;padding:8px;text-align:left"
-                    x-on:click="selectPreset(p)"
+                    onclick="selectPreset(p)"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                     <span x-text="p.label || p.name || p.provider"></span>
@@ -177,7 +176,7 @@
             <button
               class="btn btn-ghost"
               style="margin-top:8px"
-              x-on:click="selectPreset({ provider: 'custom', name: '', label: 'Custom' })"
+              onclick="selectPreset({ provider: 'custom', name: '', label: 'Custom' })"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
               Manual Configuration
@@ -187,10 +186,10 @@
 
         <!-- STEP 2: Manual form (preset chosen OR edit mode) -->
         <template x-if="selectedPreset || editMode">
-          <form x-on:submit.prevent="saveConnection()">
+          <form @submit.prevent="saveConnection()">
             <!-- hidden id when editing -->
             <template x-if="editMode">
-              <input type="hidden" name="id" x-bind:value="editId" />
+              <input type="hidden" name="id" :value="editId" />
             </template>
 
             <div>
@@ -250,8 +249,8 @@
               <button
                 type="button"
                 class="btn btn-secondary"
-                x-on:click="testConnection()"
-                x-bind:disabled="testLoading"
+                onclick="testConnection()"
+                :disabled="testLoading"
               >
                 <span x-show="!testLoading" style="display:flex;align-items:center;gap:6px">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -283,7 +282,7 @@
               <button
                 type="button"
                 class="btn btn-secondary"
-                x-on:click="backToPresets()"
+                onclick="backToPresets()"
                 x-show="!editMode"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -292,12 +291,12 @@
               <button
                 type="button"
                 class="btn btn-secondary"
-                x-on:click="closeModal()"
+                onclick="closeModal()"
               >Cancel</button>
               <button
                 type="submit"
                 class="btn btn-primary"
-                x-bind:disabled="!form.name.trim() || !form.provider.trim() || saving"
+                :disabled="!form.name.trim() || !form.provider.trim() || saving"
               >
                 <span x-show="!saving" x-text="editMode ? 'Update' : 'Save'"></span>
                 <span x-show="saving" x-cloak style="display:flex;align-items:center;gap:6px">
@@ -317,13 +316,13 @@
   <!-- ════════════════════════════════════════════ -->
   <template x-if="deleteTarget">
     <div>
-      <div class="modal-backdrop" x-on:click="deleteTarget = null"></div>
-      <div class="modal-panel" x-on:click.outside="deleteTarget = null">
+      <div class="modal-backdrop" onclick="deleteTarget = null"></div>
+      <div class="modal-panel" onclick="window.connScope.deleteTarget = null">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0">Delete Provider</h2>
           <button
             style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
-            x-on:click="deleteTarget = null"
+            onclick="deleteTarget = null"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -336,11 +335,11 @@
           This will remove the connection and all associated data. This action cannot be undone.
         </p>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn btn-secondary" x-on:click="deleteTarget = null">Cancel</button>
+          <button class="btn btn-secondary" onclick="deleteTarget = null">Cancel</button>
           <button
             class="btn btn-danger"
-            x-on:click="doDelete()"
-            x-bind:disabled="deleting"
+            onclick="doDelete()"
+            :disabled="deleting"
           >
             <span x-show="!deleting">Delete</span>
             <span x-show="deleting" x-cloak style="display:flex;align-items:center;gap:6px">
@@ -355,10 +354,10 @@
 
   <!-- Toasts -->
   <div style="position:fixed;bottom:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px">
-    <template x-for="(t, idx) in toasts" x-bind:key="idx">
+    <template x-for="(t, idx) in toasts" :key="idx">
       <div
         style="border-radius:var(--radius);padding:12px 20px;font-size:13px;font-weight:500;color:#fff;box-shadow:var(--shadow-md);animation:fadeInScale .3s ease-out;max-width:360px"
-        x-bind:style="t.type === 'success' ? 'background:#166534' : 'background:#991b1b'"
+        :style="t.type === 'success' ? 'background:#166534' : 'background:#991b1b'"
         x-text="t.message"
         x-init="setTimeout(() => toasts.splice(idx, 1), 3500)"
       ></div>
@@ -388,6 +387,8 @@ function connectionsPage() {
 
     // ── init ──
     init() {
+          window.connectionsScope = this;
+      window.connectionsScope = this;
       this.fetchConnections();
     },
 
@@ -608,5 +609,6 @@ function connectionsPage() {
     },
   };
 }
+
+
 </script>
-{{end}}

@@ -1,4 +1,20 @@
-{{define "components/spinner.gohtml"}}
-<div class="spinner"
-  {{if .Size}}style="width:{{.Size}}px; height:{{.Size}}px;"{{end}}></div>
-{{end}}
+1|2|<div class="spinner"
+     3|  {{if .Size}}style="width:{{.Size}}px; height:{{.Size}}px;"{{end}}></div>
+     4|}
+     5|
+     6|<!-- SCOPE BRIDGE: exposes Alpine data to window.spinnerScope for onclick handlers -->
+     7|<script>
+     8|(function() {
+     9|  var el = document.querySelector('[x-data]');
+    10|  if (!el) return;
+    11|  var check = setInterval(function() {
+    12|    try {
+    13|      var data = Alpine.$data ? Alpine.$data(el) : null;
+    14|      if (data && Object.keys(data).length > 0) {
+    15|        window.spinnerScope = data;
+    16|        clearInterval(check);
+    17|      }
+    18|    } catch(e) {}
+    19|  }, 100);
+    20|})();
+    21|</script>

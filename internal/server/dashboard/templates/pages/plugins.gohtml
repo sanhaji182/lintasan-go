@@ -1,5 +1,4 @@
-{{define "pages/plugins.gohtml"}}
-<div x-data="pluginsData()" x-init="fetchAll()">
+<div x-data="pluginsData()" x-init="fetchAll.call($data); window.allscope = $data">
   <div class="flex items-center justify-between mb-5">
     <div>
       <h1 class="text-xl font-bold text-[var(--color-fg-0)]">🧩 Plugins</h1>
@@ -36,7 +35,7 @@
             <td class="text-xs text-[var(--color-fg-2)]" x-text="p.description || '—'"></td>
             <td><span class="badge" :class="p.enabled ? 'badge-success' : 'badge-danger'" x-text="p.enabled ? 'Active' : 'Disabled'"></span></td>
             <td>
-              <button class="btn btn-ghost btn-sm" x-on:click="togglePlugin(p)" x-text="p.enabled ? 'Disable' : 'Enable'"></button>
+              <button class="btn btn-ghost btn-sm" onclick="window.pluginsScope.togglePlugin(p)" x-text="p.enabled ? 'Disable' : 'Enable'"></button>
             </td>
           </tr>
         </template>
@@ -68,7 +67,7 @@
                   <span class="ml-2" x-text="p.author ? 'by ' + p.author : ''"></span>
                 </div>
               </div>
-              <button class="btn btn-primary btn-sm" x-on:click="confirmInstall(p)">Install</button>
+              <button class="btn btn-primary btn-sm" onclick="window.pluginsScope.confirmInstall(p)">Install</button>
             </div>
           </template>
         </div>
@@ -79,18 +78,18 @@
   <!-- Install Confirmation Modal -->
   <template x-if="showConfirm">
     <div>
-      <div class="modal-backdrop" x-on:click="showConfirm = false"></div>
-      <div class="modal-panel" x-on:click.outside="showConfirm = false">
+      <div class="modal-backdrop" onclick="window.pluginsScope.showConfirm = false"></div>
+      <div class="modal-panel" onclick="window.pluginsScope.showConfirm = false">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-base font-semibold text-[var(--color-fg-0)]">Install Plugin</h2>
-          <button class="text-lg text-[var(--color-fg-3)] hover:text-[var(--color-fg-0)]" x-on:click="showConfirm = false">&times;</button>
+          <button class="text-lg text-[var(--color-fg-3)] hover:text-[var(--color-fg-0)]" onclick="window.pluginsScope.showConfirm = false">&times;</button>
         </div>
         <p class="text-sm text-[var(--color-fg-2)] mb-4">
           Are you sure you want to install <strong x-text="installPlugin?.name"></strong>? It may have access to your API keys and data.
         </p>
         <div class="flex gap-2 justify-end">
-          <button class="btn btn-secondary" x-on:click="showConfirm = false">Cancel</button>
-          <button class="btn btn-primary" x-on:click="doInstall()">Install</button>
+          <button class="btn btn-secondary" onclick="window.pluginsScope.showConfirm = false">Cancel</button>
+          <button class="btn btn-primary" onclick="window.pluginsScope.doInstall()">Install</button>
         </div>
       </div>
     </div>
@@ -157,5 +156,6 @@ function pluginsData() {
     }
   };
 }
+
+
 </script>
-{{end}}

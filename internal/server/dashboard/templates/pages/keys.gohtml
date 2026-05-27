@@ -1,5 +1,4 @@
-{{define "pages/keys.gohtml"}}
-<div x-data="{ showCreateModal: false, newKeyName: '', keys: null, toasts: [] }" x-init="fetchKeys()">
+<div x-data="{ showCreateModal: false, newKeyName: '', keys: null, toasts: [] }" x-init="fetchKeys.call(this); window.keysScope = $data">
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
@@ -22,7 +21,7 @@
       </h1>
       <p class="pg-sub">Manage API keys for authenticating requests.</p>
     </div>
-    <button class="btn btn-primary" x-on:click="showCreateModal = true">+ Create Key</button>
+    <button class="btn btn-primary" onclick="window.keysScope.showCreateModal = true">+ Create Key</button>
   </div>
 
   <!-- Keys Table -->
@@ -49,14 +48,14 @@
             <td style="font-size:13px;font-weight:500" x-text="key.name"></td>
             <td>
               <span class="key-mono" x-text="key.key ? key.key.substring(0, 8) + '...' : '—'"></span>
-              <button class="btn btn-ghost btn-sm copy-btn" x-on:click="copyKey(key)" title="Copy to clipboard">
+              <button class="btn btn-ghost btn-sm copy-btn" onclick="window.keysScope.copyKey(key)" title="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
               </button>
             </td>
             <td style="font-size:12px;color:var(--color-fg-3)" x-text="key.created_at || '—'"></td>
             <td style="font-size:12px;color:var(--color-fg-2)" x-text="key.requests || 0"></td>
             <td>
-              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" x-on:click="deleteKey(key.id)">Revoke</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="window.keysScope.deleteKey(key.id)">Revoke</button>
             </td>
           </tr>
         </template>
@@ -67,18 +66,18 @@
   <!-- Create Key Modal -->
   <template x-if="showCreateModal">
     <div>
-      <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
-      <div class="modal-panel" x-on:click.outside="showCreateModal = false">
+      <div class="modal-backdrop" onclick="window.keysScope.showCreateModal = false"></div>
+      <div class="modal-panel" onclick="window.keysScope.showCreateModal = false">
         <div class="modal-hdr">
           <h2 class="modal-title">Create API Key</h2>
-          <button class="btn-icon" style="font-size:18px" x-on:click="showCreateModal = false">&times;</button>
+          <button class="btn-icon" style="font-size:18px" onclick="window.keysScope.showCreateModal = false">&times;</button>
         </div>
-        <form x-on:submit="createKey()">
+        <form onsubmit="event.preventDefault(); createKey.call(window.keysScope)">
           <label>Key Name</label>
           <input type="text" name="name" x-model="newKeyName" placeholder="e.g., Production, Development">
           <div class="btn-row">
-            <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" x-bind:disabled="!newKeyName.trim()">Create</button>
+            <button type="button" class="btn btn-secondary" onclick="window.keysScope.showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="!newKeyName.trim()" onclick="createKey.call(window.keysScope)">Create</button>
           </div>
         </form>
       </div>
@@ -137,5 +136,6 @@ function copyKey(key) {
     this.toasts.push({ type: 'success', message: 'Key copied to clipboard' });
   }
 }
+
+
 </script>
-{{end}}

@@ -1,4 +1,3 @@
-{{define "pages/routing.gohtml"}}
 <div x-data="{
   routes: null,
   showModal: false,
@@ -6,7 +5,7 @@
   editId: null,
   formData: { name: '', models: '', strategy: 'priority', provider: '', is_active: true },
   toasts: []
-}" x-init="fetchRoutes()">
+}" x-init="fetchRoutes.call($data); window.routesscope = $data">
   <div class="page-header">
     <div>
       <h1 class="page-title">
@@ -15,7 +14,7 @@
       </h1>
       <p class="page-desc">Configure routing priority — drag rows to reorder. Higher priority providers are tried first.</p>
     </div>
-    <button class="btn btn-primary" x-on:click="openCreateModal()">
+    <button class="btn btn-primary" onclick="openCreateModal()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Add Rule
     </button>
@@ -54,8 +53,8 @@
             <td><span class="badge" :class="route.is_active !== false ? 'badge-success' : 'badge-error'" x-text="route.is_active !== false ? 'Active' : 'Inactive'"></span></td>
             <td class="cell-latency" x-text="route.latency_ms ? route.latency_ms + 'ms' : '—'"></td>
             <td class="cell-actions">
-              <button class="btn btn-ghost btn-sm" x-on:click="openEditModal(route)">Edit</button>
-              <button class="btn btn-ghost btn-sm btn-danger-text" x-on:click="deleteRoute(route.id)">Delete</button>
+              <button class="btn btn-ghost btn-sm" onclick="openEditModal(route)">Edit</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text" onclick="deleteRoute(route.id)">Delete</button>
             </td>
           </tr>
         </template>
@@ -66,17 +65,17 @@
   <!-- Create/Edit Modal -->
   <template x-if="showModal">
     <div>
-      <div class="modal-backdrop" x-on:click="closeModal()"></div>
-      <div class="modal-panel" x-on:click.outside="closeModal()">
+      <div class="modal-backdrop" onclick="closeModal()"></div>
+      <div class="modal-panel" onclick="closeModal()">
         <div class="modal-header">
           <h2 class="modal-title" x-text="editMode ? 'Edit Routing Rule' : 'Create Routing Rule'"></h2>
-          <button class="btn-icon" x-on:click="closeModal()">
+          <button class="btn-icon" onclick="closeModal()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <form x-on:submit.prevent="saveRoute()">
+        <form @submit.prevent="saveRoute()">
           <template x-if="editMode">
-            <input type="hidden" name="id" x-bind:value="editId">
+            <input type="hidden" name="id" :value="editId">
           </template>
           
           <div class="form-group">
@@ -109,8 +108,8 @@
           </div>
           
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" x-on:click="closeModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary" x-text="editMode ? 'Update' : 'Create'" x-bind:disabled="!formData.models.trim()"></button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" x-text="editMode ? 'Update' : 'Create'" :disabled="!formData.models.trim()" onclick=""></button>
           </div>
         </form>
       </div>
@@ -240,7 +239,9 @@
         this.toasts.push({ type: 'error', message: 'Network error' });
       }
     }
-  </script>
+  
+
+</script>
   <style>
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
     .page-title { font-size: 18px; font-weight: 700; color: var(--fg-0); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
@@ -270,4 +271,3 @@
     .checkbox-label input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--primary); }
   </style>
 </div>
-{{end}}

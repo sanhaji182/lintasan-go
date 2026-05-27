@@ -1,47 +1,63 @@
-{{define "components/table.gohtml"}}
-<div>
-  <table>
-    <thead>
-      <tr>
-        {{range .Headers}}<th>{{.}}</th>{{end}}
-      </tr>
-    </thead>
-    <tbody>
-      {{if .Loading}}
-      <tr>
-        {{$colspan := len .Headers}}
-        <td colspan="{{$colspan}}" style="text-align:center; padding:24px;">
-          <div class="spinner" style="margin:0 auto;"></div>
-        </td>
-      </tr>
-      {{else if .Error}}
-      <tr>
-        <td colspan="{{len .Headers}}" style="text-align:center; padding:24px; color:var(--color-danger);">
-          ⚠ {{.Error}}
-        </td>
-      </tr>
-      {{else if not .Rows}}
-      <tr>
-        <td colspan="{{len .Headers}}">
-          <div class="empty-state">
-            <div class="empty-state-icon">{{.EmptyIcon}}</div>
-            <p>{{.EmptyMessage}}</p>
-          </div>
-        </td>
-      </tr>
-      {{else}}
-      {{range .Rows}}
-      <tr>
-        {{range .}}<td>{{.}}</td>{{end}}
-      </tr>
-      {{end}}
-      {{end}}
-    </tbody>
-  </table>
-  {{if .Loading}}
-  <div class="htmx-indicator" style="text-align:center; padding:16px;">
-    <div class="spinner" style="margin:0 auto;"></div>
-  </div>
-  {{end}}
-</div>
-{{end}}
+1|2|<div>
+     3|  <table>
+     4|    <thead>
+     5|      <tr>
+     6|        {{range .Headers}}<th>{{.}}</th>{{end}}
+     7|      </tr>
+     8|    </thead>
+     9|    <tbody>
+    10|      {{if .Loading}}
+    11|      <tr>
+    12|        {{$colspan := len .Headers}}
+    13|        <td colspan="{{$colspan}}" style="text-align:center; padding:24px;">
+    14|          <div class="spinner" style="margin:0 auto;"></div>
+    15|        </td>
+    16|      </tr>
+    17|      {{else if .Error}}
+    18|      <tr>
+    19|        <td colspan="{{len .Headers}}" style="text-align:center; padding:24px; color:var(--color-danger);">
+    20|          ⚠ {{.Error}}
+    21|        </td>
+    22|      </tr>
+    23|      {{else if not .Rows}}
+    24|      <tr>
+    25|        <td colspan="{{len .Headers}}">
+    26|          <div class="empty-state">
+    27|            <div class="empty-state-icon">{{.EmptyIcon}}</div>
+    28|            <p>{{.EmptyMessage}}</p>
+    29|          </div>
+    30|        </td>
+    31|      </tr>
+    32|      {{else}}
+    33|      {{range .Rows}}
+    34|      <tr>
+    35|        {{range .}}<td>{{.}}</td>{{end}}
+    36|      </tr>
+    37|      {{end}}
+    38|      {{end}}
+    39|    </tbody>
+    40|  </table>
+    41|  {{if .Loading}}
+    42|  <div class="htmx-indicator" style="text-align:center; padding:16px;">
+    43|    <div class="spinner" style="margin:0 auto;"></div>
+    44|  </div>
+    45|  {{end}}
+    46|</div>
+    47|}
+    48|
+    49|<!-- SCOPE BRIDGE: exposes Alpine data to window.tableScope for onclick handlers -->
+    50|<script>
+    51|(function() {
+    52|  var el = document.querySelector('[x-data]');
+    53|  if (!el) return;
+    54|  var check = setInterval(function() {
+    55|    try {
+    56|      var data = Alpine.$data ? Alpine.$data(el) : null;
+    57|      if (data && Object.keys(data).length > 0) {
+    58|        window.tableScope = data;
+    59|        clearInterval(check);
+    60|      }
+    61|    } catch(e) {}
+    62|  }, 100);
+    63|})();
+    64|</script>

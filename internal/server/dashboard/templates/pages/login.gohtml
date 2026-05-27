@@ -1,4 +1,3 @@
-{{define "pages/login.gohtml"}}
 <div class="flex items-center justify-center min-h-[60vh]">
   <div class="card max-w-[380px] p-8 w-full">
     <div class="text-center mb-6">
@@ -21,7 +20,23 @@
           }
         }
       });
-    </script>
+    
+<!-- SCOPE BRIDGE: exposes Alpine data to window.loginScope for onclick handlers -->
+<script>
+(function() {
+  var el = document.querySelector('[x-data]');
+  if (!el) return;
+  var check = setInterval(function() {
+    try {
+      var data = Alpine.$data ? Alpine.$data(el) : null;
+      if (data && Object.keys(data).length > 0) {
+        window.loginScope = data;
+        clearInterval(check);
+      }
+    } catch(e) {}
+  }, 100);
+})();
+</script>
+</script>
   </div>
 </div>
-{{end}}
