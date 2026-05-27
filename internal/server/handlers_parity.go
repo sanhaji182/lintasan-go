@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sanhaji182/lintasan-go/internal/discover"
 )
 
 func (s *Server) registerParityRoutes() {
@@ -20,6 +22,8 @@ func (s *Server) registerParityRoutes() {
     s.mux.HandleFunc("POST /api/connections/test", s.handleConnectionTest)
     s.mux.HandleFunc("GET /api/models/sync", s.handleModelsSync)
     s.mux.HandleFunc("POST /api/models/sync", s.handleModelsSync)
+    s.mux.HandleFunc("POST /api/models/sync/{connection_id}", s.handleModelsSyncByID)
+    s.mux.HandleFunc("GET /api/models/discovered", s.handleModelsDiscovered)
     s.mux.HandleFunc("GET /api/models/manual", s.handleModelsManual)
     s.mux.HandleFunc("POST /api/models/manual", s.handleModelsManual)
     s.mux.HandleFunc("DELETE /api/models/manual", s.handleModelsManual)
@@ -119,12 +123,112 @@ func (s *Server) handleConnectionTest(w http.ResponseWriter, r *http.Request){
     writeJSON(w,map[string]any{"success":true,"message":fmt.Sprintf("Connected successfully · %d models found · %dms", len(models), time.Since(start).Milliseconds()),"latency_ms":time.Since(start).Milliseconds(),"models_count":len(models)})
 }
 
+func (s *Server) handleModelsSyncByID(w http.ResponseWriter, r *http.Request) {
+    connID := r.PathValue("connection_id")
+    if connID == "" {
+        writeJSON(w, map[string]any{"error": map[string]string{"message": "connection_id is required"}})
+        return
+    }
+    res, err := s.discoverer.SyncConnection(connID)
+    if err != nil {
+        writeJSON(w, map[string]any{"error": map[string]string{"message": err.Error()}})
+        return
+    }
+    writeJSON(w, map[string]any{
+        "success": true,
+        "data":    res,
+        "synced":  res.ModelsCount,
+    })
+}
+
+func (s *Server) handleModelsDiscovered(w http.ResponseWriter, r *http.Request) {
+    connID := r.URL.Query().Get("connection_id")
+    var rows *sql.Rows
+    var err error
+    if connID != "" {
+        rows, err = s.db.Conn().Query(
+            "SELECT id, model_id, model_name, owned_by, is_active, discovered_at FROM discovered_models WHERE connection_id=? ORDER BY model_id", connID)
+    } else {
+        rows, err = s.db.Conn().Query(
+            "SELECT id, model_id, model_name, owned_by, is_active, discovered_at FROM discovered_models ORDER BY model_id")
+    }
+    out := []map[string]any{}
+    if err == nil && rows != nil {
+        defer rows.Close()
+        for rows.Next() {
+            var id, mid, name, owner, dt string
+            var active int
+            rows.Scan(&id, &mid, &name, &owner, &active, &dt)
+            out = append(out, map[string]any{
+                "id": id, "model_id": mid, "model_name": name,
+                "owned_by": owner, "is_active": active, "discovered_at": dt,
+            })
+        }
+    }
+    writeData(w, out)
+}
+
 func (s *Server) handleModelsSync(w http.ResponseWriter, r *http.Request){
-    if r.Method=="GET" { connID:=r.URL.Query().Get("connection_id"); rows,_:=s.db.Conn().Query("SELECT id, model_id, model_name, owned_by, is_active, discovered_at FROM discovered_models WHERE connection_id=? ORDER BY model_id", connID); out:=[]map[string]any{}; if rows!=nil{defer rows.Close(); for rows.Next(){var id,mid,name,owner,dt string; var active int; rows.Scan(&id,&mid,&name,&owner,&active,&dt); out=append(out,map[string]any{"id":id,"model_id":mid,"model_name":name,"owned_by":owner,"is_active":active,"discovered_at":dt})}}; writeData(w,out); return }
-    var in map[string]any; json.NewDecoder(r.Body).Decode(&in); onlyID,_:=in["connection_id"].(string)
-    q:="SELECT id, base_url, api_key, models_path, auth_header, auth_prefix FROM connections WHERE is_active=1"; args:=[]any{}; if onlyID!=""{q+=" AND id=?"; args=append(args,onlyID)}
-    rows,_:=s.db.Conn().Query(q,args...); synced:=0; if rows!=nil{defer rows.Close(); for rows.Next(){var id,base,key,path,h,p string; rows.Scan(&id,&base,&key,&path,&h,&p); if path==""{path="/v1/models"}; models,err:=fetchModels(base,path,key,h,p); if err==nil{ s.db.Conn().Exec("DELETE FROM discovered_models WHERE connection_id=? AND owned_by!='manual'",id); for _,m:=range models{ mm,_:=m.(map[string]any); mid,_:=mm["id"].(string); if mid==""{continue}; s.db.Conn().Exec("INSERT OR REPLACE INTO discovered_models(id,connection_id,model_id,model_name,owned_by,is_active) VALUES(?,?,?,?,?,1)", uuid.New().String(),id,mid,mid,fmt.Sprint(mm["owned_by"])); synced++ }; s.db.Conn().Exec("UPDATE connections SET models_count=(SELECT COUNT(*) FROM discovered_models WHERE connection_id=? AND is_active=1), last_sync=datetime('now') WHERE id=?", id, id) } } }
-    writeJSON(w,map[string]any{"success":true,"data":map[string]any{"synced":synced},"synced":synced})
+    if r.Method==http.MethodGet {
+        connID := r.URL.Query().Get("connection_id")
+        var rows *sql.Rows
+        var err error
+        if connID != "" {
+            rows, err = s.db.Conn().Query(
+                "SELECT id, model_id, model_name, owned_by, is_active, discovered_at FROM discovered_models WHERE connection_id=? ORDER BY model_id", connID)
+        } else {
+            rows, err = s.db.Conn().Query(
+                "SELECT id, model_id, model_name, owned_by, is_active, discovered_at FROM discovered_models ORDER BY model_id")
+        }
+        out := []map[string]any{}
+        if err == nil && rows != nil {
+            defer rows.Close()
+            for rows.Next() {
+                var id, mid, name, owner, dt string
+                var active int
+                rows.Scan(&id, &mid, &name, &owner, &active, &dt)
+                out = append(out, map[string]any{
+                    "id": id, "model_id": mid, "model_name": name,
+                    "owned_by": owner, "is_active": active, "discovered_at": dt,
+                })
+            }
+        }
+        writeData(w, out)
+        return
+    }
+
+    // POST: trigger sync
+    var in map[string]any
+    json.NewDecoder(r.Body).Decode(&in)
+    connID, _ := in["connection_id"].(string)
+
+    var results any
+    var totalSynced int
+    if connID != "" {
+        res, err := s.discoverer.SyncConnection(connID)
+        if err != nil {
+            writeJSON(w, map[string]any{"error": map[string]string{"message": err.Error()}})
+            return
+        }
+        if res.Status == "ok" { totalSynced = res.ModelsCount }
+        results = []*discover.SyncResult{res}
+    } else {
+        resList, err := s.discoverer.SyncAll()
+        if err != nil {
+            writeJSON(w, map[string]any{"error": map[string]string{"message": err.Error()}})
+            return
+        }
+        for _, r := range resList {
+            if r.Status == "ok" { totalSynced += r.ModelsCount }
+        }
+        results = resList
+    }
+
+    writeJSON(w, map[string]any{
+        "success": true,
+        "data":    results,
+        "synced":  totalSynced,
+    })
 }
 func (s *Server) handleModelsManual(w http.ResponseWriter, r *http.Request){
     connID:=r.URL.Query().Get("connectionId"); if connID==""{connID=r.URL.Query().Get("connection_id")}

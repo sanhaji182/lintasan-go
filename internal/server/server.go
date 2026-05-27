@@ -14,6 +14,7 @@ import (
 	"github.com/sanhaji182/lintasan-go/internal/auth"
 	"github.com/sanhaji182/lintasan-go/internal/config"
 	"github.com/sanhaji182/lintasan-go/internal/db"
+	"github.com/sanhaji182/lintasan-go/internal/discover"
 	"github.com/sanhaji182/lintasan-go/internal/mitm"
 	"github.com/sanhaji182/lintasan-go/internal/plugin"
 )
@@ -28,6 +29,7 @@ type Server struct {
 	mitmProxy  *mitm.MITMProxy        // MITM bridge for IDE interception
 	oauthMgr   *auth.OAuthManager     // OAuth session manager
 	pluginMgr  *plugin.Manager        // JS plugin engine (also in proxy.pm)
+	discoverer *discover.Discoverer   // auto model discovery
 	mitmOnce   sync.Once              // ensures MITM starts exactly once
 }
 
@@ -57,6 +59,9 @@ func New(cfg *config.Config, database *db.DB) *Server {
 
 	// Wire plugin manager (shared with proxy so both have access)
 	s.pluginMgr = s.proxy.pm
+
+	// Wire model discoverer
+	s.discoverer = discover.NewDiscoverer(database)
 
 	// Wire MITM proxy if MITM_PORT env set
 	if port := os.Getenv("MITM_PORT"); port != "" {
