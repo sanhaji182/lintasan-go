@@ -97,14 +97,6 @@ func providerCategories() []map[string]any { return []map[string]any{{"id":"majo
 func (s *Server) handleProviderPresets(w http.ResponseWriter, r *http.Request){ writeJSON(w, map[string]any{"data":providerPresets(),"categories":providerCategories()}) }
 func (s *Server) handleProviderPresetsConfig(w http.ResponseWriter, r *http.Request){ id:=r.URL.Query().Get("id"); for _,p:=range providerPresets(){ if p["id"]==id { writeData(w,p); return } }; writeJSON(w, map[string]any{"data":map[string]any{},"presets":providerPresets(),"formats":[]string{"openai","anthropic","gemini","ollama","custom"}}) }
 
-func (s *Server) handleProviderDiscover(w http.ResponseWriter, r *http.Request){
-    var in map[string]any; json.NewDecoder(r.Body).Decode(&in)
-    base,_:=in["base_url"].(string); key,_:=in["api_key"].(string); path,_:=in["models_path"].(string); if path==""{path="/v1/models"}
-    models, err := fetchModels(base, path, key, "Authorization", "Bearer ")
-    if err != nil { writeJSON(w,map[string]any{"success":false,"error":err.Error(),"models":[]any{}}); return }
-    writeJSON(w,map[string]any{"success":true,"models":models,"count":len(models)})
-}
-
 func fetchModels(base, path, key, h, prefix string)([]any,error){
     if base=="" { return nil, fmt.Errorf("base_url required") }
     req,_:=http.NewRequest("GET", strings.TrimRight(base,"/")+path, nil)
@@ -269,4 +261,3 @@ func (s *Server) handleAuthLogout(w http.ResponseWriter,r *http.Request){ writeJ
 func (s *Server) handleTeamByID(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"success":true,"id":r.PathValue("id")}) }
 func (s *Server) handleTeamMembers(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"team_id":r.PathValue("id"),"members":[]any{}}) }
 func (s *Server) handleUserByID(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"success":true,"id":r.PathValue("id")}) }
-func (s *Server) handleWebSearch(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"results":[]any{},"note":"web search provider not configured"}) }

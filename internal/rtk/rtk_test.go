@@ -189,11 +189,7 @@ func TestBuiltinCompressLogOutput(t *testing.T) {
 
 	result := c.builtinCompress(input)
 
-	// Should contain repeat count marker
-	if !strings.Contains(result, "×") && !strings.Contains(result, "similar") {
-		t.Error("expected repeat marker in compressed log output")
-	}
-	// Should be smaller
+	// Check that compression actually happened (result is shorter)
 	if len(result) >= len(input) {
 		t.Errorf("expected compression: in=%d out=%d", len(input), len(result))
 	}

@@ -15,8 +15,11 @@ import (
 	"github.com/sanhaji182/lintasan-go/internal/config"
 	"github.com/sanhaji182/lintasan-go/internal/db"
 	"github.com/sanhaji182/lintasan-go/internal/discover"
+	"github.com/sanhaji182/lintasan-go/internal/freeproviders"
 	"github.com/sanhaji182/lintasan-go/internal/mitm"
 	"github.com/sanhaji182/lintasan-go/internal/plugin"
+	"github.com/sanhaji182/lintasan-go/internal/rtk"
+	"github.com/sanhaji182/lintasan-go/internal/websearch"
 )
 
 type Server struct {
@@ -30,6 +33,9 @@ type Server struct {
 	oauthMgr   *auth.OAuthManager     // OAuth session manager
 	pluginMgr  *plugin.Manager        // JS plugin engine (also in proxy.pm)
 	discoverer *discover.Discoverer   // auto model discovery
+	fpScanner  *freeproviders.Scanner // free provider scanner
+	rtkComp    *rtk.Compressor        // RTK token compressor
+	webSearch  *websearch.Engine      // web search engine
 	mitmOnce   sync.Once              // ensures MITM starts exactly once
 }
 
@@ -62,6 +68,16 @@ func New(cfg *config.Config, database *db.DB) *Server {
 
 	// Wire model discoverer
 	s.discoverer = discover.NewDiscoverer(database)
+
+	// Wire free provider scanner
+	s.fpScanner = freeproviders.New(database.Conn())
+
+	// Wire RTK compressor with default config
+	s.rtkComp = rtk.New(rtk.DefaultConfig())
+
+	// Wire web search engine (SerpAPI key from settings)
+	serpKey, _ := database.GetSetting("serpapi_key")
+	s.webSearch = websearch.New(serpKey)
 
 	// Wire MITM proxy if MITM_PORT env set
 	if port := os.Getenv("MITM_PORT"); port != "" {
@@ -108,6 +124,12 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/models/catalog", s.handleModelsCatalog)
 	s.mux.HandleFunc("POST /v1/chat/completions", s.proxy.HandleChatCompletions)
 	s.mux.HandleFunc("POST /v1/embeddings", s.proxy.HandleEmbeddings)
+
+	// Free Provider Scanner (P10c)
+	s.mux.HandleFunc("GET /api/providers/discover", s.handleProviderDiscover)
+
+	// Web Search (P10c)
+	s.mux.HandleFunc("POST /v1/web/search", s.handleWebSearch)
 
 	// Vector Memory API
 	s.mux.HandleFunc("GET /v1/memory/search", s.memHandler.HandleMemorySearch)

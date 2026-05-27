@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+
+	_ "github.com/mattn/go-sqlite3"
 	"strings"
 	"testing"
 )
