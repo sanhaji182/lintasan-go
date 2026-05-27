@@ -1,4 +1,4 @@
-<div x-data="{ showCreateModal: false, newUserName: '', newUserEmail: '', users: null, toasts: [] }" x-init="fetchUsers.call($data); window.usersscope = $data">
+<div x-data="{ showCreateModal: false, newUserName: '', newUserEmail: '', newUserRole: 'member', users: null, toasts: [] }" x-init="fetchUsers()">
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
@@ -18,7 +18,7 @@
       </h1>
       <p class="pg-sub">Manage dashboard and API users.</p>
     </div>
-    <button class="btn btn-primary" onclick="window.usersScope.showCreateModal = true">+ Add User</button>
+    <button class="btn btn-primary" onclick="us.showModal()">+ Add User</button>
   </div>
 
   <!-- Users Table -->
@@ -49,7 +49,7 @@
             <td style="font-size:12px;color:var(--color-fg-2)" x-text="user.team_name || '—'"></td>
             <td style="font-size:12px;color:var(--color-fg-3)" x-text="user.created_at || '—'"></td>
             <td>
-              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="window.usersScope.deleteUser(user.id)">Remove</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="us.deleteItem(this)">Remove</button>
             </td>
           </tr>
         </template>
@@ -60,13 +60,13 @@
   <!-- Create User Modal -->
   <template x-if="showCreateModal">
     <div>
-      <div class="modal-backdrop" onclick="window.usersScope.showCreateModal = false"></div>
-      <div class="modal-panel" onclick="window.usersScope.showCreateModal = false">
+      <div class="modal-backdrop" onclick="us.hideModal()"></div>
+      <div class="modal-panel">
         <div class="modal-hdr">
           <h2 class="modal-title">Add User</h2>
-          <button class="btn-icon" style="font-size:18px" onclick="window.usersScope.showCreateModal = false">&times;</button>
+          <button class="btn-icon" style="font-size:18px" onclick="us.hideModal()">&times;</button>
         </div>
-        <form onsubmit="event.preventDefault(); createUser.call(window.usersScope)">
+        <form onsubmit="event.preventDefault(); us.saveItem()">
           <label>Name</label>
           <input type="text" name="name" x-model="newUserName" placeholder="Full name">
           <label>Email</label>
@@ -77,8 +77,8 @@
             <option value="admin">Admin</option>
           </select>
           <div class="btn-row">
-            <button type="button" class="btn btn-secondary" onclick="window.usersScope.showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="!newUserName.trim() || !newUserEmail.trim()" onclick="createUser.call(window.usersScope)">Add User</button>
+            <button type="button" class="btn btn-secondary" onclick="us.hideModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="!newUserName.trim() || !newUserEmail.trim()">Add User</button>
           </div>
         </form>
       </div>
@@ -94,46 +94,71 @@
 </div>
 
 <script>
-async function fetchUsers() {
-  try {
-    let r = await fetch('/api/users');
-    if (r.ok) {
-      this.users = await r.json();
+(function() {
+  function getData() {
+    var el = document.querySelector('[x-data]');
+    return el ? Alpine.$data(el) : null;
+  }
+
+  window.us = {
+    showModal: function() {
+      var d = getData(); if (!d) return;
+      d.newUserName = '';
+      d.newUserEmail = '';
+      d.newUserRole = 'member';
+      d.showCreateModal = true;
+    },
+    hideModal: function() {
+      var d = getData(); if (!d) return;
+      d.showCreateModal = false;
+    },
+    saveItem: async function() {
+      var d = getData(); if (!d) return;
+      try {
+        var r = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: d.newUserName,
+            email: d.newUserEmail,
+            role: d.newUserRole || 'member'
+          })
+        });
+        if (r.ok) {
+          d.showCreateModal = false;
+          d.newUserName = '';
+          d.newUserEmail = '';
+          await fetchUsers();
+          d.toasts.push({ type: 'success', message: 'User added successfully' });
+        }
+      } catch(e) { console.error('Create user failed', e); }
+    },
+    deleteItem: async function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var user = d.users[idx];
+      if (!user || !user.id) return;
+      if (!confirm('Remove user "' + (user.name || user.email) + '"?')) return;
+      try {
+        var r = await fetch('/api/users?id=' + user.id, { method: 'DELETE' });
+        if (r.ok) {
+          d.users = d.users.filter(function(u) { return u.id !== user.id; });
+          d.toasts.push({ type: 'success', message: 'User removed' });
+        }
+      } catch(e) { console.error('Delete user failed', e); }
     }
-  } catch(e) { console.error('Users fetch failed', e); }
-}
+  };
 
-async function createUser() {
-  try {
-    let r = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        name: this.newUserName,
-        email: this.newUserEmail,
-        role: this.newUserRole || 'member'
-      })
-    });
-    if (r.ok) {
-      this.showCreateModal = false;
-      this.newUserName = '';
-      this.newUserEmail = '';
-      this.fetchUsers();
-      this.toasts.push({ type: 'success', message: 'User added successfully' });
-    }
-  } catch(e) { console.error('Create user failed', e); }
-}
-
-async function deleteUser(id) {
-  if (!confirm('Remove this user?')) return;
-  try {
-    let r = await fetch('/api/users?id=' + id, { method: 'DELETE' });
-    if (r.ok) {
-      this.fetchUsers();
-      this.toasts.push({ type: 'success', message: 'User removed' });
-    }
-  } catch(e) { console.error('Delete user failed', e); }
-}
-
-
+  window.fetchUsers = async function() {
+    var d = getData();
+    if (!d) { setTimeout(fetchUsers, 100); return; }
+    try {
+      var r = await fetch('/api/users');
+      if (r.ok) {
+        d.users = await r.json();
+      }
+    } catch(e) { console.error('Users fetch failed', e); }
+  };
+})();
 </script>

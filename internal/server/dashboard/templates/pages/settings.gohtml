@@ -1,4 +1,4 @@
-<div>
+<div x-data="{ saving: false, saved: false, toasts: [] }">
   <div class="page-header">
     <div>
       <h1 class="page-title">
@@ -9,18 +9,18 @@
     </div>
   </div>
 
-  <form hx-put="/api/settings" hx-swap="none">
+  <form onsubmit="event.preventDefault(); ss.saveSettings()">
     <!-- General Section -->
     <div class="card section-card">
       <h2 class="section-title">General</h2>
       <div class="form-group">
         <label class="form-label">Master Key</label>
-        <input type="password" name="master_key" placeholder="Change master password..." class="form-input">
+        <input type="password" id="master_key" placeholder="Change master password..." class="form-input">
         <p class="form-hint">Leave blank to keep current.</p>
       </div>
       <div class="form-group">
         <label class="form-label">Port</label>
-        <input type="number" name="port" placeholder="8080" class="form-input">
+        <input type="number" id="port" placeholder="8080" class="form-input">
       </div>
     </div>
 
@@ -29,17 +29,17 @@
       <h2 class="section-title">Cache</h2>
       <div class="form-group">
         <label class="checkbox-label">
-          <input type="checkbox" name="cache_enabled" x-model="cacheEnabled">
+          <input type="checkbox" id="cache_enabled" x-model="cacheEnabled">
           <span class="form-label">Enable Response Caching</span>
         </label>
       </div>
       <div class="form-group">
         <label class="form-label">Cache TTL (seconds)</label>
-        <input type="number" name="cache_ttl" placeholder="3600" min="0" class="form-input">
+        <input type="number" id="cache_ttl" placeholder="3600" min="0" class="form-input">
       </div>
       <div class="form-group">
         <label class="form-label">Cache Similarity Threshold</label>
-        <input type="number" name="cache_threshold" step="0.01" min="0" max="1" placeholder="0.95" class="form-input">
+        <input type="number" id="cache_threshold" step="0.01" min="0" max="1" placeholder="0.95" class="form-input">
         <p class="form-hint">Semantic similarity threshold for cache hits (0-1). Higher = stricter matching.</p>
       </div>
     </div>
@@ -49,37 +49,109 @@
       <h2 class="section-title">Security</h2>
       <div class="form-group">
         <label class="checkbox-label">
-          <input type="checkbox" name="rate_limit_enabled" x-model="rateLimitEnabled">
+          <input type="checkbox" id="rate_limit_enabled" x-model="rateLimitEnabled">
           <span class="form-label">Enable Rate Limiting</span>
         </label>
       </div>
       <div x-show="rateLimitEnabled" class="form-group">
         <label class="form-label">Requests per Minute</label>
-        <input type="number" name="rate_limit_rpm" placeholder="60" min="1" class="form-input">
+        <input type="number" id="rate_limit_rpm" placeholder="60" min="1" class="form-input">
       </div>
     </div>
 
     <!-- Save -->
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary">
-        <span class="hidden htmx-indicator">
-          <span class="spinner-sm"></span>
+      <button type="submit" class="btn btn-primary" :disabled="saving">
+        <span x-show="!saving">
+          Save Settings
         </span>
-        Save Settings
+        <span x-show="saving" x-cloak style="display:flex;align-items:center;gap:6px">
+          <span class="spinner-sm"></span>
+          Saving…
+        </span>
       </button>
-      <span id="settings-saved" class="success-msg hidden">Saved</span>
+      <span x-show="saved" class="success-msg">Saved</span>
     </div>
   </form>
 
-  <script>
-    document.body.addEventListener('htmx:afterRequest', function(evt) {
-      if (evt.detail.target && evt.detail.target.closest('form[hx-put="/api/settings"]')) {
-        var saved = document.getElementById('settings-saved');
-        saved.style.display = 'inline';
-        setTimeout(function() { saved.style.display = 'none'; }, 3000);
-      }
-    });
-  
-
-</script>
+  <!-- Toast container -->
+  <div>
+    <template x-for="(t, i) in toasts" :key="i">
+      <div class="toast" :class="'toast-' + t.type" x-init="setTimeout(() => toasts.splice(i, 1), 3000)" x-text="t.message"></div>
+    </template>
+  </div>
 </div>
+
+<script>
+(function() {
+  function getData() {
+    var el = document.querySelector('[x-data]');
+    return el ? Alpine.$data(el) : null;
+  }
+
+  window.ss = {
+    saveSettings: async function() {
+      var d = getData(); if (!d) return;
+      d.saving = true;
+      d.saved = false;
+      try {
+        var masterKey = document.getElementById('master_key').value;
+        var port = document.getElementById('port').value;
+        var cacheEnabled = document.getElementById('cache_enabled').checked;
+        var cacheTtl = document.getElementById('cache_ttl').value;
+        var cacheThreshold = document.getElementById('cache_threshold').value;
+        var rateLimitEnabled = document.getElementById('rate_limit_enabled').checked;
+        var rateLimitRpm = document.getElementById('rate_limit_rpm').value;
+
+        var body = {
+          master_key: masterKey,
+          port: port ? parseInt(port) : null,
+          cache_enabled: cacheEnabled,
+          cache_ttl: cacheTtl ? parseInt(cacheTtl) : null,
+          cache_threshold: cacheThreshold ? parseFloat(cacheThreshold) : null,
+          rate_limit_enabled: rateLimitEnabled,
+          rate_limit_rpm: rateLimitRpm ? parseInt(rateLimitRpm) : null
+        };
+
+        var r = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (r.ok) {
+          d.saved = true;
+          d.toasts.push({ type: 'success', message: 'Settings saved successfully' });
+          setTimeout(function() { d.saved = false; }, 3000);
+        } else {
+          d.toasts.push({ type: 'error', message: 'Failed to save settings' });
+        }
+      } catch(e) {
+        console.error('Save settings failed', e);
+        d.toasts.push({ type: 'error', message: 'Network error' });
+      } finally {
+        d.saving = false;
+      }
+    }
+  };
+})();
+</script>
+
+<style>
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.page-title { font-size: 18px; font-weight: 700; color: var(--fg-0); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.page-desc { font-size: 13px; color: var(--fg-2); }
+.section-card { margin-bottom: 16px; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--fg-1); margin-bottom: 12px; }
+.form-actions { display: flex; align-items: center; gap: 12px; }
+.success-msg { font-size: 13px; color: var(--success); }
+.spinner-sm { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border-light); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 4px; vertical-align: middle; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 11px; font-weight: 600; color: var(--fg-2); margin-bottom: 4px; }
+.form-input { width: 100%; margin-top: 4px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-body); color: var(--fg-0); font-size: 13px; }
+.form-input:focus { outline: none; border-color: var(--primary); }
+.form-hint { font-size: 11px; color: var(--fg-3); margin-top: 4px; }
+.checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.checkbox-label input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--primary); }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>

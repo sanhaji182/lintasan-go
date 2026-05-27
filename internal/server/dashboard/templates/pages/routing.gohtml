@@ -5,7 +5,7 @@
   editId: null,
   formData: { name: '', models: '', strategy: 'priority', provider: '', is_active: true },
   toasts: []
-}" x-init="fetchRoutes.call($data); window.routesscope = $data">
+}" x-init="fetchRoutes()">
   <div class="page-header">
     <div>
       <h1 class="page-title">
@@ -14,7 +14,7 @@
       </h1>
       <p class="page-desc">Configure routing priority — drag rows to reorder. Higher priority providers are tried first.</p>
     </div>
-    <button class="btn btn-primary" onclick="openCreateModal()">
+    <button class="btn btn-primary" onclick="rs.showModal()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Add Rule
     </button>
@@ -43,7 +43,7 @@
           <tr><td colspan="9" class="text-center"><div class="empty-state"><p>No routing rules configured</p></div></td></tr>
         </template>
         <template x-for="(route, index) in routes" :key="route.id">
-          <tr data-id="route.id">
+          <tr :data-id="route.id">
             <td class="drag-handle">⋮⋮</td>
             <td class="cell-priority" x-text="routes.length - index"></td>
             <td class="cell-name" x-text="route.name || '—'"></td>
@@ -53,8 +53,8 @@
             <td><span class="badge" :class="route.is_active !== false ? 'badge-success' : 'badge-error'" x-text="route.is_active !== false ? 'Active' : 'Inactive'"></span></td>
             <td class="cell-latency" x-text="route.latency_ms ? route.latency_ms + 'ms' : '—'"></td>
             <td class="cell-actions">
-              <button class="btn btn-ghost btn-sm" onclick="openEditModal(route)">Edit</button>
-              <button class="btn btn-ghost btn-sm btn-danger-text" onclick="deleteRoute(route.id)">Delete</button>
+              <button class="btn btn-ghost btn-sm" onclick="rs.editItem(this)">Edit</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text" onclick="rs.deleteItem(this)">Delete</button>
             </td>
           </tr>
         </template>
@@ -65,31 +65,31 @@
   <!-- Create/Edit Modal -->
   <template x-if="showModal">
     <div>
-      <div class="modal-backdrop" onclick="closeModal()"></div>
-      <div class="modal-panel" onclick="closeModal()">
+      <div class="modal-backdrop" onclick="rs.hideModal()"></div>
+      <div class="modal-panel">
         <div class="modal-header">
           <h2 class="modal-title" x-text="editMode ? 'Edit Routing Rule' : 'Create Routing Rule'"></h2>
-          <button class="btn-icon" onclick="closeModal()">
+          <button class="btn-icon" onclick="rs.hideModal()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <form @submit.prevent="saveRoute()">
+        <form onsubmit="event.preventDefault(); rs.saveItem()">
           <template x-if="editMode">
             <input type="hidden" name="id" :value="editId">
           </template>
-          
+
           <div class="form-group">
             <label class="form-label">Rule Name</label>
             <input type="text" name="name" x-model="formData.name" placeholder="e.g., coding, cheap, always-on" class="form-input">
             <p class="form-hint">Use this name as the model in API requests</p>
           </div>
-          
+
           <div class="form-group">
             <label class="form-label">Models (comma-separated)</label>
             <input type="text" name="models" x-model="formData.models" placeholder="e.g., gpt-4o, claude-3-opus, deepseek-v4" class="form-input">
             <p class="form-hint">Fallback models in priority order (left = highest priority)</p>
           </div>
-          
+
           <div class="form-group">
             <label class="form-label">Strategy</label>
             <select name="strategy" x-model="formData.strategy" class="form-input">
@@ -99,17 +99,17 @@
               <option value="latency">Latency-based</option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label class="checkbox-label">
               <input type="checkbox" x-model="formData.is_active">
               <span>Active</span>
             </label>
           </div>
-          
+
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary" x-text="editMode ? 'Update' : 'Create'" :disabled="!formData.models.trim()" onclick=""></button>
+            <button type="button" class="btn btn-secondary" onclick="rs.hideModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" x-text="editMode ? 'Update' : 'Create'" :disabled="!formData.models.trim()"></button>
           </div>
         </form>
       </div>
@@ -125,122 +125,152 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   <script>
-    async function fetchRoutes() {
-      try {
-        let r = await fetch('/api/combos');
-        if (r.ok) {
-          let data = await r.json();
-          this.routes = data.data || data || [];
-          this.$nextTick(initSortable);
-        }
-      } catch(e) { console.error('Routing fetch failed', e); }
-    }
+(function() {
+  function getData() {
+    var el = document.querySelector('[x-data]');
+    return el ? Alpine.$data(el) : null;
+  }
 
-    function initSortable() {
-      var tbody = document.getElementById('routing-rows');
-      if (tbody && !tbody._sortableInit && this.routes && this.routes.length > 0) {
-        tbody._sortableInit = true;
-        new Sortable(tbody, {
-          handle: '.drag-handle',
-          animation: 150,
-          onEnd: function() {
-            var rows = tbody.querySelectorAll('tr[data-id]');
-            var order = [];
-            rows.forEach(function(row, i) {
-              order.push({
-                id: row.getAttribute('data-id'),
-                priority: rows.length - i
-              });
-            });
-            fetch('/api/combos/reorder', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ routes: order })
-            });
-          }
-        });
-      }
-    }
-
-    function openCreateModal() {
-      this.editMode = false;
-      this.editId = null;
-      this.formData = { name: '', models: '', strategy: 'priority', provider: '', is_active: true };
-      this.showModal = true;
-    }
-
-    function openEditModal(route) {
-      this.editMode = true;
-      this.editId = route.id;
-      this.formData = {
+  window.rs = {
+    showModal: function() {
+      var d = getData(); if (!d) return;
+      d.editMode = false;
+      d.editId = null;
+      d.formData = { name: '', models: '', strategy: 'priority', provider: '', is_active: true };
+      d.showModal = true;
+    },
+    hideModal: function() {
+      var d = getData(); if (!d) return;
+      d.showModal = false;
+      d.editMode = false;
+      d.editId = null;
+    },
+    editItem: function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var route = d.routes[idx];
+      if (!route) return;
+      d.editMode = true;
+      d.editId = route.id;
+      d.formData = {
         name: route.name || '',
         models: route.models || route.model || '',
         strategy: route.strategy || 'priority',
         provider: route.provider || '',
         is_active: route.is_active !== false
       };
-      this.showModal = true;
-    }
-
-    function closeModal() {
-      this.showModal = false;
-      this.editMode = false;
-      this.editId = null;
-    }
-
-    async function saveRoute() {
+      d.showModal = true;
+    },
+    saveItem: async function() {
+      var d = getData(); if (!d) return;
       try {
-        let method = this.editMode ? 'PUT' : 'POST';
-        let url = '/api/combos';
-        if (this.editMode) {
-          url += '?id=' + encodeURIComponent(this.editId);
+        var method = d.editMode ? 'PUT' : 'POST';
+        var url = '/api/combos';
+        if (d.editMode) {
+          url += '?id=' + encodeURIComponent(d.editId);
         }
-        
-        let body = {
-          name: this.formData.name,
-          models: this.formData.models,
-          strategy: this.formData.strategy,
-          is_active: this.formData.is_active
+
+        var body = {
+          name: d.formData.name,
+          models: d.formData.models,
+          strategy: d.formData.strategy,
+          is_active: d.formData.is_active
         };
-        
-        let r = await fetch(url, {
+
+        var r = await fetch(url, {
           method: method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
-        
-        if (r.ok) {
-          this.closeModal();
-          this.fetchRoutes();
-          this.toasts.push({ type: 'success', message: this.editMode ? 'Rule updated successfully' : 'Rule created successfully' });
-        } else {
-          let err = await r.json();
-          this.toasts.push({ type: 'error', message: 'Failed: ' + (err.error || 'Unknown error') });
-        }
-      } catch(e) { 
-        console.error('Save route failed', e);
-        this.toasts.push({ type: 'error', message: 'Network error' });
-      }
-    }
 
-    async function deleteRoute(id) {
+        if (r.ok) {
+          d.hideModal && rs.hideModal();
+          await fetchRoutes();
+          d.toasts.push({ type: 'success', message: d.editMode ? 'Rule updated successfully' : 'Rule created successfully' });
+        } else {
+          var err = await r.json().catch(function(){ return {}; });
+          d.toasts.push({ type: 'error', message: 'Failed: ' + (err.error || 'Unknown error') });
+        }
+      } catch(e) {
+        console.error('Save route failed', e);
+        var d2 = getData();
+        if (d2) d2.toasts.push({ type: 'error', message: 'Network error' });
+      }
+    },
+    deleteItem: async function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var route = d.routes[idx];
+      if (!route || !route.id) return;
       if (!confirm('Delete this routing rule? This cannot be undone.')) return;
       try {
-        let r = await fetch('/api/combos?id=' + encodeURIComponent(id), { method: 'DELETE' });
+        var r = await fetch('/api/combos?id=' + encodeURIComponent(route.id), { method: 'DELETE' });
         if (r.ok) {
-          this.fetchRoutes();
-          this.toasts.push({ type: 'success', message: 'Rule deleted' });
+          d.routes = d.routes.filter(function(rt){ return rt.id !== route.id; });
+          d.toasts.push({ type: 'success', message: 'Rule deleted' });
         } else {
-          let err = await r.json();
-          this.toasts.push({ type: 'error', message: 'Failed: ' + (err.error || 'Unknown error') });
+          var err = await r.json().catch(function(){ return {}; });
+          d.toasts.push({ type: 'error', message: 'Failed: ' + (err.error || 'Unknown error') });
         }
-      } catch(e) { 
+      } catch(e) {
         console.error('Delete route failed', e);
-        this.toasts.push({ type: 'error', message: 'Network error' });
+        d.toasts.push({ type: 'error', message: 'Network error' });
       }
     }
-  
+  };
 
+  window.fetchRoutes = async function() {
+    var d = getData();
+    if (!d) { setTimeout(fetchRoutes, 100); return; }
+    try {
+      var r = await fetch('/api/combos');
+      if (r.ok) {
+        var data = await r.json();
+        d.routes = data.data || data || [];
+        // Re-init sortable after Alpine processes the new data
+        if (d.$nextTick) {
+          d.$nextTick(function() { initSortable(); });
+        } else {
+          setTimeout(initSortable, 50);
+        }
+      }
+    } catch(e) { console.error('Routing fetch failed', e); }
+  };
+
+  function initSortable() {
+    var tbody = document.getElementById('routing-rows');
+    if (!tbody) return;
+    if (tbody._sortableInit) {
+      // Destroy previous instance if needed
+    }
+    var d = getData();
+    if (!d || !d.routes || d.routes.length === 0) return;
+    tbody._sortableInit = true;
+    if (typeof Sortable !== 'undefined') {
+      new Sortable(tbody, {
+        handle: '.drag-handle',
+        animation: 150,
+        onEnd: function() {
+          var rows = tbody.querySelectorAll('tr[data-id]');
+          var order = [];
+          rows.forEach(function(row, i) {
+            order.push({
+              id: row.getAttribute('data-id'),
+              priority: rows.length - i
+            });
+          });
+          fetch('/api/combos/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ routes: order })
+          });
+        }
+      });
+    }
+  }
+})();
 </script>
   <style>
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }

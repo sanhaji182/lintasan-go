@@ -1,4 +1,4 @@
-<div x-data="{ showCreateModal: false, newTeamName: '', teams: null, toasts: [] }" x-init="fetchTeams.call($data); window.teamsscope = $data">
+<div x-data="{ showCreateModal: false, editMode: false, editId: '', newTeamName: '', newRateLimit: '', teams: null, toasts: [] }" x-init="fetchTeams()">
   <div class="page-header">
     <div>
       <h1 class="page-title">
@@ -7,7 +7,7 @@
       </h1>
       <p class="page-desc">Manage teams and their rate limits.</p>
     </div>
-    <button class="btn btn-primary" onclick="window.teamsScope.showCreateModal = true">
+    <button class="btn btn-primary" onclick="ts.showModal()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Create Team
     </button>
@@ -39,8 +39,8 @@
             <td class="cell-meta" x-text="team.rate_limit ? team.rate_limit + '/min' : 'Unlimited'"></td>
             <td class="cell-date" x-text="team.created_at || '—'"></td>
             <td class="cell-actions">
-              <button class="btn btn-ghost btn-sm" onclick="window.teamsScope.editTeam(team)">Edit</button>
-              <button class="btn btn-ghost btn-sm btn-danger-text" onclick="window.teamsScope.deleteTeam(team.id)">Delete</button>
+              <button class="btn btn-ghost btn-sm" onclick="ts.editTeam(this)">Edit</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text" onclick="ts.deleteItem(this)">Delete</button>
             </td>
           </tr>
         </template>
@@ -48,18 +48,18 @@
     </table>
   </div>
 
-  <!-- Create Team Modal -->
+  <!-- Create/Edit Team Modal -->
   <template x-if="showCreateModal">
     <div>
-      <div class="modal-backdrop" onclick="window.teamsScope.showCreateModal = false"></div>
-      <div class="modal-panel" onclick="window.teamsScope.showCreateModal = false">
+      <div class="modal-backdrop" onclick="ts.hideModal()"></div>
+      <div class="modal-panel">
         <div class="modal-header">
           <h2 class="modal-title" x-text="editMode ? 'Edit Team' : 'Create Team'"></h2>
-          <button class="btn-icon" onclick="window.teamsScope.showCreateModal = false">
+          <button class="btn-icon" onclick="ts.hideModal()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <form onsubmit="event.preventDefault(); saveTeam.call(window.teamsScope)">
+        <form onsubmit="event.preventDefault(); ts.saveItem()">
           <template x-if="editMode">
             <input type="hidden" name="id" :value="editId">
           </template>
@@ -68,8 +68,8 @@
           <label class="form-label">Rate Limit (requests/min)</label>
           <input type="number" name="rate_limit" x-model="newRateLimit" placeholder="Leave empty for unlimited" min="0" class="form-input">
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick="window.teamsScope.showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="!newTeamName.trim()" x-text="editMode ? 'Update' : 'Create'" onclick="saveTeam.call(window.teamsScope)"></button>
+            <button type="button" class="btn btn-secondary" onclick="ts.hideModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="!newTeamName.trim()" x-text="editMode ? 'Update' : 'Create'"></button>
           </div>
         </form>
       </div>
@@ -85,57 +85,87 @@
 </div>
 
 <script>
-async function fetchTeams() {
-  try {
-    let r = await fetch('/api/teams');
-    if (r.ok) {
-      this.teams = await r.json();
+(function() {
+  function getData() {
+    var el = document.querySelector('[x-data]');
+    return el ? Alpine.$data(el) : null;
+  }
+
+  window.ts = {
+    showModal: function() {
+      var d = getData(); if (!d) return;
+      d.editMode = false;
+      d.editId = '';
+      d.newTeamName = '';
+      d.newRateLimit = '';
+      d.showCreateModal = true;
+    },
+    hideModal: function() {
+      var d = getData(); if (!d) return;
+      d.showCreateModal = false;
+    },
+    editTeam: function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var team = d.teams[idx];
+      if (!team) return;
+      d.editMode = true;
+      d.editId = team.id;
+      d.newTeamName = team.name;
+      d.newRateLimit = team.rate_limit || '';
+      d.showCreateModal = true;
+    },
+    saveItem: async function() {
+      var d = getData(); if (!d) return;
+      try {
+        var method = d.editMode ? 'PUT' : 'POST';
+        var r = await fetch('/api/teams', {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: d.newTeamName,
+            rate_limit: d.newRateLimit ? parseInt(d.newRateLimit) : null
+          })
+        });
+        if (r.ok) {
+          d.showCreateModal = false;
+          d.newTeamName = '';
+          d.newRateLimit = '';
+          d.editMode = false;
+          await fetchTeams();
+          d.toasts.push({ type: 'success', message: 'Team saved successfully' });
+        }
+      } catch(e) { console.error('Save team failed', e); }
+    },
+    deleteItem: async function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var team = d.teams[idx];
+      if (!team || !team.id) return;
+      if (!confirm('Delete team "' + team.name + '"?')) return;
+      try {
+        var r = await fetch('/api/teams?id=' + team.id, { method: 'DELETE' });
+        if (r.ok) {
+          d.teams = d.teams.filter(function(t) { return t.id !== team.id; });
+          d.toasts.push({ type: 'success', message: 'Team deleted' });
+        }
+      } catch(e) { console.error('Delete team failed', e); }
     }
-  } catch(e) { console.error('Teams fetch failed', e); }
-}
+  };
 
-function editTeam(team) {
-  this.showCreateModal = true;
-  this.editMode = true;
-  this.editId = team.id;
-  this.newTeamName = team.name;
-  this.newRateLimit = team.rate_limit || '';
-}
-
-async function saveTeam() {
-  try {
-    let method = this.editMode ? 'PUT' : 'POST';
-    let r = await fetch('/api/teams', {
-      method: method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        name: this.newTeamName,
-        rate_limit: this.newRateLimit ? parseInt(this.newRateLimit) : null
-      })
-    });
-    if (r.ok) {
-      this.showCreateModal = false;
-      this.newTeamName = '';
-      this.newRateLimit = '';
-      this.editMode = false;
-      this.fetchTeams();
-      this.toasts.push({ type: 'success', message: 'Team saved successfully' });
-    }
-  } catch(e) { console.error('Save team failed', e); }
-}
-
-async function deleteTeam(id) {
-  if (!confirm('Delete this team?')) return;
-  try {
-    let r = await fetch('/api/teams?id=' + id, { method: 'DELETE' });
-    if (r.ok) {
-      this.fetchTeams();
-      this.toasts.push({ type: 'success', message: 'Team deleted' });
-    }
-  } catch(e) { console.error('Delete team failed', e); }
-}
-
-
+  window.fetchTeams = async function() {
+    var d = getData();
+    if (!d) { setTimeout(fetchTeams, 100); return; }
+    try {
+      var r = await fetch('/api/teams');
+      if (r.ok) {
+        d.teams = await r.json();
+      }
+    } catch(e) { console.error('Teams fetch failed', e); }
+  };
+})();
 </script>
 
 <style>

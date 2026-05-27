@@ -1,4 +1,4 @@
-<div x-data="{ showCreateModal: false, form: { name: '', url: '', events: 'completion' }, webhooks: null, toasts: [] }" x-init="fetchWebhooks.call($data); window.webhooksscope = $data">
+<div x-data="{ showCreateModal: false, editMode: false, editId: '', form: { name: '', url: '', events: 'completion' }, webhooks: null, toasts: [] }" x-init="fetchWebhooks()">
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
@@ -19,7 +19,7 @@
       </h1>
       <p class="pg-sub">Configure webhook endpoints for event notifications.</p>
     </div>
-    <button class="btn btn-primary" onclick="window.webhooksScope.showCreateModal = true; form = { name: '', url: '', events: 'completion' }">+ Add Webhook</button>
+    <button class="btn btn-primary" onclick="ws.showModal()">+ Add Webhook</button>
   </div>
 
   <!-- Webhooks Table -->
@@ -50,8 +50,8 @@
             <td><span class="badge" :class="wh.is_active ? 'badge-success' : 'badge-danger'" x-text="wh.is_active ? 'Active' : 'Inactive'"></span></td>
             <td style="font-size:12px;color:var(--color-fg-3)" x-text="wh.last_triggered || 'Never'"></td>
             <td>
-              <button class="btn btn-ghost btn-sm" onclick="window.webhooksScope.editWebhook(wh)">Edit</button>
-              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="window.webhooksScope.deleteWebhook(wh.id)">Delete</button>
+              <button class="btn btn-ghost btn-sm" onclick="ws.editItem(this)">Edit</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="ws.deleteItem(this)">Delete</button>
             </td>
           </tr>
         </template>
@@ -59,16 +59,16 @@
     </table>
   </div>
 
-  <!-- Create Webhook Modal -->
+  <!-- Create/Edit Webhook Modal -->
   <template x-if="showCreateModal">
     <div>
-      <div class="modal-backdrop" onclick="window.webhooksScope.showCreateModal = false"></div>
-      <div class="modal-panel" onclick="window.webhooksScope.showCreateModal = false">
+      <div class="modal-backdrop" onclick="ws.hideModal()"></div>
+      <div class="modal-panel">
         <div class="modal-hdr">
           <h2 class="modal-title" x-text="editMode ? 'Edit Webhook' : 'Add Webhook'"></h2>
-          <button class="btn-icon" style="font-size:18px" onclick="window.webhooksScope.showCreateModal = false">&times;</button>
+          <button class="btn-icon" style="font-size:18px" onclick="ws.hideModal()">&times;</button>
         </div>
-        <form onsubmit="event.preventDefault(); saveWebhook.call(window.webhooksScope)">
+        <form onsubmit="event.preventDefault(); ws.saveItem()">
           <template x-if="editMode">
             <input type="hidden" name="id" :value="editId">
           </template>
@@ -86,8 +86,8 @@
           </select>
 
           <div class="btn-row">
-            <button type="button" class="btn btn-secondary" onclick="window.webhooksScope.showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="!form.name.trim() || !form.url.trim()" onclick="saveWebhook.call(window.webhooksScope)">Create</button>
+            <button type="button" class="btn btn-secondary" onclick="ws.hideModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="!form.name.trim() || !form.url.trim()" x-text="editMode ? 'Update' : 'Create'"></button>
           </div>
         </form>
       </div>
@@ -103,53 +103,83 @@
 </div>
 
 <script>
-async function fetchWebhooks() {
-  try {
-    let r = await fetch('/api/webhooks');
-    if (r.ok) {
-      this.webhooks = await r.json();
-    }
-  } catch(e) { console.error('Webhooks fetch failed', e); }
-}
+(function() {
+  function getData() {
+    var el = document.querySelector('[x-data]');
+    return el ? Alpine.$data(el) : null;
+  }
 
-function editWebhook(wh) {
-  this.showCreateModal = true;
-  this.editMode = true;
-  this.editId = wh.id;
-  this.form = {
-    name: wh.name || '',
-    url: wh.url || '',
-    events: wh.events || 'completion'
+  window.ws = {
+    showModal: function() {
+      var d = getData(); if (!d) return;
+      d.editMode = false;
+      d.editId = '';
+      d.form = { name: '', url: '', events: 'completion' };
+      d.showCreateModal = true;
+    },
+    hideModal: function() {
+      var d = getData(); if (!d) return;
+      d.showCreateModal = false;
+    },
+    editItem: function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var wh = d.webhooks[idx];
+      if (!wh) return;
+      d.editMode = true;
+      d.editId = wh.id;
+      d.form = {
+        name: wh.name || '',
+        url: wh.url || '',
+        events: wh.events || 'completion'
+      };
+      d.showCreateModal = true;
+    },
+    saveItem: async function() {
+      var d = getData(); if (!d) return;
+      try {
+        var method = d.editMode ? 'PUT' : 'POST';
+        var r = await fetch('/api/webhooks', {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(d.form)
+        });
+        if (r.ok) {
+          d.showCreateModal = false;
+          d.form = { name: '', url: '', events: 'completion' };
+          d.editMode = false;
+          await fetchWebhooks();
+          d.toasts.push({ type: 'success', message: 'Webhook saved successfully' });
+        }
+      } catch(e) { console.error('Save webhook failed', e); }
+    },
+    deleteItem: async function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var wh = d.webhooks[idx];
+      if (!wh || !wh.id) return;
+      if (!confirm('Delete webhook "' + wh.name + '"?')) return;
+      try {
+        var r = await fetch('/api/webhooks?id=' + wh.id, { method: 'DELETE' });
+        if (r.ok) {
+          d.webhooks = d.webhooks.filter(function(w) { return w.id !== wh.id; });
+          d.toasts.push({ type: 'success', message: 'Webhook deleted' });
+        }
+      } catch(e) { console.error('Delete webhook failed', e); }
+    }
   };
-}
 
-async function saveWebhook() {
-  try {
-    let method = this.editMode ? 'PUT' : 'POST';
-    let r = await fetch('/api/webhooks', {
-      method: method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(this.form)
-    });
-    if (r.ok) {
-      this.showCreateModal = false;
-      this.form = { name: '', url: '', events: 'completion' };
-      this.fetchWebhooks();
-      this.toasts.push({ type: 'success', message: 'Webhook saved successfully' });
-    }
-  } catch(e) { console.error('Save webhook failed', e); }
-}
-
-async function deleteWebhook(id) {
-  if (!confirm('Delete this webhook?')) return;
-  try {
-    let r = await fetch('/api/webhooks?id=' + id, { method: 'DELETE' });
-    if (r.ok) {
-      this.fetchWebhooks();
-      this.toasts.push({ type: 'success', message: 'Webhook deleted' });
-    }
-  } catch(e) { console.error('Delete webhook failed', e); }
-}
-
-
+  window.fetchWebhooks = async function() {
+    var d = getData();
+    if (!d) { setTimeout(fetchWebhooks, 100); return; }
+    try {
+      var r = await fetch('/api/webhooks');
+      if (r.ok) {
+        d.webhooks = await r.json();
+      }
+    } catch(e) { console.error('Webhooks fetch failed', e); }
+  };
+})();
 </script>

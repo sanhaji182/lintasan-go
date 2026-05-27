@@ -1,4 +1,4 @@
-<div x-data="pluginsData()" x-init="fetchAll.call($data); window.allscope = $data">
+<div x-data="pluginsData()" x-init="fetchPlugins()">
   <div class="flex items-center justify-between mb-5">
     <div>
       <h1 class="text-xl font-bold text-[var(--color-fg-0)]">🧩 Plugins</h1>
@@ -35,7 +35,7 @@
             <td class="text-xs text-[var(--color-fg-2)]" x-text="p.description || '—'"></td>
             <td><span class="badge" :class="p.enabled ? 'badge-success' : 'badge-danger'" x-text="p.enabled ? 'Active' : 'Disabled'"></span></td>
             <td>
-              <button class="btn btn-ghost btn-sm" onclick="window.pluginsScope.togglePlugin(p)" x-text="p.enabled ? 'Disable' : 'Enable'"></button>
+              <button class="btn btn-ghost btn-sm" onclick="ps.togglePlugin(this)" x-text="p.enabled ? 'Disable' : 'Enable'"></button>
             </td>
           </tr>
         </template>
@@ -67,7 +67,7 @@
                   <span class="ml-2" x-text="p.author ? 'by ' + p.author : ''"></span>
                 </div>
               </div>
-              <button class="btn btn-primary btn-sm" onclick="window.pluginsScope.confirmInstall(p)">Install</button>
+              <button class="btn btn-primary btn-sm" onclick="ps.confirmInstall(this)">Install</button>
             </div>
           </template>
         </div>
@@ -78,18 +78,18 @@
   <!-- Install Confirmation Modal -->
   <template x-if="showConfirm">
     <div>
-      <div class="modal-backdrop" onclick="window.pluginsScope.showConfirm = false"></div>
-      <div class="modal-panel" onclick="window.pluginsScope.showConfirm = false">
+      <div class="modal-backdrop" onclick="ps.hideModal()"></div>
+      <div class="modal-panel">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-base font-semibold text-[var(--color-fg-0)]">Install Plugin</h2>
-          <button class="text-lg text-[var(--color-fg-3)] hover:text-[var(--color-fg-0)]" onclick="window.pluginsScope.showConfirm = false">&times;</button>
+          <button class="text-lg text-[var(--color-fg-3)] hover:text-[var(--color-fg-0)]" onclick="ps.hideModal()">&times;</button>
         </div>
         <p class="text-sm text-[var(--color-fg-2)] mb-4">
           Are you sure you want to install <strong x-text="installPlugin?.name"></strong>? It may have access to your API keys and data.
         </p>
         <div class="flex gap-2 justify-end">
-          <button class="btn btn-secondary" onclick="window.pluginsScope.showConfirm = false">Cancel</button>
-          <button class="btn btn-primary" onclick="window.pluginsScope.doInstall()">Install</button>
+          <button class="btn btn-secondary" onclick="ps.hideModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="ps.installPlugin()">Install</button>
         </div>
       </div>
     </div>
@@ -97,65 +97,101 @@
 </div>
 
 <script>
-function pluginsData() {
-  return {
-    installedPlugins: null,
-    storePlugins: null,
-    showConfirm: false,
-    installPlugin: null,
-    async fetchAll() {
-      await Promise.all([this.fetchInstalled(), this.fetchStore()]);
+(function() {
+  function getData() {
+    var el = document.querySelector('[x-data]');
+    return el ? Alpine.$data(el) : null;
+  }
+
+  window.fetchPlugins = async function() {
+    var d = getData();
+    if (!d) { setTimeout(fetchPlugins, 100); return; }
+    var ps = window.ps;
+    try {
+      var r = await fetch('/api/plugins');
+      if (r.ok) {
+        var data = await r.json();
+        d.installedPlugins = data.data || data || [];
+      }
+    } catch(e) { console.error('Fetch installed plugins failed', e); }
+
+    try {
+      var r2 = await fetch('/api/plugins/store');
+      if (r2.ok) {
+        var data2 = await r2.json();
+        d.storePlugins = data2.data || data2 || [];
+      }
+    } catch(e) { console.error('Fetch plugin store failed', e); }
+  };
+
+  window.ps = {
+    showModal: function() {
+      var d = getData(); if (!d) return;
+      d.showConfirm = true;
     },
-    async fetchInstalled() {
+    hideModal: function() {
+      var d = getData(); if (!d) return;
+      d.showConfirm = false;
+      d.installPlugin = null;
+    },
+    confirmInstall: function(btn) {
+      var d = getData(); if (!d) return;
+      var card = btn.closest('.card');
+      if (!card) return;
+      var nameEl = card.querySelector('[x-text="p.name"]');
+      var name = nameEl ? nameEl.textContent : '';
+      var descEl = card.querySelector('[x-text="p.description || \'\'"]');
+      var description = descEl ? descEl.textContent : '';
+      var verEl = card.querySelector('[x-text="\'v\' + (p.version || \'0.0.0\')"]');
+      var version = verEl ? verEl.textContent.replace(/^v/, '') : '0.0.0';
+      var authorEl = card.querySelector('[x-text="p.author ? \'by \' + p.author : \'\'"]');
+      var author = authorEl ? authorEl.textContent.replace(/^by /, '') : '';
+      var categoryEl = card.querySelector('[x-text="p.category"]');
+      var category = categoryEl ? categoryEl.textContent : '';
+      d.installPlugin = { name: name, version: version, description: description, author: author, category: category };
+      d.showConfirm = true;
+    },
+    installPlugin: async function() {
+      var d = getData(); if (!d) return;
+      if (!d.installPlugin) return;
       try {
-        let r = await fetch('/api/plugins');
-        if (r.ok) {
-          let data = await r.json();
-          this.installedPlugins = data.data || data || [];
-        }
-      } catch(e) { console.error('Fetch installed plugins failed', e); }
-    },
-    async fetchStore() {
-      try {
-        let r = await fetch('/api/plugins/store');
-        if (r.ok) {
-          let data = await r.json();
-          this.storePlugins = data.data || data || [];
-        }
-      } catch(e) { console.error('Fetch plugin store failed', e); }
-    },
-    confirmInstall(p) {
-      this.installPlugin = p;
-      this.showConfirm = true;
-    },
-    async doInstall() {
-      if (!this.installPlugin) return;
-      try {
-        let r = await fetch('/api/plugins', {
+        var r = await fetch('/api/plugins', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'install',
-            name: this.installPlugin.name,
-            version: this.installPlugin.version,
-            description: this.installPlugin.description,
-            category: this.installPlugin.category,
-            author: this.installPlugin.author
+            name: d.installPlugin.name,
+            version: d.installPlugin.version,
+            description: d.installPlugin.description,
+            category: d.installPlugin.category,
+            author: d.installPlugin.author
           })
         });
         if (r.ok) {
-          this.showConfirm = false;
-          this.installPlugin = null;
-          await this.fetchInstalled();
+          d.showConfirm = false;
+          d.installPlugin = null;
+          await fetchPlugins();
         }
       } catch(e) { console.error('Install plugin failed', e); }
     },
-    async togglePlugin(p) {
-      // TODO: implement toggle endpoint
-      console.log('Toggle plugin', p);
+    togglePlugin: async function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var p = d.installedPlugins[idx];
+      if (!p || !p.id) return;
+      try {
+        var r = await fetch('/api/plugins/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: p.id })
+        });
+        if (r.ok) {
+          var data = await r.json();
+          p.enabled = data.enabled !== undefined ? data.enabled : !p.enabled;
+        }
+      } catch(e) { console.error('Toggle plugin failed', e); }
     }
   };
-}
-
-
+})();
 </script>

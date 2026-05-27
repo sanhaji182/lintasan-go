@@ -1,6 +1,6 @@
 <div
   x-data="connectionsPage()"
-  x-init="init(); window.connectionsScope = this"
+  x-init="fetchConnections()"
   x-cloak
 >
   <!-- Top Bar -->
@@ -15,7 +15,7 @@
     <div style="display:flex;gap:8px">
       <button
         class="btn btn-secondary"
-        onclick="syncAll()"
+        onclick="cs.syncAll()"
         :disabled="syncLoading"
       >
         <span x-show="!syncLoading" style="display:flex;align-items:center;gap:6px">
@@ -29,7 +29,7 @@
       </button>
       <button
         class="btn btn-primary"
-        onclick="openAddModal()"
+        onclick="cs.openAdd()"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         Add Provider
@@ -88,11 +88,11 @@
             </td>
             <td>
               <div style="display:flex;gap:4px">
-                <button class="btn btn-ghost btn-sm" onclick="openEditModal(conn)">
+                <button class="btn btn-ghost btn-sm" onclick="cs.editItem(this)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   Edit
                 </button>
-                <button class="btn btn-ghost btn-sm" style="color:var(--error)" onclick="confirmDelete(conn)">
+                <button class="btn btn-ghost btn-sm" style="color:var(--error)" onclick="cs.confirmDelete(this)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                   Delete
                 </button>
@@ -109,18 +109,17 @@
   <!-- ════════════════════════════════════════════ -->
   <template x-if="showModal">
     <div>
-      <div class="modal-backdrop" onclick="closeModal()"></div>
+      <div class="modal-backdrop" onclick="cs.hideModal()"></div>
       <div
         class="modal-panel"
         style="max-width:640px"
-        onclick="window.connScope.closeModal()"
       >
         <!-- header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0" x-text="modalTitle"></h2>
           <button
             style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
-            onclick="closeModal()"
+            onclick="cs.hideModal()"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -145,7 +144,7 @@
             <template x-if="presets && presets._error">
               <div style="text-align:center;padding:16px 0">
                 <p style="font-size:13px;color:var(--error);margin:0" x-text="presets._error"></p>
-                <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="loadPresets()">Retry</button>
+                <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="cs.loadPresets()">Retry</button>
               </div>
             </template>
 
@@ -157,7 +156,7 @@
                     type="button"
                     class="btn btn-secondary btn-sm"
                     style="justify-content:flex-start;padding:8px;text-align:left"
-                    onclick="selectPreset(p)"
+                    onclick="cs.selectPreset(this)"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                     <span x-text="p.label || p.name || p.provider"></span>
@@ -176,7 +175,7 @@
             <button
               class="btn btn-ghost"
               style="margin-top:8px"
-              onclick="selectPreset({ provider: 'custom', name: '', label: 'Custom' })"
+              onclick="cs.selectCustom()"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
               Manual Configuration
@@ -186,7 +185,7 @@
 
         <!-- STEP 2: Manual form (preset chosen OR edit mode) -->
         <template x-if="selectedPreset || editMode">
-          <form @submit.prevent="saveConnection()">
+          <form onsubmit="event.preventDefault(); cs.saveConnection()">
             <!-- hidden id when editing -->
             <template x-if="editMode">
               <input type="hidden" name="id" :value="editId" />
@@ -249,7 +248,7 @@
               <button
                 type="button"
                 class="btn btn-secondary"
-                onclick="testConnection()"
+                onclick="cs.testConnection()"
                 :disabled="testLoading"
               >
                 <span x-show="!testLoading" style="display:flex;align-items:center;gap:6px">
@@ -282,7 +281,7 @@
               <button
                 type="button"
                 class="btn btn-secondary"
-                onclick="backToPresets()"
+                onclick="cs.backToPresets()"
                 x-show="!editMode"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -291,7 +290,7 @@
               <button
                 type="button"
                 class="btn btn-secondary"
-                onclick="closeModal()"
+                onclick="cs.hideModal()"
               >Cancel</button>
               <button
                 type="submit"
@@ -316,13 +315,13 @@
   <!-- ════════════════════════════════════════════ -->
   <template x-if="deleteTarget">
     <div>
-      <div class="modal-backdrop" onclick="deleteTarget = null"></div>
-      <div class="modal-panel" onclick="window.connScope.deleteTarget = null">
+      <div class="modal-backdrop" onclick="cs.cancelDelete()"></div>
+      <div class="modal-panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0">Delete Provider</h2>
           <button
             style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
-            onclick="deleteTarget = null"
+            onclick="cs.cancelDelete()"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -335,10 +334,10 @@
           This will remove the connection and all associated data. This action cannot be undone.
         </p>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn btn-secondary" onclick="deleteTarget = null">Cancel</button>
+          <button class="btn btn-secondary" onclick="cs.cancelDelete()">Cancel</button>
           <button
             class="btn btn-danger"
-            onclick="doDelete()"
+            onclick="cs.doDelete()"
             :disabled="deleting"
           >
             <span x-show="!deleting">Delete</span>
@@ -369,8 +368,8 @@
 function connectionsPage() {
   return {
     // ── state ──
-    connections: null,        // null = loading, [] = empty, [...] = rows
-    presets: null,            // null = loading, { _error: '...' } = error, [...] = loaded
+    connections: null,
+    presets: null,
     showModal: false,
     modalTitle: 'Add Provider',
     editMode: false,
@@ -379,236 +378,266 @@ function connectionsPage() {
     form: { name: '', provider: '', api_key: '', base_url: '', models: '' },
     saving: false,
     testLoading: false,
-    testResult: null,         // null = no test yet, true = pass, false = fail
+    testResult: null,
     syncLoading: false,
-    deleteTarget: null,       // { id, name } or null
+    deleteTarget: null,
     deleting: false,
     toasts: [],
 
-    // ── init ──
-    init() {
-          window.connectionsScope = this;
-      window.connectionsScope = this;
-      this.fetchConnections();
-    },
+    // ── helpers ──
+    addToast: function(type, message) {
+      this.toasts.push({ type: type, message: message });
+    }
+  };
+}
 
-    // ── API: fetch connections ──
-    async fetchConnections() {
-      try {
-        const r = await fetch('/api/connections');
-        if (r.ok) {
-          const data = await r.json();
-          this.connections = Array.isArray(data) ? data : (data.data || []);
-        } else {
-          this.connections = [];
-        }
-      } catch (e) {
-        console.error('Fetch connections failed', e);
-        this.connections = this.connections || [];
+(function() {
+  function getData() {
+    var el = document.querySelector('[x-data]');
+    return el ? Alpine.$data(el) : null;
+  }
+
+  window.fetchConnections = async function() {
+    var d = getData();
+    if (!d) { setTimeout(fetchConnections, 100); return; }
+    try {
+      var r = await fetch('/api/connections');
+      if (r.ok) {
+        var data = await r.json();
+        d.connections = Array.isArray(data) ? data : (data.data || []);
+      } else {
+        d.connections = [];
       }
+    } catch (e) {
+      console.error('Fetch connections failed', e);
+      d.connections = d.connections || [];
+    }
+  };
+
+  window.cs = {
+    // ── modal ──
+    hideModal: function() {
+      var d = getData(); if (!d) return;
+      d.showModal = false;
+      d.selectedPreset = null;
+      d.editMode = false;
+      d.testResult = null;
     },
 
-    // ── API: load presets ──
-    async loadPresets() {
-      this.presets = null;
+    openAdd: function() {
+      var d = getData(); if (!d) return;
+      d.showModal = true;
+      d.modalTitle = 'Add Provider';
+      d.editMode = false;
+      d.editId = '';
+      d.selectedPreset = null;
+      d.form = { name: '', provider: '', api_key: '', base_url: '', models: '' };
+      d.testResult = null;
+      cs.loadPresets();
+    },
+
+    // ── presets ──
+    loadPresets: async function() {
+      var d = getData(); if (!d) return;
+      d.presets = null;
       try {
-        const r = await fetch('/api/providers/presets');
+        var r = await fetch('/api/providers/presets');
         if (r.ok) {
-          const data = await r.json();
-          const extracted = Array.isArray(data) ? data : (data.data || data.presets || []);
-          this.presets = Array.isArray(extracted) ? extracted : [];
+          var data = await r.json();
+          var extracted = Array.isArray(data) ? data : (data.data || data.presets || []);
+          d.presets = Array.isArray(extracted) ? extracted : [];
         } else {
-          this.presets = { _error: 'Failed to load presets (HTTP ' + r.status + ')' };
+          d.presets = { _error: 'Failed to load presets (HTTP ' + r.status + ')' };
         }
       } catch (e) {
         console.error('Load presets failed', e);
-        this.presets = { _error: 'Network error loading presets' };
+        d.presets = { _error: 'Network error loading presets' };
       }
     },
 
-    // ── open add modal ──
-    openAddModal() {
-      this.showModal = true;
-      this.modalTitle = 'Add Provider';
-      this.editMode = false;
-      this.editId = '';
-      this.selectedPreset = null;
-      this.form = { name: '', provider: '', api_key: '', base_url: '', models: '' };
-      this.testResult = null;
-      this.loadPresets();
-    },
-
-    // ── select a preset ──
-    selectPreset(p) {
-      this.selectedPreset = p;
-      this.form = {
+    selectPreset: function(btn) {
+      var d = getData(); if (!d) return;
+      // Find the preset data by looking at the button's x-for context
+      var presetBtn = btn.closest('button');
+      var grid = presetBtn ? presetBtn.closest('div[style*="grid"]') : null;
+      if (!grid) return;
+      var buttons = grid.querySelectorAll(':scope > button');
+      var idx = Array.prototype.indexOf.call(buttons, presetBtn);
+      var p = d.presets[idx];
+      if (!p) return;
+      d.selectedPreset = p;
+      d.form = {
         name: p.name || p.label || p.provider || '',
         provider: p.provider || 'custom',
         api_key: '',
         base_url: p.base_url || '',
         models: (p.models || []).join(', '),
       };
-      this.testResult = null;
+      d.testResult = null;
     },
 
-    // ── back from form to presets ──
-    backToPresets() {
-      this.selectedPreset = null;
-      this.form = { name: '', provider: '', api_key: '', base_url: '', models: '' };
-      this.testResult = null;
-      this.loadPresets();
+    selectCustom: function() {
+      var d = getData(); if (!d) return;
+      d.selectedPreset = { provider: 'custom', name: '', label: 'Custom' };
+      d.form = { name: '', provider: 'custom', api_key: '', base_url: '', models: '' };
+      d.testResult = null;
     },
 
-    // ── open edit modal ──
-    openEditModal(conn) {
-      this.showModal = true;
-      this.modalTitle = 'Edit Provider';
-      this.editMode = true;
-      this.editId = conn.id;
-      this.selectedPreset = { provider: conn.provider, name: conn.name };
-      this.form = {
+    backToPresets: function() {
+      var d = getData(); if (!d) return;
+      d.selectedPreset = null;
+      d.form = { name: '', provider: '', api_key: '', base_url: '', models: '' };
+      d.testResult = null;
+      cs.loadPresets();
+    },
+
+    // ── edit ──
+    editItem: function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var conn = d.connections[idx];
+      if (!conn) return;
+      d.showModal = true;
+      d.modalTitle = 'Edit Provider';
+      d.editMode = true;
+      d.editId = conn.id;
+      d.selectedPreset = { provider: conn.provider, name: conn.name };
+      d.form = {
         name: conn.name || '',
         provider: conn.provider || '',
-        api_key: '',                     // never pre-fill the key
+        api_key: '',
         base_url: conn.base_url || '',
         models: Array.isArray(conn.models)
           ? conn.models.join(', ')
           : (conn.models || ''),
       };
-      this.testResult = null;
+      d.testResult = null;
     },
 
-    // ── close modal ──
-    closeModal() {
-      this.showModal = false;
-      this.selectedPreset = null;
-      this.editMode = false;
-      this.testResult = null;
-    },
-
-    // ── save (create / update) ──
-    async saveConnection() {
-      if (!this.form.name.trim() || !this.form.provider.trim()) return;
-      this.saving = true;
+    // ── save ──
+    saveConnection: async function() {
+      var d = getData(); if (!d) return;
+      if (!d.form.name.trim() || !d.form.provider.trim()) return;
+      d.saving = true;
       try {
-        const payload = {
-          name: this.form.name.trim(),
-          provider: this.form.provider.trim(),
-          api_key: this.form.api_key,
-          base_url: this.form.base_url.trim(),
-          models: this.form.models
-            .split(',')
-            .map(s => s.trim())
-            .filter(Boolean),
+        var payload = {
+          name: d.form.name.trim(),
+          provider: d.form.provider.trim(),
+          api_key: d.form.api_key,
+          base_url: d.form.base_url.trim(),
+          models: d.form.models.split(',').map(function(s){ return s.trim(); }).filter(Boolean),
         };
-        if (this.editMode && this.editId) {
-          payload.id = this.editId;
+        if (d.editMode && d.editId) {
+          payload.id = d.editId;
         }
 
-        const method = this.editMode ? 'PUT' : 'POST';
-        const r = await fetch('/api/connections', {
-          method,
+        var method = d.editMode ? 'PUT' : 'POST';
+        var r = await fetch('/api/connections', {
+          method: method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
 
         if (r.ok) {
-          this.closeModal();
-          await this.fetchConnections();
-          this.addToast('success', this.editMode ? 'Connection updated.' : 'Connection created.');
+          cs.hideModal();
+          await fetchConnections();
+          d.addToast('success', d.editMode ? 'Connection updated.' : 'Connection created.');
         } else {
-          const err = await r.text().catch(() => '');
-          this.addToast('error', 'Save failed: ' + (err || 'HTTP ' + r.status));
+          var err = await r.text().catch(function(){ return ''; });
+          d.addToast('error', 'Save failed: ' + (err || 'HTTP ' + r.status));
         }
       } catch (e) {
         console.error('Save connection failed', e);
-        this.addToast('error', 'Network error while saving.');
+        d.addToast('error', 'Network error while saving.');
       } finally {
-        this.saving = false;
+        d.saving = false;
       }
     },
 
-    // ── test connection ──
-    async testConnection() {
-      this.testLoading = true;
-      this.testResult = null;
+    // ── test ──
+    testConnection: async function() {
+      var d = getData(); if (!d) return;
+      d.testLoading = true;
+      d.testResult = null;
       try {
-        const r = await fetch('/api/connections/test', {
+        var r = await fetch('/api/connections/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: this.form.name,
-            provider: this.form.provider,
-            api_key: this.form.api_key,
-            base_url: this.form.base_url,
-            models: this.form.models
-              .split(',')
-              .map(s => s.trim())
-              .filter(Boolean),
+            name: d.form.name,
+            provider: d.form.provider,
+            api_key: d.form.api_key,
+            base_url: d.form.base_url,
+            models: d.form.models.split(',').map(function(s){ return s.trim(); }).filter(Boolean),
           }),
         });
-        this.testResult = r.ok;
+        d.testResult = r.ok;
       } catch (e) {
         console.error('Test connection failed', e);
-        this.testResult = false;
+        d.testResult = false;
       } finally {
-        this.testLoading = false;
+        d.testLoading = false;
       }
     },
 
-    // ── delete confirmation ──
-    confirmDelete(conn) {
-      this.deleteTarget = { id: conn.id, name: conn.name };
+    // ── delete ──
+    confirmDelete: function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var conn = d.connections[idx];
+      if (!conn) return;
+      d.deleteTarget = { id: conn.id, name: conn.name };
     },
 
-    // ── execute delete ──
-    async doDelete() {
-      if (!this.deleteTarget) return;
-      this.deleting = true;
+    cancelDelete: function() {
+      var d = getData(); if (!d) return;
+      d.deleteTarget = null;
+    },
+
+    doDelete: async function() {
+      var d = getData(); if (!d) return;
+      if (!d.deleteTarget) return;
+      d.deleting = true;
       try {
-        const r = await fetch('/api/connections?id=' + encodeURIComponent(this.deleteTarget.id), {
+        var r = await fetch('/api/connections?id=' + encodeURIComponent(d.deleteTarget.id), {
           method: 'DELETE',
         });
         if (r.ok) {
-          this.deleteTarget = null;
-          await this.fetchConnections();
-          this.addToast('success', 'Connection deleted.');
+          d.deleteTarget = null;
+          await fetchConnections();
+          d.addToast('success', 'Connection deleted.');
         } else {
-          this.addToast('error', 'Delete failed (HTTP ' + r.status + ')');
+          d.addToast('error', 'Delete failed (HTTP ' + r.status + ')');
         }
       } catch (e) {
         console.error('Delete connection failed', e);
-        this.addToast('error', 'Network error while deleting.');
+        d.addToast('error', 'Network error while deleting.');
       } finally {
-        this.deleting = false;
+        d.deleting = false;
       }
     },
 
-    // ── sync all ──
-    async syncAll() {
-      this.syncLoading = true;
+    // ── sync ──
+    syncAll: async function() {
+      var d = getData(); if (!d) return;
+      d.syncLoading = true;
       try {
-        const r = await fetch('/api/connections/sync', { method: 'POST' });
+        var r = await fetch('/api/connections/sync', { method: 'POST' });
         if (r.ok) {
-          await this.fetchConnections();
-          this.addToast('success', 'All connections synced.');
+          await fetchConnections();
+          d.addToast('success', 'All connections synced.');
         } else {
-          this.addToast('error', 'Sync failed (HTTP ' + r.status + ')');
+          d.addToast('error', 'Sync failed (HTTP ' + r.status + ')');
         }
       } catch (e) {
         console.error('Sync all failed', e);
-        this.addToast('error', 'Network error during sync.');
+        d.addToast('error', 'Network error during sync.');
       } finally {
-        this.syncLoading = false;
+        d.syncLoading = false;
       }
-    },
-
-    // ── helpers ──
-    addToast(type, message) {
-      this.toasts.push({ type, message });
-    },
+    }
   };
-}
-
-
+})();
 </script>
