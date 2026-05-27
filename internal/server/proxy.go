@@ -393,6 +393,15 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	req["model"] = resolvedModel
 	body, _ = json.Marshal(req)
 
+	// Plugin pre-request hook: transform request body before upstream
+	if p.pm != nil {
+		if transformedBody, err := p.pm.ExecuteRequestHook(r.Context(), comboName, resolvedModel, body); err != nil {
+			fmt.Fprintf(os.Stderr, "plugin pre-request error: %v\n", err)
+		} else {
+			body = transformedBody
+		}
+	}
+
 	var lastErr string
 	var lastStatusCode int
 	for i, conn := range candidates {
@@ -549,10 +558,24 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 			// Auto-Indexing: embed and store completion if header set
 			p.autoIndex(r, model, messages, string(streamBuffer), tokensIn, tokensOut)
 
+			// Plugin post-response hook (stream already sent, side-effects only)
+			if p.pm != nil {
+				p.pm.ExecuteResponseHook(r.Context(), conn.ID, resolvedModel, streamBuffer)
+			}
+
 			return
 		}
 
 		b, _ := io.ReadAll(resp.Body)
+
+		// Plugin post-response hook: transform response body
+		if p.pm != nil {
+			if transformedResp, err := p.pm.ExecuteResponseHook(r.Context(), conn.ID, resolvedModel, b); err != nil {
+				fmt.Fprintf(os.Stderr, "plugin post-response error: %v\n", err)
+			} else {
+				b = transformedResp
+			}
+		}
 
 		// Translate CC Alpha SSE → OpenAI JSON
 		if conn.Format == "commandcode" {

@@ -6,20 +6,29 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/sanhaji182/lintasan-go/internal/auth"
 	"github.com/sanhaji182/lintasan-go/internal/config"
 	"github.com/sanhaji182/lintasan-go/internal/db"
+	"github.com/sanhaji182/lintasan-go/internal/mitm"
+	"github.com/sanhaji182/lintasan-go/internal/plugin"
 )
 
 type Server struct {
-	cfg       *config.Config
-	db        *db.DB
-	mux       *http.ServeMux
-	proxy     *ProxyHandler
-	nodeProxy *httputil.ReverseProxy // reverse-proxy to Node dashboard at :20180
-	memHandler *MemoryHandler        // vector memory API handler
+	cfg        *config.Config
+	db         *db.DB
+	mux        *http.ServeMux
+	proxy      *ProxyHandler
+	nodeProxy  *httputil.ReverseProxy // reverse-proxy to Node dashboard at :20180
+	memHandler *MemoryHandler         // vector memory API handler
+	mitmProxy  *mitm.MITMProxy        // MITM bridge for IDE interception
+	oauthMgr   *auth.OAuthManager     // OAuth session manager
+	pluginMgr  *plugin.Manager        // JS plugin engine (also in proxy.pm)
+	mitmOnce   sync.Once              // ensures MITM starts exactly once
 }
 
 func New(cfg *config.Config, database *db.DB) *Server {
@@ -42,11 +51,33 @@ func New(cfg *config.Config, database *db.DB) *Server {
 	}
 	s.proxy = NewProxyHandler(cfg, database)
 	s.memHandler = NewMemoryHandler(s.proxy.mem)
+
+	// Wire OAuth manager (reuse the one from proxy or create standalone)
+	s.oauthMgr = auth.NewOAuthManager(database)
+
+	// Wire plugin manager (shared with proxy so both have access)
+	s.pluginMgr = s.proxy.pm
+
+	// Wire MITM proxy if MITM_PORT env set
+	if port := os.Getenv("MITM_PORT"); port != "" {
+		s.mitmProxy = mitm.New(cfg.MITMPort, cfg.Port, database)
+	}
+
 	s.routes()
 	return s
 }
 
 func (s *Server) Start() error {
+	// Start MITM bridge if configured
+	if s.mitmProxy != nil {
+		go func() {
+			fmt.Printf("🔒 MITM bridge listening on :%d → forwarding to Lintasan on :%d\n", s.mitmProxy.GetListenPort(), s.cfg.Port)
+			if err := s.mitmProxy.Start(); err != nil {
+				fmt.Fprintf(os.Stderr, "MITM proxy error: %v\n", err)
+			}
+		}()
+	}
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.cfg.Port),
 		Handler:      s.corsMiddleware(s.authMiddleware(s.mux)),
@@ -175,10 +206,11 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip auth for health, dashboard, auth, and dashboard API
+		// Skip auth for health, dashboard, auth, oauth, and dashboard API
 		if r.URL.Path == "/health" || r.URL.Path == "/" ||
 			strings.HasPrefix(r.URL.Path, "/api/dashboard/") ||
-			strings.HasPrefix(r.URL.Path, "/api/auth/") {
+			strings.HasPrefix(r.URL.Path, "/api/auth/") ||
+			strings.HasPrefix(r.URL.Path, "/api/oauth/") {
 			next.ServeHTTP(w, r)
 			return
 		}

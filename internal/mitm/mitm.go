@@ -61,6 +61,11 @@ func (m *MITMProxy) Stop() error {
 	return nil
 }
 
+// GetListenPort returns the port the MITM proxy listens on.
+func (m *MITMProxy) GetListenPort() int {
+	return m.listenPort
+}
+
 // handleProxy forwards all requests to the target Lintasan instance.
 func (m *MITMProxy) handleProxy(w http.ResponseWriter, r *http.Request) {
 	targetURL := fmt.Sprintf("http://localhost:%d%s", m.targetPort, r.URL.RequestURI())

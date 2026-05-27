@@ -67,3 +67,76 @@ func TestModelInfo(t *testing.T) {
 		}
 	}
 }
+
+func TestFindModel(t *testing.T) {
+	tests := []struct {
+		id      string
+		wantNil bool
+		wantID  string
+	}{
+		{"gpt-4o", false, "gpt-4o"},
+		{"claude-opus-4-20250514", false, "claude-opus-4-20250514"},
+		{"gemini-2.5-pro", false, "gemini-2.5-pro"},
+		{"deepseek-r1", false, "deepseek-r1"},
+		{"nonexistent-model", true, ""},
+	}
+
+	for _, tt := range tests {
+		m := FindModel(tt.id)
+		if tt.wantNil {
+			if m != nil {
+				t.Errorf("FindModel(%q) = %v, want nil", tt.id, m)
+			}
+		} else {
+			if m == nil {
+				t.Errorf("FindModel(%q) = nil, want non-nil", tt.id)
+			} else if m.ID != tt.wantID {
+				t.Errorf("FindModel(%q).ID = %q, want %q", tt.id, m.ID, tt.wantID)
+			}
+		}
+	}
+}
+
+func TestFindProvider(t *testing.T) {
+	tests := []struct {
+		id      string
+		wantNil bool
+		wantID  string
+	}{
+		{"openai", false, "openai"},
+		{"anthropic", false, "anthropic"},
+		{"google", false, "google"},
+		{"deepseek", false, "deepseek"},
+		{"nonexistent", true, ""},
+	}
+
+	for _, tt := range tests {
+		p := FindProvider(tt.id)
+		if tt.wantNil {
+			if p != nil {
+				t.Errorf("FindProvider(%q) = %v, want nil", tt.id, p)
+			}
+		} else {
+			if p == nil {
+				t.Errorf("FindProvider(%q) = nil, want non-nil", tt.id)
+			} else if p.ID != tt.wantID {
+				t.Errorf("FindProvider(%q).ID = %q, want %q", tt.id, p.ID, tt.wantID)
+			}
+		}
+	}
+}
+
+func TestAllProviders(t *testing.T) {
+	providers := AllProviders()
+	if len(providers) < 10 {
+		t.Errorf("expected at least 10 providers, got %d", len(providers))
+	}
+	for _, p := range providers {
+		if p.ID == "" {
+			t.Error("AllProviders() returned provider with empty ID")
+		}
+		if len(p.Models) == 0 {
+			t.Errorf("provider %s has no models", p.ID)
+		}
+	}
+}

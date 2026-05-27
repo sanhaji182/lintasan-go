@@ -136,3 +136,31 @@ func (p *Plugin) FireAfterResponseConn(ctx context.Context, connID, model string
 	}
 	return body, nil
 }
+
+// ExecuteRequestHook runs the pre-request hook on all active plugins.
+// Each plugin gets the request body as bytes and may transform it.
+func (m *Manager) ExecuteRequestHook(ctx context.Context, connID, model string, body []byte) ([]byte, error) {
+	for _, p := range m.plugins {
+		adapter := &PluginAdapter{Plugin: p}
+		var err error
+		body, err = adapter.OnRequest(ctx, connID, model, body)
+		if err != nil {
+			return nil, fmt.Errorf("plugin %s pre-request: %w", p.Name, err)
+		}
+	}
+	return body, nil
+}
+
+// ExecuteResponseHook runs the post-response hook on all active plugins.
+// Each plugin gets the response body as bytes and may transform it.
+func (m *Manager) ExecuteResponseHook(ctx context.Context, connID, model string, body []byte) ([]byte, error) {
+	for _, p := range m.plugins {
+		adapter := &PluginAdapter{Plugin: p}
+		var err error
+		body, err = adapter.OnResponse(ctx, connID, model, body)
+		if err != nil {
+			return nil, fmt.Errorf("plugin %s post-response: %w", p.Name, err)
+		}
+	}
+	return body, nil
+}

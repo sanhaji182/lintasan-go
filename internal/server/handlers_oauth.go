@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/sanhaji182/lintasan-go/internal/auth"
 	"github.com/google/uuid"
 )
 
-// Register OAuth routes — called from server.go routes()
+// registerOAuthRoutes registers OAuth endpoints on the server mux.
+// Called from server.go routes().
 func (s *Server) registerOAuthRoutes() {
 	s.mux.HandleFunc("POST /api/oauth/authorize", s.handleOAuthAuthorize)
-	s.mux.HandleFunc("GET /api/oauth/callback", s.handleOAuthCallback)
+	s.mux.HandleFunc("GET /api/oauth/callback/{provider}", s.handleOAuthCallback)
 	s.mux.HandleFunc("GET /api/oauth/sessions", s.handleOAuthSessions)
 	s.mux.HandleFunc("DELETE /api/oauth/sessions/{id}", s.handleOAuthRevokeSession)
 }
@@ -47,8 +47,7 @@ func (s *Server) handleOAuthAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mgr := auth.NewOAuthManager(s.db)
-	session, err := mgr.CreateSession(input.Provider)
+	session, err := s.oauthMgr.CreateSession(input.Provider)
 	if err != nil {
 		writeJSON(w, map[string]string{"error": fmt.Sprintf("failed to create session: %v", err)})
 		return
@@ -66,11 +65,11 @@ func (s *Server) handleOAuthAuthorize(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GET /api/oauth/callback — OAuth callback handler
+// GET /api/oauth/callback/{provider} — OAuth callback handler
 func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
-	provider := r.URL.Query().Get("provider")
+	provider := r.PathValue("provider")
 
 	if code == "" || state == "" {
 		writeJSON(w, map[string]string{"error": "code and state are required"})
@@ -82,7 +81,7 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	accessToken := fmt.Sprintf("sk-lintasan-%s", uuid.New().String())
-	refreshToken := fmt.Sprintf("sk-lintasan-refresh-%s", uuid.New().String())
+	refreshToken := fmt.Sprintf("sk-lin...esh-%s", uuid.New().String())
 
 	// Use raw SQL to create/update the session with proper expiry
 	_, err := s.db.Conn().Exec(
@@ -124,8 +123,7 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 // GET /api/oauth/sessions — list all OAuth sessions
 func (s *Server) handleOAuthSessions(w http.ResponseWriter, r *http.Request) {
-	mgr := auth.NewOAuthManager(s.db)
-	sessions, err := mgr.ListSessions()
+	sessions, err := s.oauthMgr.ListSessions()
 	if err != nil {
 		writeJSON(w, map[string]string{"error": fmt.Sprintf("failed to list sessions: %v", err)})
 		return
@@ -142,8 +140,7 @@ func (s *Server) handleOAuthRevokeSession(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	mgr := auth.NewOAuthManager(s.db)
-	if err := mgr.RevokeSession(id); err != nil {
+	if err := s.oauthMgr.RevokeSession(id); err != nil {
 		writeJSON(w, map[string]string{"error": fmt.Sprintf("failed to revoke session: %v", err)})
 		return
 	}

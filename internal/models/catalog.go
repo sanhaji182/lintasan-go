@@ -190,3 +190,31 @@ func TotalModelCount() int {
 	}
 	return count
 }
+
+// AllProviders returns all provider info entries from the catalog.
+func AllProviders() []ProviderInfo {
+	return Catalog()
+}
+
+// FindProvider returns the ProviderInfo for a given provider ID, or nil if not found.
+func FindProvider(id string) *ProviderInfo {
+	for _, p := range Catalog() {
+		if p.ID == id {
+			return &p
+		}
+	}
+	return nil
+}
+
+// FindModel returns the ModelInfo for a given model ID, or nil if not found.
+// It searches across all providers.
+func FindModel(id string) *ModelInfo {
+	for _, p := range Catalog() {
+		for _, m := range p.Models {
+			if m.ID == id {
+				return &m
+			}
+		}
+	}
+	return nil
+}
