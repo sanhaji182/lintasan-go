@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/sanhaji182/lintasan-go/internal/quota"
 	"github.com/sanhaji182/lintasan-go/internal/ratelimit"
 	"github.com/sanhaji182/lintasan-go/internal/reasoning"
+	"github.com/sanhaji182/lintasan-go/internal/reflect"
 	"github.com/sanhaji182/lintasan-go/internal/retry"
 	"github.com/sanhaji182/lintasan-go/internal/webhook"
 )
@@ -224,6 +226,13 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	
 	stream, _ := req["stream"].(bool)
 	messages, _ := req["messages"].([]any)
+
+	// P7.4 Self-Review Loop — triggered by X-Lintasan-Reflect header
+	// Must be BEFORE any upstream call so the reflect loop owns the full request flow
+	if reflectHeader := r.Header.Get("X-Lintasan-Reflect"); reflectHeader != "" {
+		p.handleReflectLoop(r, model, messages, w)
+		return
+	}
 
 	// Rate Limiter
 	if p.rl != nil {
@@ -1036,6 +1045,162 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return string(runes[:maxLen]) + "..."
+}
+
+// handleReflectLoop runs the self-review auto-fix loop triggered by X-Lintasan-Reflect header.
+// Must be called BEFORE any upstream response is written — it owns the full request flow.
+func (p *ProxyHandler) handleReflectLoop(r *http.Request, model string, messages []any, w http.ResponseWriter) {
+	reflectHeader := r.Header.Get("X-Lintasan-Reflect")
+	maxIter := 3
+	if n, err := strconv.Atoi(reflectHeader); err == nil && n >= 1 && n <= 5 {
+		maxIter = n
+	}
+
+	verifyRaw := r.Header.Get("X-Lintasan-Reflect-Verify")
+	if verifyRaw == "" {
+		verifyRaw = "text"
+	}
+	
+	// Parse verify mode: "pytest:/tmp/test_X.py:/tmp/buggy_X.py"
+	var verifyMode string
+	var testFile, codeModule string
+	if strings.HasPrefix(verifyRaw, "pytest:") {
+		verifyMode = "pytest"
+		parts := strings.Split(verifyRaw, ":")
+		if len(parts) >= 3 {
+			testFile = parts[1]
+			codeModule = parts[2]
+		} else {
+			testFile = "/tmp/reflect_test.py"
+			codeModule = "/tmp/reflect_module.py"
+		}
+	} else {
+		verifyMode = verifyRaw
+	}
+
+	// Build initial prompt from the last user message
+	initialPrompt := ""
+	for i := len(messages) - 1; i >= 0; i-- {
+		msg, ok := messages[i].(map[string]any)
+		if !ok {
+			continue
+		}
+		role, _ := msg["role"].(string)
+		if role == "user" {
+			if content, ok := msg["content"].(string); ok {
+				initialPrompt = content
+			}
+			break
+		}
+	}
+	if initialPrompt == "" {
+		http.Error(w, `{"error":"no user message found for reflect loop"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Create LLM generator that resolves connection + calls upstream with format translation
+	generator := func(prompt string, prevErrors []string) (string, error) {
+		conn, err := p.findConnectionForModel(model)
+		if err != nil {
+			return "", fmt.Errorf("no connection for model %s: %w", model, err)
+		}
+
+		reqBody := map[string]any{
+			"model":    model,
+			"messages": []map[string]any{
+				{"role": "user", "content": prompt},
+			},
+			"max_tokens": 16384.0,
+			"stream":     false,
+		}
+		bodyBytes, err := json.Marshal(reqBody)
+		if err != nil {
+			return "", err
+		}
+
+		resp, err := p.doUpstream(r, conn, bodyBytes)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+
+		respBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+
+		// CC Alpha format translation
+		if conn.Format == "commandcode" {
+			respBytes = translateCCAlphaToOpenAI(respBytes)
+		}
+
+		// Extract text from OpenAI response
+		var respObj map[string]any
+		if err := json.Unmarshal(respBytes, &respObj); err != nil {
+			return string(respBytes), nil
+		}
+		if choices, ok := respObj["choices"].([]any); ok && len(choices) > 0 {
+			if choice, ok := choices[0].(map[string]any); ok {
+				if msg, ok := choice["message"].(map[string]any); ok {
+					if content, ok := msg["content"].(string); ok {
+						return content, nil
+					}
+					// DeepSeek: content might be empty, reasoning_content has answer
+					if rc, ok := msg["reasoning_content"].(string); ok && rc != "" {
+						return rc, nil
+					}
+				}
+			}
+		}
+		return string(respBytes), nil
+	}
+
+	// Create verifier
+	var verifier reflect.Verifier
+	if verifyMode == "pytest" {
+		verifier = reflect.NewPytestVerifier(testFile, codeModule)
+	} else {
+		// Text verifier: just checks response is non-empty
+		verifier = func(output string) reflect.VerifyResult {
+			if output == "" {
+				return reflect.VerifyResult{Score: 0, Errors: []string{"empty response"}}
+			}
+			return reflect.VerifyResult{Score: 1.0, Passed: 1, Total: 1}
+		}
+	}
+
+	result, err := reflect.Reflect(ctx, maxIter, generator, verifier, initialPrompt, true)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"reflect loop failed: %s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	// Build OpenAI-compatible response with best result
+	resp := map[string]any{
+		"id":      "reflect-" + uuid.New().String()[:8],
+		"object":  "chat.completion",
+		"created": time.Now().Unix(),
+		"model":   model,
+		"choices": []map[string]any{
+			{
+				"index": 0,
+				"message": map[string]any{
+					"role":    "assistant",
+					"content": result.BestResponse,
+				},
+				"finish_reason": "stop",
+			},
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Lintasan-Reflect-Iterations", fmt.Sprintf("%d", result.Iterations))
+	w.Header().Set("X-Lintasan-Reflect-Score", fmt.Sprintf("%.0f", result.BestScore*100))
+	json.NewEncoder(w).Encode(resp)
+
+	fmt.Fprintf(os.Stderr, "reflect: %d iterations, best=%.0f%%, duration=%v\n",
+		result.Iterations, result.BestScore*100, result.Duration)
 }
 
 // autoIndex stores a completion in vector memory when X-Lintasan-Index header is "true".
