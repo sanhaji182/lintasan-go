@@ -1,0 +1,91 @@
+{{define "pages/settings.gohtml"}}
+<div>
+  <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0); margin-bottom:8px;">⚙ Settings</h1>
+  <p style="color:var(--color-fg-2); margin-bottom:20px;">Configure your Lintasan instance.</p>
+
+  <form hx-put="/api/settings" hx-swap="none">
+    <!-- General Section -->
+    <div class="card" style="margin-bottom:16px;">
+      <h2 style="font-size:14px; font-weight:600; color:var(--color-fg-1); margin-bottom:16px;">General</h2>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Master Key</label>
+        <input type="password" name="master_key" placeholder="Change master password..."
+               style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+        <p style="font-size:11px; color:var(--color-fg-3); margin-top:4px;">Leave blank to keep current.</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Port</label>
+        <input type="number" name="port" placeholder="8080"
+               style="width:200px; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+      </div>
+    </div>
+
+    <!-- Cache Section -->
+    <div class="card" style="margin-bottom:16px;" x-data="{ cacheEnabled: true }">
+      <h2 style="font-size:14px; font-weight:600; color:var(--color-fg-1); margin-bottom:16px;">Cache</h2>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <label style="font-size:13px; font-weight:500; color:var(--color-fg-1);">Enable Response Caching</label>
+        <label style="position:relative; display:inline-block; width:44px; height:24px;">
+          <input type="checkbox" name="cache_enabled" x-model="cacheEnabled" style="display:none;">
+          <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:var(--color-border); border-radius:12px; transition:0.2s;"
+                x-bind:style="cacheEnabled ? 'background:var(--color-primary);' : 'background:var(--color-border);'"></span>
+          <span style="position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.2s;"
+                x-bind:style="cacheEnabled ? 'transform:translateX(20px);' : ''"></span>
+        </label>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Cache TTL (seconds)</label>
+        <input type="number" name="cache_ttl" placeholder="3600" min="0"
+               style="width:200px; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Cache Similarity Threshold</label>
+        <input type="number" name="cache_threshold" step="0.01" min="0" max="1" placeholder="0.95"
+               style="width:200px; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+        <p style="font-size:11px; color:var(--color-fg-3); margin-top:4px;">Semantic similarity threshold for cache hits (0-1). Higher = stricter matching.</p>
+      </div>
+    </div>
+
+    <!-- Security Section -->
+    <div class="card" style="margin-bottom:16px;" x-data="{ rateLimitEnabled: false }">
+      <h2 style="font-size:14px; font-weight:600; color:var(--color-fg-1); margin-bottom:16px;">Security</h2>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <label style="font-size:13px; font-weight:500; color:var(--color-fg-1);">Enable Rate Limiting</label>
+        <label style="position:relative; display:inline-block; width:44px; height:24px;">
+          <input type="checkbox" name="rate_limit_enabled" x-model="rateLimitEnabled" style="display:none;">
+          <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:var(--color-border); border-radius:12px; transition:0.2s;"
+                x-bind:style="rateLimitEnabled ? 'background:var(--color-primary);' : 'background:var(--color-border);'"></span>
+          <span style="position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.2s;"
+                x-bind:style="rateLimitEnabled ? 'transform:translateX(20px);' : ''"></span>
+        </label>
+      </div>
+      <div style="margin-bottom:16px;" x-show="rateLimitEnabled">
+        <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Requests per Minute</label>
+        <input type="number" name="rate_limit_rpm" placeholder="60" min="1"
+               style="width:200px; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+      </div>
+    </div>
+
+    <!-- Save -->
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button type="submit" class="btn btn-primary">
+        <span class="htmx-indicator" style="display:none;">
+          <span class="spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; vertical-align:middle; margin-right:4px;"></span>
+        </span>
+        Save Settings
+      </button>
+      <span id="settings-saved" style="font-size:13px; color:var(--color-success); display:none;">✓ Saved</span>
+    </div>
+  </form>
+
+  <script>
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+      if (evt.detail.target && evt.detail.target.closest('form[hx-put="/api/settings"]')) {
+        var saved = document.getElementById('settings-saved');
+        saved.style.display = 'inline';
+        setTimeout(function() { saved.style.display = 'none'; }, 3000);
+      }
+    });
+  </script>
+</div>
+{{end}}

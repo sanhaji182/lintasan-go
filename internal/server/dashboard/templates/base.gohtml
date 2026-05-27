@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" hx-boost="true">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lintasan — {{.Title}}</title>
+  <link rel="stylesheet" href="/static/tailwind.css">
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/alpine.min.js"></script>
+</head>
+<body class="flex min-h-screen bg-[var(--color-bg-body)]">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="px-4 pb-4">
+      <h2 class="text-lg font-bold text-[var(--color-primary)]">Lintasan</h2>
+      <p class="text-xs text-[var(--color-fg-3)]">v2.0.0 · Go</p>
+    </div>
+    <nav>
+      <a href="/dashboard" class="sidebar-link {{if eq .Title "overview"}}active{{end}}">📊 Overview</a>
+      <a href="/dashboard/connections" class="sidebar-link {{if eq .Title "connections"}}active{{end}}">🔌 Accounts</a>
+      <a href="/dashboard/routing" class="sidebar-link {{if eq .Title "routing"}}active{{end}}">🔀 Routing</a>
+      <a href="/dashboard/fallback" class="sidebar-link {{if eq .Title "fallback"}}active{{end}}">🔄 Fallback</a>
+      <a href="/dashboard/logs" class="sidebar-link {{if eq .Title "logs"}}active{{end}}">📋 Logs</a>
+      <a href="/dashboard/usage" class="sidebar-link {{if eq .Title "usage"}}active{{end}}">💰 Usage</a>
+      <a href="/dashboard/analytics" class="sidebar-link {{if eq .Title "analytics"}}active{{end}}">📈 Analytics</a>
+      <a href="/dashboard/keys" class="sidebar-link {{if eq .Title "keys"}}active{{end}}">🔑 API Keys</a>
+      <a href="/dashboard/teams" class="sidebar-link {{if eq .Title "teams"}}active{{end}}">👥 Teams</a>
+      <a href="/dashboard/users" class="sidebar-link {{if eq .Title "users"}}active{{end}}">👤 Users</a>
+      <a href="/dashboard/webhooks" class="sidebar-link {{if eq .Title "webhooks"}}active{{end}}">🪝 Webhooks</a>
+      <a href="/dashboard/backup" class="sidebar-link {{if eq .Title "backup"}}active{{end}}">💾 Backup</a>
+      <a href="/dashboard/settings" class="sidebar-link {{if eq .Title "settings"}}active{{end}}">⚙ Settings</a>
+      <a href="/dashboard/plugins" class="sidebar-link {{if eq .Title "plugins"}}active{{end}}">🧩 Plugins</a>
+      <a href="/dashboard/playground" class="sidebar-link {{if eq .Title "playground"}}active{{end}}">🧪 Playground</a>
+      <a href="/dashboard/docs" class="sidebar-link {{if eq .Title "docs"}}active{{end}}">📖 Docs</a>
+    </nav>
+  </aside>
+
+  <!-- Main content area -->
+  <main id="content" class="ml-[220px] flex-1 p-6" hx-swap="outerHTML">
+    {{.Content}}
+  </main>
+
+  <!-- Shared app JS (Alpine components + helpers) -->
+  <script src="/static/app.js"></script>
+</body>
+</html>

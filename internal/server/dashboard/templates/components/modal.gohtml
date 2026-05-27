@@ -1,0 +1,18 @@
+{{define "components/modal.gohtml"}}
+<div x-data="{ open: false }" x-on:keydown.escape.window="open = false">
+  <span x-on:click="open = true">{{.Trigger}}</span>
+
+  <template x-if="open">
+    <div>
+      <div class="modal-backdrop" x-on:click="open = false"></div>
+      <div class="modal-panel" x-on:click.outside="open = false">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0);">{{.Title}}</h2>
+          <button class="btn-icon" x-on:click="open = false" style="font-size:18px;">&times;</button>
+        </div>
+        {{.Body}}
+      </div>
+    </div>
+  </template>
+</div>
+{{end}}

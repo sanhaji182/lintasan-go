@@ -1,0 +1,14 @@
+{{define "components/card.gohtml"}}
+<div class="card" style="display:flex; align-items:center; gap:12px;">
+  {{if .Icon}}
+  <div style="font-size:24px;">{{.Icon}}</div>
+  {{end}}
+  <div>
+    <div style="font-size:11px; font-weight:600; color:var(--color-fg-3); text-transform:uppercase; letter-spacing:0.5px;">{{.Label}}</div>
+    <div style="font-size:24px; font-weight:700; color:var(--color-fg-0);">{{.Value}}</div>
+    {{if .Subtitle}}
+    <div style="font-size:12px; color:var(--color-fg-2); margin-top:2px;">{{.Subtitle}}</div>
+    {{end}}
+  </div>
+</div>
+{{end}}

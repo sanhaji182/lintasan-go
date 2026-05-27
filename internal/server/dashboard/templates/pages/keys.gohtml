@@ -1,0 +1,69 @@
+{{define "pages/keys.gohtml"}}
+<div x-data="{ showCreateModal: false, newKeyName: '' }">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+    <div>
+      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">🔑 API Keys</h1>
+      <p style="color:var(--color-fg-2); font-size:13px;">Manage API keys for authenticating requests.</p>
+    </div>
+    <button class="btn btn-primary" x-on:click="showCreateModal = true">+ Create Key</button>
+  </div>
+
+  <!-- Keys Table -->
+  <div class="card" id="keys-table" hx-get="/api/keys" hx-trigger="load" hx-swap="outerHTML">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Key</th>
+          <th>Created</th>
+          <th>Requests</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="5" style="text-align:center; padding:24px;">
+            <div class="spinner" style="margin:0 auto;"></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Create Key Modal -->
+  <template x-if="showCreateModal">
+    <div>
+      <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
+      <div class="modal-panel" x-on:click.outside="showCreateModal = false">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0);">Create API Key</h2>
+          <button class="btn-icon" x-on:click="showCreateModal = false" style="font-size:18px;">&times;</button>
+        </div>
+        <form hx-post="/api/keys" hx-target="#keys-table" hx-swap="outerHTML"
+              x-on:submit="showCreateModal = false">
+          <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Key Name</label>
+          <input type="text" name="name" x-model="newKeyName" placeholder="e.g., Production, Development"
+                 style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+            <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary" x-bind:disabled="!newKeyName.trim()">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+  <!-- Toast container -->
+  <div x-data="{ toasts: [] }" x-on:htmx:after-request.window="
+    const detail = $event.detail;
+    if (detail.xhr.getResponseHeader('HX-Trigger')) {
+      const trigger = JSON.parse(detail.xhr.getResponseHeader('HX-Trigger'));
+      if (trigger.toast) toasts.push(trigger.toast);
+    }
+  " style="position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px;">
+    <template x-for="(t, i) in toasts" :key="i">
+      <div class="toast" :class="'toast-' + t.type" x-init="setTimeout(() => toasts.splice(i, 1), 3000)" x-text="t.message"></div>
+    </template>
+  </div>
+</div>
+{{end}}

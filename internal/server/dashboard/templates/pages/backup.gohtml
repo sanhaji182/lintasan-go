@@ -1,0 +1,50 @@
+{{define "pages/backup.gohtml"}}
+<div>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+    <div>
+      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">💾 Backup</h1>
+      <p style="color:var(--color-fg-2); font-size:13px;">Database backup and restore.</p>
+    </div>
+  </div>
+
+  <!-- Backup Status -->
+  <div class="card" id="backup-status" hx-get="/api/backup" hx-trigger="load" hx-swap="outerHTML" style="margin-bottom:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-size:14px; font-weight:600; color:var(--color-fg-0);">Backup Status</div>
+        <div style="font-size:13px; color:var(--color-fg-2); margin-top:4px;">Loading...</div>
+      </div>
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Create Backup -->
+  <div class="card">
+    <h2 style="font-size:14px; font-weight:600; color:var(--color-fg-1); margin-bottom:8px;">Create Backup</h2>
+    <p style="font-size:13px; color:var(--color-fg-2); margin-bottom:16px;">
+      Create a full backup of your Lintasan database including all settings, keys, teams, users, and routing configuration.
+    </p>
+    <button class="btn btn-primary"
+            hx-post="/api/backup"
+            hx-target="#backup-status"
+            hx-swap="outerHTML"
+            hx-indicator="this">
+      <span class="htmx-indicator" style="display:none;">
+        <span class="spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; vertical-align:middle; margin-right:4px;"></span>
+        Creating...
+      </span>
+      <span class="htmx-indicator-off">Create Backup Now</span>
+    </button>
+    <script>
+      // Toggle button text on request
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[hx-post="/api/backup"]');
+        if (btn) {
+          btn.querySelector('.htmx-indicator').style.display = 'inline';
+          btn.querySelector('.htmx-indicator-off').style.display = 'none';
+        }
+      });
+    </script>
+  </div>
+</div>
+{{end}}

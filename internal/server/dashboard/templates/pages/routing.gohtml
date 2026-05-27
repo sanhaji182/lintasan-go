@@ -1,0 +1,62 @@
+{{define "pages/routing.gohtml"}}
+<div>
+  <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0); margin-bottom:8px;">🔀 Routing</h1>
+  <p style="color:var(--color-fg-2); margin-bottom:12px;">Configure routing priority — drag rows to reorder. Higher priority providers are tried first.</p>
+
+  <div class="card" id="routing-table" hx-get="/api/routing" hx-trigger="load" hx-swap="outerHTML">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px;"></th>
+          <th>Priority</th>
+          <th>Model</th>
+          <th>Provider</th>
+          <th>Status</th>
+          <th>Latency</th>
+        </tr>
+      </thead>
+      <tbody id="routing-rows">
+        <tr>
+          <td colspan="6" style="text-align:center; padding:24px;">
+            <div class="spinner" style="margin:0 auto;"></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+  <script>
+    document.addEventListener('htmx:afterSettle', function() {
+      var tbody = document.getElementById('routing-rows');
+      if (tbody && !tbody._sortableInit) {
+        tbody._sortableInit = true;
+        new Sortable(tbody, {
+          handle: '.drag-handle',
+          animation: 150,
+          onEnd: function() {
+            var rows = tbody.querySelectorAll('tr[draggable]');
+            var order = [];
+            rows.forEach(function(row, i) {
+              order.push({
+                id: row.getAttribute('data-id'),
+                priority: i + 1
+              });
+            });
+            fetch('/api/routing/reorder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ routes: order })
+            });
+          }
+        });
+      }
+    });
+  </script>
+  <style>
+    .drag-handle { cursor: grab; color: var(--color-fg-3); font-size: 16px; user-select: none; }
+    .drag-handle:active { cursor: grabbing; }
+    .sortable-ghost { opacity: 0.4; background: var(--color-primary-light); }
+  </style>
+</div>
+{{end}}

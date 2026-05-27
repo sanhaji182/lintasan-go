@@ -1,0 +1,13 @@
+{{define "components/toast.gohtml"}}
+<div x-data="{ toasts: [], show: false }"
+     x-on:htmx:trigger.window="$event.detail.toast && (toasts.push($event.detail.toast), show=true)"
+     x-on:toast.window="toasts.push($event.detail), show=true"
+     style="position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px;">
+  <template x-for="(t, i) in toasts" :key="i">
+    <div class="toast"
+         :class="'toast-' + t.type"
+         x-init="setTimeout(() => toasts.splice(i, 1), 3000)"
+         x-text="t.message"></div>
+  </template>
+</div>
+{{end}}

@@ -1,0 +1,28 @@
+{{define "pages/login.gohtml"}}
+<div style="display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--color-bg-body);">
+  <div class="card" style="width:100%; max-width:380px; padding:32px;">
+    <div style="text-align:center; margin-bottom:24px;">
+      <h1 style="font-size:24px; font-weight:700; color:var(--color-primary);">Lintasan</h1>
+      <p style="color:var(--color-fg-2); font-size:13px; margin-top:4px;">Dashboard Access</p>
+    </div>
+    <form hx-post="/api/auth/login" hx-target="this" hx-swap="outerHTML">
+      <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Master Password</label>
+      <input type="password" name="password" placeholder="Enter password..." autocomplete="current-password"
+             style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+      <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px; justify-content:center;">
+        Sign In
+      </button>
+      <div style="color:var(--color-danger); font-size:12px; margin-top:8px; text-align:center;" class="htmx-indicator" id="login-error"></div>
+    </form>
+    <script>
+      document.body.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.target && evt.detail.target.closest('form[hx-post="/api/auth/login"]')) {
+          if (evt.detail.xhr.status === 200) {
+            window.location.href = '/dashboard';
+          }
+        }
+      });
+    </script>
+  </div>
+</div>
+{{end}}

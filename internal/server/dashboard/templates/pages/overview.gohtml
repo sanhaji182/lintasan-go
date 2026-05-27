@@ -1,0 +1,66 @@
+{{define "pages/overview.gohtml"}}
+<div>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+    <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">Overview</h1>
+    <span style="font-size:12px; color:var(--color-fg-3);">Auto-refreshes every 30s</span>
+  </div>
+
+  <!-- Stats Cards -->
+  <div id="overview-stats" hx-get="/api/overview-stats" hx-trigger="load, every 30s" hx-swap="outerHTML">
+    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
+      <div class="card" style="display:flex; align-items:center; gap:12px;">
+        <div style="font-size:24px;">🔌</div>
+        <div>
+          <div style="font-size:11px; font-weight:600; color:var(--color-fg-3); text-transform:uppercase;">Active Connections</div>
+          <div class="skeleton" style="width:48px; height:28px; border-radius:4px;"></div>
+        </div>
+      </div>
+      <div class="card" style="display:flex; align-items:center; gap:12px;">
+        <div style="font-size:24px;">📊</div>
+        <div>
+          <div style="font-size:11px; font-weight:600; color:var(--color-fg-3); text-transform:uppercase;">Total Requests</div>
+          <div class="skeleton" style="width:64px; height:28px; border-radius:4px;"></div>
+        </div>
+      </div>
+      <div class="card" style="display:flex; align-items:center; gap:12px;">
+        <div style="font-size:24px;">⚡</div>
+        <div>
+          <div style="font-size:11px; font-weight:600; color:var(--color-fg-3); text-transform:uppercase;">Cache Hit Rate</div>
+          <div class="skeleton" style="width:56px; height:28px; border-radius:4px;"></div>
+        </div>
+      </div>
+      <div class="card" style="display:flex; align-items:center; gap:12px;">
+        <div style="font-size:24px;">🪙</div>
+        <div>
+          <div style="font-size:11px; font-weight:600; color:var(--color-fg-3); text-transform:uppercase;">Tokens Today</div>
+          <div class="skeleton" style="width:72px; height:28px; border-radius:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card" style="margin-top:24px;">
+    <h2 style="font-size:14px; font-weight:600; color:var(--color-fg-1); margin-bottom:12px;">Recent Activity</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Model</th>
+          <th>Provider</th>
+          <th>Status</th>
+          <th>Tokens</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody id="recent-activity" hx-get="/api/overview-stats" hx-trigger="load, every 30s" hx-swap="outerHTML">
+        <tr>
+          <td colspan="6" style="text-align:center; padding:24px;">
+            <div class="spinner" style="margin:0 auto;"></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}

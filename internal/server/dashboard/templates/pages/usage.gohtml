@@ -1,0 +1,29 @@
+{{define "pages/usage.gohtml"}}
+<div>
+  <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0); margin-bottom:8px;">💰 Usage</h1>
+  <p style="color:var(--color-fg-2); margin-bottom:20px;">Token consumption by model and provider.</p>
+
+  <div class="card" id="usage-table-container" hx-get="/api/usage" hx-trigger="load" hx-swap="outerHTML">
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Provider</th>
+          <th>Requests</th>
+          <th>Prompt Tokens</th>
+          <th>Completion Tokens</th>
+          <th>Total Tokens</th>
+          <th>Avg Latency</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="7" style="text-align:center; padding:24px;">
+            <div class="spinner" style="margin:0 auto;"></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}

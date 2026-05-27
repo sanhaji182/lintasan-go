@@ -1,0 +1,47 @@
+{{define "components/table.gohtml"}}
+<div>
+  <table>
+    <thead>
+      <tr>
+        {{range .Headers}}<th>{{.}}</th>{{end}}
+      </tr>
+    </thead>
+    <tbody>
+      {{if .Loading}}
+      <tr>
+        {{$colspan := len .Headers}}
+        <td colspan="{{$colspan}}" style="text-align:center; padding:24px;">
+          <div class="spinner" style="margin:0 auto;"></div>
+        </td>
+      </tr>
+      {{else if .Error}}
+      <tr>
+        <td colspan="{{len .Headers}}" style="text-align:center; padding:24px; color:var(--color-danger);">
+          ⚠ {{.Error}}
+        </td>
+      </tr>
+      {{else if not .Rows}}
+      <tr>
+        <td colspan="{{len .Headers}}">
+          <div class="empty-state">
+            <div class="empty-state-icon">{{.EmptyIcon}}</div>
+            <p>{{.EmptyMessage}}</p>
+          </div>
+        </td>
+      </tr>
+      {{else}}
+      {{range .Rows}}
+      <tr>
+        {{range .}}<td>{{.}}</td>{{end}}
+      </tr>
+      {{end}}
+      {{end}}
+    </tbody>
+  </table>
+  {{if .Loading}}
+  <div class="htmx-indicator" style="text-align:center; padding:16px;">
+    <div class="spinner" style="margin:0 auto;"></div>
+  </div>
+  {{end}}
+</div>
+{{end}}

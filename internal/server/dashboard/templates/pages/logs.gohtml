@@ -1,0 +1,85 @@
+{{define "pages/logs.gohtml"}}
+<div x-data="{
+  level: 'all',
+  paused: false,
+  autoScroll: true,
+  logCount: 0,
+  toggleLevel(l) { this.level = l; this.refreshStream(); },
+  refreshStream() {
+    var tbody = document.getElementById('log-entries');
+    if (tbody) tbody.innerHTML = '';
+    this.logCount = 0;
+    var container = document.getElementById('log-stream');
+    if (container) {
+      container.setAttribute('hx-get', '/api/logs/stream?level=' + this.level);
+      htmx.process(container);
+      container.dispatchEvent(new Event('htmx:trigger'));
+    }
+  }
+}" x-init="
+  $watch('autoScroll', function(v) {
+    if (v) {
+      var el = document.getElementById('log-container');
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+  });
+">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+    <div>
+      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">📋 Logs</h1>
+      <p style="color:var(--color-fg-2); font-size:13px;">Real-time server logs.</p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="btn btn-sm" x-bind:class="level === 'all' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('all')">All</button>
+      <button class="btn btn-sm" x-bind:class="level === 'info' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('info')">Info</button>
+      <button class="btn btn-sm" x-bind:class="level === 'warn' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('warn')">Warn</button>
+      <button class="btn btn-sm" x-bind:class="level === 'error' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('error')">Error</button>
+      <span style="width:1px; height:20px; background:var(--color-border); margin:0 4px;"></span>
+      <button class="btn btn-sm btn-secondary" x-on:click="paused = !paused" x-text="paused ? '▶ Resume' : '⏸ Pause'"></button>
+      <button class="btn btn-sm btn-ghost" x-on:click="document.getElementById('log-entries').innerHTML = ''; logCount = 0;">Clear</button>
+    </div>
+  </div>
+
+  <div class="card" id="log-container"
+       style="max-height:calc(100vh - 200px); overflow-y:auto; padding:0;"
+       x-init="
+         var obs = new MutationObserver(function() {
+           if (autoScroll) { $el.scrollTop = $el.scrollHeight; }
+         });
+         obs.observe($el, { childList: true, subtree: true });
+       ">
+    <div id="log-stream" hx-ext="sse" sse-connect="/api/logs/stream" sse-swap="message" hx-swap="afterbegin">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:160px;">Timestamp</th>
+            <th style="width:70px;">Level</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody id="log-entries">
+          <tr>
+            <td colspan="3" style="text-align:center; padding:24px; color:var(--color-fg-3);">
+              Waiting for log events...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:8px; font-size:11px; color:var(--color-fg-3);">
+    <span x-text="logCount + ' entries'">0 entries</span>
+    <span x-show="paused" style="margin-left:8px; color:var(--color-warning);">(Paused)</span>
+  </div>
+
+  <script src="https://unpkg.com/htmx-ext-sse@2.2.3/sse.js"></script>
+  <script>
+    // Track log count
+    document.addEventListener('htmx:sseMessage', function(evt) {
+      var alpineData = document.querySelector('[x-data]')._x_dataStack[0];
+      if (alpineData) alpineData.logCount++;
+    });
+  </script>
+</div>
+{{end}}

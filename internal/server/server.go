@@ -23,11 +23,12 @@ import (
 )
 
 type Server struct {
-	cfg        *config.Config
-	db         *db.DB
-	mux        *http.ServeMux
-	proxy      *ProxyHandler
-	nodeProxy  *httputil.ReverseProxy // reverse-proxy to Node dashboard at :20180
+	cfg             *config.Config
+	db              *db.DB
+	mux             *http.ServeMux
+	proxy           *ProxyHandler
+	dashboardEngine *DashboardEngine
+	nodeProxy       *httputil.ReverseProxy // reverse-proxy to Node dashboard at :20180
 	memHandler *MemoryHandler         // vector memory API handler
 	mitmProxy  *mitm.MITMProxy        // MITM bridge for IDE interception
 	oauthMgr   *auth.OAuthManager     // OAuth session manager
@@ -78,6 +79,14 @@ func New(cfg *config.Config, database *db.DB) *Server {
 	// Wire web search engine (SerpAPI key from settings)
 	serpKey, _ := database.GetSetting("serpapi_key")
 	s.webSearch = websearch.New(serpKey)
+
+	// Wire dashboard engine
+	engine, err := NewDashboardEngine()
+	if err != nil {
+		fmt.Printf("WARNING: dashboard engine init failed: %v\n", err)
+	} else {
+		s.dashboardEngine = engine
+	}
 
 	// Wire MITM proxy if MITM_PORT env set
 	if port := os.Getenv("MITM_PORT"); port != "" {
@@ -177,34 +186,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/settings", s.handleGetSettings)
 	s.mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
 
-	// Dashboard API endpoints
-	s.mux.HandleFunc("GET /api/dashboard/stats", s.handleDashboardStats)
-	s.mux.HandleFunc("GET /api/dashboard/connections", s.handleDashboardConnections)
-	s.mux.HandleFunc("GET /api/dashboard/cache", s.handleDashboardCache)
-	s.mux.HandleFunc("GET /api/dashboard/combo", s.handleDashboardCombo)
-	s.mux.HandleFunc("GET /api/dashboard/logs", s.handleDashboardLogs)
-	s.mux.HandleFunc("PUT /api/dashboard/settings", s.handleDashboardSettings)
-
-	// Dashboard — reverse-proxy everything else to Node :20180
-	// This includes: /, /dashboard/*, /_next/*, /favicon.ico
-	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Go-specific paths stay local — ONLY paths Go owns
-		if strings.HasPrefix(r.URL.Path, "/v1/") ||
-			strings.HasPrefix(r.URL.Path, "/health") ||
-			strings.HasPrefix(r.URL.Path, "/api/dashboard/") ||
-			strings.HasPrefix(r.URL.Path, "/api/oauth/") ||
-			strings.HasPrefix(r.URL.Path, "/api/models/catalog") {
-			http.NotFound(w, r)
-			return
-		}
-		// Redirect analytics → usage (analytics page has Next.js 16 RSC streaming bug)
-		if r.URL.Path == "/dashboard/analytics" {
-			http.Redirect(w, r, "/dashboard/usage", http.StatusMovedPermanently)
-			return
-		}
-		// Everything else → proxy to Node dashboard
-		s.nodeProxy.ServeHTTP(w, r)
-	})
+	// Dashboard — Go native (HTMX + Alpine.js)
+	s.registerDashboardRoutes()
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
