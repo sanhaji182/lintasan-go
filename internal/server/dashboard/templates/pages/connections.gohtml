@@ -8,10 +8,10 @@
   presets: [],
   form: { name: '', provider: '', api_key: '', base_url: '', models: '' }
 }">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+  <div>
     <div>
-      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">🔌 Provider Accounts</h1>
-      <p style="color:var(--color-fg-2); font-size:13px;">Manage connections to AI model providers.</p>
+      <h1>🔌 Provider Accounts</h1>
+      <p>Manage connections to AI model providers.</p>
     </div>
     <button class="btn btn-primary" x-on:click="showModal = true; modalTitle = 'Add Provider'; editMode = false; selectedPreset = null; form = { name: '', provider: '', api_key: '', base_url: '', models: '' }; $nextTick(() => $refs.presetsGrid && loadPresets())">+ Add Provider</button>
   </div>
@@ -31,8 +31,8 @@
       </thead>
       <tbody>
         <tr>
-          <td colspan="6" style="text-align:center; padding:24px;">
-            <div class="spinner" style="margin:0 auto;"></div>
+          <td colspan="6">
+            <div class="mx-auto spinner"></div>
           </td>
         </tr>
       </tbody>
@@ -43,20 +43,20 @@
   <template x-if="showModal">
     <div>
       <div class="modal-backdrop" x-on:click="showModal = false"></div>
-      <div class="modal-panel" x-on:click.outside="showModal = false" style="max-width:640px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0);" x-text="modalTitle"></h2>
-          <button class="btn-icon" x-on:click="showModal = false" style="font-size:18px;">&times;</button>
+      <div class="max-w-[640px] modal-panel" x-on:click.outside="showModal = false">
+        <div>
+          <h2 x-text="modalTitle"></h2>
+          <button class="btn-icon text-lg" x-on:click="showModal = false">&times;</button>
         </div>
 
         <!-- Preset Grid (only when adding) -->
         <template x-if="!editMode && !selectedPreset">
           <div>
-            <p style="font-size:13px; color:var(--color-fg-2); margin-bottom:12px;">Choose a provider preset to get started:</p>
-            <div x-ref="presetsGrid" id="presets-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; max-height:300px; overflow-y:auto;">
+            <p>Choose a provider preset to get started:</p>
+            <div x-ref="presetsGrid" id="presets-grid">
               <!-- Loaded via hx-get -->
             </div>
-            <div style="margin-top:16px; text-align:center;">
+            <div>
               <button class="btn btn-ghost" x-on:click="selectedPreset = { provider: 'custom', name: '' }; form.provider = 'custom'">Manual Configuration</button>
             </div>
           </div>
@@ -69,27 +69,22 @@
             <template x-if="editMode">
               <input type="hidden" name="id" x-bind:value="editId">
             </template>
-            <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Display Name</label>
-            <input type="text" name="name" x-model="form.name" placeholder="e.g., OpenAI Production"
-                   style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+            <label>Display Name</label>
+            <input type="text" name="name" x-model="form.name" placeholder="e.g., OpenAI Production">
 
-            <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px; margin-top:12px;">Provider</label>
-            <input type="text" name="provider" x-model="form.provider" placeholder="openai"
-                   style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+            <label>Provider</label>
+            <input type="text" name="provider" x-model="form.provider" placeholder="openai">
 
-            <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px; margin-top:12px;">API Key</label>
-            <input type="password" name="api_key" x-model="form.api_key" placeholder="sk-..."
-                   style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+            <label>API Key</label>
+            <input type="password" name="api_key" x-model="form.api_key" placeholder="sk-...">
 
-            <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px; margin-top:12px;">Base URL (optional)</label>
-            <input type="text" name="base_url" x-model="form.base_url" placeholder="https://api.openai.com/v1"
-                   style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+            <label>Base URL (optional)</label>
+            <input type="text" name="base_url" x-model="form.base_url" placeholder="https://api.openai.com/v1">
 
-            <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px; margin-top:12px;">Models (comma-separated)</label>
-            <input type="text" name="models" x-model="form.models" placeholder="gpt-4o, gpt-4o-mini"
-                   style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+            <label>Models (comma-separated)</label>
+            <input type="text" name="models" x-model="form.models" placeholder="gpt-4o, gpt-4o-mini">
 
-            <div style="display:flex; gap:8px; justify-content:space-between; margin-top:16px;">
+            <div>
               <button type="button" class="btn btn-secondary"
                       hx-post="/api/connections/test"
                       hx-include="closest form"
@@ -97,12 +92,12 @@
                       hx-swap="innerHTML">
                 Test Connection
               </button>
-              <div style="display:flex; gap:8px;">
+              <div>
                 <button type="button" class="btn btn-secondary" x-on:click="selectedPreset = null; if (editMode) { showModal = false }">Back</button>
                 <button type="submit" class="btn btn-primary" x-bind:disabled="!form.name.trim() || !form.provider.trim()">Save</button>
               </div>
             </div>
-            <div id="test-result" style="margin-top:8px; font-size:12px;"></div>
+            <div id="test-result"></div>
           </form>
         </template>
       </div>
@@ -113,13 +108,13 @@
     function loadPresets() {
       var grid = document.getElementById('presets-grid');
       if (!grid) return;
-      grid.innerHTML = '<div class="spinner" style="margin:0 auto; grid-column:1/-1;"></div>';
+      grid.innerHTML = '<div class="col-span-full mx-auto spinner"></div>';
       fetch('/api/providers/presets')
         .then(r => r.json())
         .then(data => {
           if (Array.isArray(data)) {
             grid.innerHTML = data.map(p =>
-              '<button type="button" class="btn btn-secondary btn-sm" style="justify-content:flex-start; padding:8px;" ' +
+              '<button type="button" class="btn btn-secondary btn-sm justify-start p-2" ' +
               'onclick="var d=Alpine.$data(document.querySelector(\'[x-data]\')); ' +
               'd.selectedPreset = ' + JSON.stringify(p).replace(/"/g, '&quot;') + '; ' +
               'd.form = { name: \'' + (p.name || p.provider).replace(/'/g, "\\'") + '\', provider: \'' + (p.provider || '').replace(/'/g, "\\'") + '\', api_key: \'\', base_url: \'' + (p.base_url || '').replace(/'/g, "\\'") + '\', models: \'\' };">' +
@@ -129,7 +124,7 @@
           }
         })
         .catch(() => {
-          grid.innerHTML = '<span style="color:var(--color-fg-3); font-size:12px; grid-column:1/-1; text-align:center;">Failed to load presets</span>';
+          grid.innerHTML = '<span>Failed to load presets</span>';
         });
     }
   </script>

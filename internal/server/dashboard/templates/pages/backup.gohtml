@@ -1,18 +1,18 @@
 {{define "pages/backup.gohtml"}}
 <div>
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+  <div>
     <div>
-      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">💾 Backup</h1>
-      <p style="color:var(--color-fg-2); font-size:13px;">Database backup and restore.</p>
+      <h1>💾 Backup</h1>
+      <p>Database backup and restore.</p>
     </div>
   </div>
 
   <!-- Backup Status -->
-  <div class="card" id="backup-status" hx-get="/api/backup" hx-trigger="load" hx-swap="outerHTML" style="margin-bottom:16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
+  <div class="card mb-4" id="backup-status" hx-get="/api/backup" hx-trigger="load" hx-swap="outerHTML">
+    <div>
       <div>
-        <div style="font-size:14px; font-weight:600; color:var(--color-fg-0);">Backup Status</div>
-        <div style="font-size:13px; color:var(--color-fg-2); margin-top:4px;">Loading...</div>
+        <div>Backup Status</div>
+        <div>Loading...</div>
       </div>
       <div class="spinner"></div>
     </div>
@@ -20,8 +20,8 @@
 
   <!-- Create Backup -->
   <div class="card">
-    <h2 style="font-size:14px; font-weight:600; color:var(--color-fg-1); margin-bottom:8px;">Create Backup</h2>
-    <p style="font-size:13px; color:var(--color-fg-2); margin-bottom:16px;">
+    <h2>Create Backup</h2>
+    <p>
       Create a full backup of your Lintasan database including all settings, keys, teams, users, and routing configuration.
     </p>
     <button class="btn btn-primary"
@@ -29,8 +29,8 @@
             hx-target="#backup-status"
             hx-swap="outerHTML"
             hx-indicator="this">
-      <span class="htmx-indicator" style="display:none;">
-        <span class="spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; vertical-align:middle; margin-right:4px;"></span>
+      <span class="hidden htmx-indicator">
+        <span class="align-middle h-[14px] inline-block mr-1 spinner w-[14px]"></span>
         Creating...
       </span>
       <span class="htmx-indicator-off">Create Backup Now</span>

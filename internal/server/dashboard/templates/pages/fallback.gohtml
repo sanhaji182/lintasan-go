@@ -1,9 +1,9 @@
 {{define "pages/fallback.gohtml"}}
 <div x-data="{ showModal: false, editMode: false, editId: '', chainName: '', providers: [''], providerOptions: [] }">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+  <div>
     <div>
-      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">🔄 Fallback Chains</h1>
-      <p style="color:var(--color-fg-2); font-size:13px;">Define provider fallback sequences when a provider fails.</p>
+      <h1>🔄 Fallback Chains</h1>
+      <p>Define provider fallback sequences when a provider fails.</p>
     </div>
     <button class="btn btn-primary" x-on:click="
       showModal = true; editMode = false; editId = ''; chainName = ''; providers = [''];
@@ -24,8 +24,8 @@
       </thead>
       <tbody>
         <tr>
-          <td colspan="4" style="text-align:center; padding:24px;">
-            <div class="spinner" style="margin:0 auto;"></div>
+          <td colspan="4">
+            <div class="mx-auto spinner"></div>
           </td>
         </tr>
       </tbody>
@@ -36,10 +36,10 @@
   <template x-if="showModal">
     <div>
       <div class="modal-backdrop" x-on:click="showModal = false"></div>
-      <div class="modal-panel" x-on:click.outside="showModal = false" style="max-width:540px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0);" x-text="editMode ? 'Edit Chain' : 'Add Fallback Chain'"></h2>
-          <button class="btn-icon" x-on:click="showModal = false" style="font-size:18px;">&times;</button>
+      <div class="max-w-[540px] modal-panel" x-on:click.outside="showModal = false">
+        <div>
+          <h2 x-text="editMode ? 'Edit Chain' : 'Add Fallback Chain'"></h2>
+          <button class="btn-icon text-lg" x-on:click="showModal = false">&times;</button>
         </div>
 
         <form hx-post="/api/fallback" hx-target="#fallback-table" hx-swap="outerHTML"
@@ -48,15 +48,14 @@
             <input type="hidden" name="id" x-bind:value="editId">
           </template>
 
-          <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Chain Name</label>
-          <input type="text" name="name" x-model="chainName" placeholder="e.g., Primary Fallback"
-                 style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+          <label>Chain Name</label>
+          <input type="text" name="name" x-model="chainName" placeholder="e.g., Primary Fallback">
 
-          <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px; margin-top:16px;">Providers (in fallback order)</label>
+          <label>Providers (in fallback order)</label>
           <div id="provider-sequence">
             <template x-for="(provider, index) in providers" :key="index">
-              <div style="display:flex; gap:8px; margin-bottom:8px;">
-                <select x-bind:name="'providers[]'" style="flex:1; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none;">
+              <div>
+                <select x-bind:name="'providers[]'">
                   <option value="">-- Select Provider --</option>
                   <template x-for="opt in providerOptions" :key="opt.id">
                     <option x-bind:value="opt.name || opt.id" x-text="opt.name" x-bind:selected="provider === (opt.name || opt.id)"></option>
@@ -67,10 +66,10 @@
               </div>
             </template>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px;"
+          <button type="button" class="btn btn-secondary btn-sm mt-2"
                   x-on:click="providers.push('')">+ Add Provider</button>
 
-          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+          <div>
             <button type="button" class="btn btn-secondary" x-on:click="showModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" x-bind:disabled="!chainName.trim() || providers.filter(p => p.trim()).length < 2">
               Save Chain

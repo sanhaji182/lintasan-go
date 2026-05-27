@@ -1,11 +1,11 @@
 {{define "pages/plugins.gohtml"}}
 <div x-data="{ showConfirm: false, installPlugin: null }">
-  <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0); margin-bottom:8px;">🧩 Plugins</h1>
-  <p style="color:var(--color-fg-2); margin-bottom:20px;">Extend Lintasan with custom plugins.</p>
+  <h1>🧩 Plugins</h1>
+  <p>Extend Lintasan with custom plugins.</p>
 
   <!-- Installed Plugins -->
-  <div class="card" style="margin-bottom:16px;">
-    <h2 style="font-size:14px; font-weight:600; color:var(--color-fg-1); margin-bottom:12px;">Installed Plugins</h2>
+  <div class="card mb-4">
+    <h2>Installed Plugins</h2>
     <div id="installed-plugins" hx-get="/api/plugins" hx-trigger="load" hx-swap="outerHTML">
       <table>
         <thead>
@@ -19,8 +19,8 @@
         </thead>
         <tbody>
           <tr>
-            <td colspan="5" style="text-align:center; padding:24px;">
-              <div class="spinner" style="margin:0 auto;"></div>
+            <td colspan="5">
+              <div class="mx-auto spinner"></div>
             </td>
           </tr>
         </tbody>
@@ -30,22 +30,22 @@
 
   <!-- Plugin Store -->
   <div class="card">
-    <h2 style="font-size:14px; font-weight:600; color:var(--color-fg-1); margin-bottom:12px;">Plugin Store</h2>
-    <div id="plugin-store" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+    <h2>Plugin Store</h2>
+    <div id="plugin-store">
       {{range .Plugins}}
-      <div class="card card-hover" style="display:flex; flex-direction:column; justify-content:space-between;">
+      <div class="card card-hover flex justify-between">
         <div>
-          <div style="font-size:14px; font-weight:600; color:var(--color-fg-0);">{{.Name}}</div>
-          <div style="font-size:12px; color:var(--color-fg-2); margin-top:4px;">{{.Description}}</div>
-          <div style="font-size:11px; color:var(--color-fg-3); margin-top:8px;">v{{.Version}}</div>
+          <div>{{.Name}}</div>
+          <div>{{.Description}}</div>
+          <div>v{{.Version}}</div>
         </div>
-        <button class="btn btn-primary btn-sm" style="margin-top:12px; align-self:flex-start;"
+        <button class="btn btn-primary btn-sm mt-3"
                 x-on:click="installPlugin = '{{.ID}}'; showConfirm = true">
           Install
         </button>
       </div>
       {{else}}
-      <div style="grid-column:1/-1;" class="empty-state">
+      <div class="empty-state">
         <div class="empty-state-icon">🧩</div>
         <p>No plugins available in the store.</p>
       </div>
@@ -58,12 +58,12 @@
     <div>
       <div class="modal-backdrop" x-on:click="showConfirm = false"></div>
       <div class="modal-panel" x-on:click.outside="showConfirm = false">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0);">Install Plugin</h2>
-          <button class="btn-icon" x-on:click="showConfirm = false" style="font-size:18px;">&times;</button>
+        <div>
+          <h2>Install Plugin</h2>
+          <button class="btn-icon text-lg" x-on:click="showConfirm = false">&times;</button>
         </div>
-        <p style="color:var(--color-fg-1); margin-bottom:16px;">Are you sure you want to install this plugin? It may have access to your API keys and data.</p>
-        <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <p>Are you sure you want to install this plugin? It may have access to your API keys and data.</p>
+        <div>
           <button class="btn btn-secondary" x-on:click="showConfirm = false">Cancel</button>
           <button class="btn btn-primary"
                   hx-post="/api/plugins"

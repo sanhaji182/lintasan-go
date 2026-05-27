@@ -112,13 +112,13 @@
     this.input = '';
   }
 }" x-init="init()">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+  <div>
     <div>
-      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">🧪 Playground</h1>
-      <p style="color:var(--color-fg-2); font-size:13px;">Test AI models directly from the dashboard.</p>
+      <h1>🧪 Playground</h1>
+      <p>Test AI models directly from the dashboard.</p>
     </div>
-    <div style="display:flex; gap:8px; align-items:center;">
-      <select x-model="model" style="padding:8px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:13px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none;">
+    <div>
+      <select x-model="model">
         <option value="">-- Select Model --</option>
         <template x-for="m in models" :key="m.id || m.name">
           <option x-bind:value="m.id || m.name" x-text="m.name || m.id"></option>
@@ -129,27 +129,24 @@
   </div>
 
   <!-- Settings Panel -->
-  <div class="card" style="margin-bottom:16px;" x-show="showSettings">
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+  <div class="card mb-4" x-show="showSettings">
+    <div>
       <div>
-        <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">System Prompt</label>
-        <textarea x-model="sys" rows="3"
-                  style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:13px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box; font-family:monospace;"></textarea>
+        <label>System Prompt</label>
+        <textarea x-model="sys" rows="3"></textarea>
       </div>
       <div>
-        <div style="margin-bottom:16px;">
-          <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Temperature: <span x-text="temp"></span></label>
-          <input type="range" x-model="temp" min="0" max="2" step="0.1"
-                 style="width:100%; accent-color:var(--color-primary);">
-        </div>
-        <div style="margin-bottom:16px;">
-          <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Max Tokens</label>
-          <input type="number" x-model="maxTok" min="1" max="131072"
-                 style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+        <div>
+          <label>Temperature: <span x-text="temp"></span></label>
+          <input type="range" x-model="temp" min="0" max="2" step="0.1">
         </div>
         <div>
-          <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--color-fg-1); cursor:pointer;">
-            <input type="checkbox" x-model="single" style="width:auto; accent-color:var(--color-primary);">
+          <label>Max Tokens</label>
+          <input type="number" x-model="maxTok" min="1" max="131072">
+        </div>
+        <div>
+          <label>
+            <input type="checkbox" x-model="single">
             Single turn (no conversation history)
           </label>
         </div>
@@ -158,20 +155,20 @@
   </div>
 
   <!-- Chat Area -->
-  <div class="card" style="margin-bottom:16px; min-height:400px; max-height:calc(100vh - 380px); overflow-y:auto; padding:16px;" id="chat-messages">
+  <div class="- 380px)] card max-h-[calc(100vh mb-4 min-h-[400px] overflow-y-auto p-4" id="chat-messages">
     <template x-if="messages.length === 0 && !streamText">
-      <div class="empty-state" style="padding:60px 16px;">
+      <div class="empty-state px-4 py-15">
         <div class="empty-state-icon">💬</div>
         <p>Send a message to start testing.</p>
       </div>
     </template>
 
     <template x-for="(msg, i) in messages" :key="i">
-      <div style="margin-bottom:16px;"
+      <div
            x-bind:style="msg.role === 'user' ? 'text-align:right;' : ''">
-        <div style="font-size:11px; font-weight:600; color:var(--color-fg-3); margin-bottom:4px; text-transform:uppercase;"
+        <div
              x-text="msg.error ? 'ERROR' : msg.role === 'user' ? 'You' : 'Assistant'"></div>
-        <div style="display:inline-block; max-width:85%; padding:10px 14px; border-radius:12px; font-size:13px; line-height:1.6; white-space:pre-wrap; word-break:break-word; text-align:left;"
+        <div
              x-bind:style="msg.error ?
                'background:#fee2e2; color:#991b1b;' :
                (msg.role === 'user' ?
@@ -179,43 +176,42 @@
                  'background:var(--color-bg-input); color:var(--color-fg-0);')"
              x-text="msg.content"></div>
         <button x-show="msg.role === 'assistant' && !msg.error"
-                class="btn btn-ghost btn-sm" style="margin-left:4px; font-size:11px;"
+                class="btn btn-ghost btn-sm ml-1 text-xs"
                 x-on:click="copy(msg.content)">📋</button>
       </div>
     </template>
 
     <!-- Streaming text -->
     <template x-if="streamText">
-      <div style="margin-bottom:16px;">
-        <div style="font-size:11px; font-weight:600; color:var(--color-fg-3); margin-bottom:4px; text-transform:uppercase;">Assistant</div>
-        <div style="display:inline-block; max-width:85%; padding:10px 14px; border-radius:12px; font-size:13px; line-height:1.6; white-space:pre-wrap; word-break:break-word; background:var(--color-bg-input); color:var(--color-fg-0);"
+      <div>
+        <div>Assistant</div>
+        <div
              x-text="streamText"></div>
-        <span class="spinner" style="display:inline-block; width:12px; height:12px; border-width:2px; vertical-align:middle; margin-left:4px;"></span>
+        <span class="align-middle h-[12px] inline-block ml-1 spinner w-[12px]"></span>
       </div>
     </template>
 
     <!-- Loading indicator -->
-    <div x-show="loading && !streamText" style="text-align:center; padding:16px;">
-      <div class="spinner" style="margin:0 auto;"></div>
+    <div x-show="loading && !streamText">
+      <div class="mx-auto spinner"></div>
     </div>
   </div>
 
   <!-- Input Area -->
-  <div class="card" style="padding:12px 16px;">
-    <div style="display:flex; gap:8px; align-items:flex-end;">
+  <div class="card px-4 py-3">
+    <div>
       <textarea x-model="input" placeholder="Type your message..." rows="1"
-                style="flex:1; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; resize:none; box-sizing:border-box; min-height:42px; max-height:120px; font-family:inherit;"
                 x-on:keydown.enter.prevent="if(!$event.shiftKey) { send(); }"
                 x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px';"
                 x-bind:disabled="loading"></textarea>
-      <button x-show="!loading" class="btn btn-primary" style="padding:10px 20px;" x-on:click="send()" x-bind:disabled="!input.trim()">
+      <button x-show="!loading" class="btn btn-primary px-5 py-[10px]" x-on:click="send()" x-bind:disabled="!input.trim()">
         Send
       </button>
-      <button x-show="loading" class="btn btn-danger" style="padding:10px 20px;" x-on:click="abort()">
+      <button x-show="loading" class="btn btn-danger px-5 py-[10px]" x-on:click="abort()">
         ⏹ Stop
       </button>
     </div>
-    <div style="display:flex; gap:8px; margin-top:8px;">
+    <div>
       <button class="btn btn-ghost btn-sm" x-on:click="clear()">🗑 Clear Chat</button>
     </div>
   </div>

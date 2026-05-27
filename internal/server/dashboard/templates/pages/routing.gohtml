@@ -1,13 +1,13 @@
 {{define "pages/routing.gohtml"}}
 <div>
-  <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0); margin-bottom:8px;">🔀 Routing</h1>
-  <p style="color:var(--color-fg-2); margin-bottom:12px;">Configure routing priority — drag rows to reorder. Higher priority providers are tried first.</p>
+  <h1>🔀 Routing</h1>
+  <p>Configure routing priority — drag rows to reorder. Higher priority providers are tried first.</p>
 
   <div class="card" id="routing-table" hx-get="/api/routing" hx-trigger="load" hx-swap="outerHTML">
     <table>
       <thead>
         <tr>
-          <th style="width:40px;"></th>
+          <th></th>
           <th>Priority</th>
           <th>Model</th>
           <th>Provider</th>
@@ -17,8 +17,8 @@
       </thead>
       <tbody id="routing-rows">
         <tr>
-          <td colspan="6" style="text-align:center; padding:24px;">
-            <div class="spinner" style="margin:0 auto;"></div>
+          <td colspan="6">
+            <div class="mx-auto spinner"></div>
           </td>
         </tr>
       </tbody>

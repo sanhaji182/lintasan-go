@@ -1,9 +1,9 @@
 {{define "pages/users.gohtml"}}
 <div x-data="{ showCreateModal: false, newUserName: '', newUserEmail: '' }">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+  <div>
     <div>
-      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">👤 Users</h1>
-      <p style="color:var(--color-fg-2); font-size:13px;">Manage dashboard and API users.</p>
+      <h1>👤 Users</h1>
+      <p>Manage dashboard and API users.</p>
     </div>
     <button class="btn btn-primary" x-on:click="showCreateModal = true">+ Add User</button>
   </div>
@@ -23,8 +23,8 @@
       </thead>
       <tbody>
         <tr>
-          <td colspan="6" style="text-align:center; padding:24px;">
-            <div class="spinner" style="margin:0 auto;"></div>
+          <td colspan="6">
+            <div class="mx-auto spinner"></div>
           </td>
         </tr>
       </tbody>
@@ -36,24 +36,22 @@
     <div>
       <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
       <div class="modal-panel" x-on:click.outside="showCreateModal = false">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0);">Add User</h2>
-          <button class="btn-icon" x-on:click="showCreateModal = false" style="font-size:18px;">&times;</button>
+        <div>
+          <h2>Add User</h2>
+          <button class="btn-icon text-lg" x-on:click="showCreateModal = false">&times;</button>
         </div>
         <form hx-post="/api/users" hx-target="#users-table" hx-swap="outerHTML"
               x-on:submit="showCreateModal = false">
-          <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px;">Name</label>
-          <input type="text" name="name" x-model="newUserName" placeholder="Full name"
-                 style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
-          <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px; margin-top:12px;">Email</label>
-          <input type="email" name="email" x-model="newUserEmail" placeholder="user@example.com"
-                 style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
-          <label style="display:block; font-size:12px; font-weight:600; color:var(--color-fg-2); margin-bottom:6px; margin-top:12px;">Role</label>
-          <select name="role" style="width:100%; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius); font-size:14px; background:var(--color-bg-input); color:var(--color-fg-0); outline:none; box-sizing:border-box;">
+          <label>Name</label>
+          <input type="text" name="name" x-model="newUserName" placeholder="Full name">
+          <label>Email</label>
+          <input type="email" name="email" x-model="newUserEmail" placeholder="user@example.com">
+          <label>Role</label>
+          <select name="role">
             <option value="member">Member</option>
             <option value="admin">Admin</option>
           </select>
-          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+          <div>
             <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" x-bind:disabled="!newUserName.trim()">Add User</button>
           </div>

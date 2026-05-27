@@ -24,24 +24,23 @@
     }
   });
 ">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+  <div>
     <div>
-      <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0);">📋 Logs</h1>
-      <p style="color:var(--color-fg-2); font-size:13px;">Real-time server logs.</p>
+      <h1>📋 Logs</h1>
+      <p>Real-time server logs.</p>
     </div>
-    <div style="display:flex; gap:8px; align-items:center;">
+    <div>
       <button class="btn btn-sm" x-bind:class="level === 'all' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('all')">All</button>
       <button class="btn btn-sm" x-bind:class="level === 'info' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('info')">Info</button>
       <button class="btn btn-sm" x-bind:class="level === 'warn' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('warn')">Warn</button>
       <button class="btn btn-sm" x-bind:class="level === 'error' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('error')">Error</button>
-      <span style="width:1px; height:20px; background:var(--color-border); margin:0 4px;"></span>
+      <span></span>
       <button class="btn btn-sm btn-secondary" x-on:click="paused = !paused" x-text="paused ? '▶ Resume' : '⏸ Pause'"></button>
       <button class="btn btn-sm btn-ghost" x-on:click="document.getElementById('log-entries').innerHTML = ''; logCount = 0;">Clear</button>
     </div>
   </div>
 
-  <div class="card" id="log-container"
-       style="max-height:calc(100vh - 200px); overflow-y:auto; padding:0;"
+  <div class="- 200px)] card max-h-[calc(100vh overflow-y-auto" id="log-container"
        x-init="
          var obs = new MutationObserver(function() {
            if (autoScroll) { $el.scrollTop = $el.scrollHeight; }
@@ -52,14 +51,14 @@
       <table>
         <thead>
           <tr>
-            <th style="width:160px;">Timestamp</th>
-            <th style="width:70px;">Level</th>
+            <th>Timestamp</th>
+            <th>Level</th>
             <th>Message</th>
           </tr>
         </thead>
         <tbody id="log-entries">
           <tr>
-            <td colspan="3" style="text-align:center; padding:24px; color:var(--color-fg-3);">
+            <td colspan="3">
               Waiting for log events...
             </td>
           </tr>
@@ -68,9 +67,9 @@
     </div>
   </div>
 
-  <div style="margin-top:8px; font-size:11px; color:var(--color-fg-3);">
+  <div>
     <span x-text="logCount + ' entries'">0 entries</span>
-    <span x-show="paused" style="margin-left:8px; color:var(--color-warning);">(Paused)</span>
+    <span x-show="paused">(Paused)</span>
   </div>
 
   <script src="https://unpkg.com/htmx-ext-sse@2.2.3/sse.js"></script>

@@ -1,28 +1,28 @@
 {{define "pages/docs.gohtml"}}
 <div>
-  <h1 style="font-size:20px; font-weight:700; color:var(--color-fg-0); margin-bottom:8px;">📖 Documentation</h1>
-  <p style="color:var(--color-fg-2); margin-bottom:24px;">Learn how to use Lintasan for AI model routing and management.</p>
+  <h1>📖 Documentation</h1>
+  <p>Learn how to use Lintasan for AI model routing and management.</p>
 
-  <div style="display:flex; gap:24px;">
+  <div>
     <!-- Sidebar nav -->
-    <nav style="width:200px; flex-shrink:0;">
-      <div class="card" style="position:sticky; top:24px;">
-        <a href="#getting-started" style="display:block; padding:8px 12px; color:var(--color-fg-1); text-decoration:none; font-size:13px; border-radius:6px;">Getting Started</a>
-        <a href="#configuration" style="display:block; padding:8px 12px; color:var(--color-fg-1); text-decoration:none; font-size:13px; border-radius:6px;">Configuration</a>
-        <a href="#api-reference" style="display:block; padding:8px 12px; color:var(--color-fg-1); text-decoration:none; font-size:13px; border-radius:6px;">API Reference</a>
-        <a href="#routing" style="display:block; padding:8px 12px; color:var(--color-fg-1); text-decoration:none; font-size:13px; border-radius:6px;">Routing</a>
-        <a href="#fallback" style="display:block; padding:8px 12px; color:var(--color-fg-1); text-decoration:none; font-size:13px; border-radius:6px;">Fallback Chains</a>
-        <a href="#caching" style="display:block; padding:8px 12px; color:var(--color-fg-1); text-decoration:none; font-size:13px; border-radius:6px;">Caching</a>
+    <nav>
+      <div class="card">
+        <a href="#getting-started">Getting Started</a>
+        <a href="#configuration">Configuration</a>
+        <a href="#api-reference">API Reference</a>
+        <a href="#routing">Routing</a>
+        <a href="#fallback">Fallback Chains</a>
+        <a href="#caching">Caching</a>
       </div>
     </nav>
 
     <!-- Content -->
-    <div style="flex:1; max-width:720px;">
-      <section id="getting-started" class="card" style="margin-bottom:16px;">
-        <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0); margin-bottom:12px;">Getting Started</h2>
-        <p style="color:var(--color-fg-1); line-height:1.7;">Lintasan is a lightweight AI model gateway that routes requests across multiple providers. It supports OpenAI, Anthropic, Google, Groq, Ollama, and any OpenAI-compatible endpoint.</p>
-        <h3 style="font-size:14px; font-weight:600; color:var(--color-fg-0); margin-top:16px;">Quick Start</h3>
-        <pre style="background:var(--color-bg-input); padding:12px; border-radius:var(--radius); font-size:12px; overflow-x:auto; margin-top:8px;"><code># Set your master key
+    <div>
+      <section id="getting-started" class="card mb-4">
+        <h2>Getting Started</h2>
+        <p>Lintasan is a lightweight AI model gateway that routes requests across multiple providers. It supports OpenAI, Anthropic, Google, Groq, Ollama, and any OpenAI-compatible endpoint.</p>
+        <h3>Quick Start</h3>
+        <pre><code># Set your master key
 export LINTASAN_MASTER_KEY="your-secret-key"
 
 # Run the server
@@ -31,38 +31,38 @@ export LINTASAN_MASTER_KEY="your-secret-key"
 # Access dashboard at http://localhost:8080/dashboard</code></pre>
       </section>
 
-      <section id="configuration" class="card" style="margin-bottom:16px;">
-        <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0); margin-bottom:12px;">Configuration</h2>
-        <p style="color:var(--color-fg-1); line-height:1.7;">All configuration is done through the dashboard UI. No config files needed. Settings are stored in SQLite and persist across restarts.</p>
-        <ul style="color:var(--color-fg-1); line-height:1.8; padding-left:20px;">
+      <section id="configuration" class="card mb-4">
+        <h2>Configuration</h2>
+        <p>All configuration is done through the dashboard UI. No config files needed. Settings are stored in SQLite and persist across restarts.</p>
+        <ul>
           <li><strong>Master Key:</strong> Protects your dashboard and API.</li>
           <li><strong>Cache TTL:</strong> How long responses are cached.</li>
           <li><strong>Rate Limits:</strong> Per-key and per-model limits.</li>
         </ul>
       </section>
 
-      <section id="api-reference" class="card" style="margin-bottom:16px;">
-        <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0); margin-bottom:12px;">API Reference</h2>
-        <p style="color:var(--color-fg-1); line-height:1.7;">Lintasan exposes an OpenAI-compatible API at <code style="background:var(--color-bg-input); padding:2px 6px; border-radius:4px; font-size:12px;">/v1/chat/completions</code>. Use your API key in the <code style="background:var(--color-bg-input); padding:2px 6px; border-radius:4px; font-size:12px;">Authorization: Bearer</code> header.</p>
-        <pre style="background:var(--color-bg-input); padding:12px; border-radius:var(--radius); font-size:12px; overflow-x:auto; margin-top:8px;"><code>curl http://localhost:8080/v1/chat/completions \
+      <section id="api-reference" class="card mb-4">
+        <h2>API Reference</h2>
+        <p>Lintasan exposes an OpenAI-compatible API at <code>/v1/chat/completions</code>. Use your API key in the <code>Authorization: Bearer</code> header.</p>
+        <pre><code>curl http://localhost:8080/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'</code></pre>
       </section>
 
-      <section id="routing" class="card" style="margin-bottom:16px;">
-        <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0); margin-bottom:12px;">Routing</h2>
-        <p style="color:var(--color-fg-1); line-height:1.7;">Configure routing priorities to control which provider handles requests for each model. Higher priority providers are tried first. Use the Routing page to drag and drop provider order.</p>
+      <section id="routing" class="card mb-4">
+        <h2>Routing</h2>
+        <p>Configure routing priorities to control which provider handles requests for each model. Higher priority providers are tried first. Use the Routing page to drag and drop provider order.</p>
       </section>
 
-      <section id="fallback" class="card" style="margin-bottom:16px;">
-        <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0); margin-bottom:12px;">Fallback Chains</h2>
-        <p style="color:var(--color-fg-1); line-height:1.7;">Fallback chains define a sequence of providers to try when the primary provider fails. Create chains that step through providers in order until one succeeds.</p>
+      <section id="fallback" class="card mb-4">
+        <h2>Fallback Chains</h2>
+        <p>Fallback chains define a sequence of providers to try when the primary provider fails. Create chains that step through providers in order until one succeeds.</p>
       </section>
 
-      <section id="caching" class="card" style="margin-bottom:16px;">
-        <h2 style="font-size:16px; font-weight:600; color:var(--color-fg-0); margin-bottom:12px;">Caching</h2>
-        <p style="color:var(--color-fg-1); line-height:1.7;">Lintasan can cache LLM responses to reduce costs and latency. Configure cache behavior in Settings. Cached responses are served instantly without calling upstream providers.</p>
+      <section id="caching" class="card mb-4">
+        <h2>Caching</h2>
+        <p>Lintasan can cache LLM responses to reduce costs and latency. Configure cache behavior in Settings. Cached responses are served instantly without calling upstream providers.</p>
       </section>
     </div>
   </div>
