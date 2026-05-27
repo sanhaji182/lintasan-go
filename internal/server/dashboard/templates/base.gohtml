@@ -4,9 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lintasan — {{.Title}}</title>
-  <link rel="stylesheet" href="/static/tailwind.css">
+  <link rel="stylesheet" href="/static/app.css">
   <script src="/static/htmx.min.js"></script>
-  <script src="/static/alpine.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'primary': 'var(--color-primary)',
+            'primary-hover': 'var(--color-primary-hover)',
+            'primary-light': 'var(--color-primary-light)',
+            'fg-0': 'var(--color-fg-0)',
+            'fg-1': 'var(--color-fg-1)',
+            'fg-2': 'var(--color-fg-2)',
+            'fg-3': 'var(--color-fg-3)',
+            'bg-body': 'var(--color-bg-body)',
+            'bg-card': 'var(--color-bg-card)',
+            'bg-card-hover': 'var(--color-bg-card-hover)',
+            'bg-input': 'var(--color-bg-input)',
+            'bg-modal': 'var(--color-bg-modal)',
+            'border-color': 'var(--color-border)',
+            'border-focus': 'var(--color-border-focus)',
+            'danger': 'var(--color-danger)',
+            'danger-hover': 'var(--color-danger-hover)',
+            'success': 'var(--color-success)',
+            'warning': 'var(--color-warning)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
 </head>
 <body class="flex min-h-screen bg-[var(--color-bg-body)]">
 
@@ -41,7 +72,19 @@
     {{.Content}}
   </main>
 
-  <!-- Shared app JS (Alpine components + helpers) -->
+  <!-- Alpine (deferred) + HTMX re-init bridge -->
+  <script src="/static/alpine.min.js" defer></script>
+  <script>
+    document.addEventListener('htmx:afterSettle', function() {
+      // Re-init Alpine on HTMX-swapped content
+      if (window.Alpine) {
+        document.querySelectorAll('[x-data]:not([x-data=""]):not([data-alpine-ok])').forEach(function(el) {
+          el.setAttribute('data-alpine-ok', '1');
+        });
+        Alpine.initTree(document.body);
+      }
+    });
+  </script>
   <script src="/static/app.js"></script>
 </body>
 </html>

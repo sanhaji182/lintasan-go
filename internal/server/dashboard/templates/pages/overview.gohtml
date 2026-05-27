@@ -1,46 +1,48 @@
 {{define "pages/overview.gohtml"}}
-<div>
+<div x-data="overviewData()" x-init="fetchStats()">
   <div class="flex items-center justify-between mb-5">
     <h1 class="text-xl font-bold text-[var(--color-fg-0)]">Overview</h1>
     <span class="text-xs text-[var(--color-fg-3)]">Auto-refreshes every 30s</span>
   </div>
 
   <!-- Stats Cards -->
-  <div id="overview-stats" hx-get="/api/overview-stats" hx-trigger="load, every 30s" hx-swap="outerHTML">
-    <div class="grid grid-cols-4 gap-4">
-      <div class="card flex items-center gap-3">
-        <div class="text-2xl">🔌</div>
-        <div>
-          <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Active Connections</div>
-          <div class="skeleton w-12 h-7 rounded"></div>
-        </div>
+  <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="card flex items-center gap-3">
+      <div class="text-2xl">🔌</div>
+      <div>
+        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Active Connections</div>
+        <div x-show="!stats" class="skeleton w-12 h-7 rounded"></div>
+        <div x-show="stats" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="stats?.activeConnections ?? '—'" x-cloak></div>
       </div>
-      <div class="card flex items-center gap-3">
-        <div class="text-2xl">📊</div>
-        <div>
-          <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Total Requests</div>
-          <div class="skeleton w-16 h-7 rounded"></div>
-        </div>
+    </div>
+    <div class="card flex items-center gap-3">
+      <div class="text-2xl">📊</div>
+      <div>
+        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Total Requests</div>
+        <div x-show="!stats" class="skeleton w-16 h-7 rounded"></div>
+        <div x-show="stats" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(stats?.totalRequests ?? 0).toLocaleString()" x-cloak></div>
       </div>
-      <div class="card flex items-center gap-3">
-        <div class="text-2xl">⚡</div>
-        <div>
-          <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Cache Hit Rate</div>
-          <div class="skeleton w-14 h-7 rounded"></div>
-        </div>
+    </div>
+    <div class="card flex items-center gap-3">
+      <div class="text-2xl">⚡</div>
+      <div>
+        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Cache Hit Rate</div>
+        <div x-show="!stats" class="skeleton w-14 h-7 rounded"></div>
+        <div x-show="stats" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(stats?.cacheHitRate ?? 0).toFixed(1) + '%'" x-cloak></div>
       </div>
-      <div class="card flex items-center gap-3">
-        <div class="text-2xl">🪙</div>
-        <div>
-          <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Tokens Today</div>
-          <div class="skeleton w-[72px] h-7 rounded"></div>
-        </div>
+    </div>
+    <div class="card flex items-center gap-3">
+      <div class="text-2xl">🪙</div>
+      <div>
+        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Tokens Today</div>
+        <div x-show="!stats" class="skeleton w-[72px] h-7 rounded"></div>
+        <div x-show="stats" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(stats?.tokensToday ?? 0).toLocaleString()" x-cloak></div>
       </div>
     </div>
   </div>
 
   <!-- Recent Activity -->
-  <div class="card mt-6">
+  <div class="card">
     <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Recent Activity</h2>
     <table>
       <thead>
@@ -53,14 +55,54 @@
           <th>Duration</th>
         </tr>
       </thead>
-      <tbody id="recent-activity" hx-get="/api/overview-stats" hx-trigger="load, every 30s" hx-swap="outerHTML">
-        <tr>
-          <td colspan="6" class="text-center p-6">
-            <div class="spinner mx-auto"></div>
-          </td>
-        </tr>
+      <tbody>
+        <template x-if="!logs">
+          <tr><td colspan="6" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+        </template>
+        <template x-if="logs && logs.length === 0">
+          <tr><td colspan="6" class="text-center p-6"><div class="empty-state"><p>No activity yet</p></div></td></tr>
+        </template>
+        <template x-for="l in logs" :key="l.timestamp">
+          <tr>
+            <td class="text-xs text-[var(--color-fg-3)]" x-text="l.timestamp"></td>
+            <td class="text-sm font-medium" x-text="l.model"></td>
+            <td class="text-xs text-[var(--color-fg-2)]" x-text="l.provider || '—'"></td>
+            <td><span class="badge" :class="l.status >= 200 && l.status < 300 ? 'badge-success' : 'badge-danger'" x-text="l.status"></span></td>
+            <td class="text-xs text-[var(--color-fg-2)]" x-text="'In:' + l.tokens_in + ' / Out:' + l.tokens_out"></td>
+            <td class="text-xs text-[var(--color-fg-3)]" x-text="l.latency_ms + 'ms'"></td>
+          </tr>
+        </template>
       </tbody>
     </table>
   </div>
 </div>
+
+<script>
+function overviewData() {
+  return {
+    stats: null,
+    logs: null,
+    async fetchStats() {
+      try {
+        let r = await fetch('/api/overview-stats');
+        if (r.ok) {
+          let data = await r.json();
+          this.stats = data.data || data;
+          console.log('Stats loaded', this.stats);
+        }
+      } catch(e) { console.error('Stats fetch failed', e); }
+
+      try {
+        let r = await fetch('/api/dashboard/logs?limit=10');
+        if (r.ok) {
+          this.logs = await r.json();
+        }
+      } catch(e) { console.error('Logs fetch failed', e); }
+
+      // Refresh every 30s
+      setTimeout(() => this.fetchStats(), 30000);
+    }
+  };
+}
+</script>
 {{end}}
