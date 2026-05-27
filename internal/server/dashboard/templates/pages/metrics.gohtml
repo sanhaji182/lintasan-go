@@ -1,0 +1,321 @@
+<div x-data="metricsData()" x-init="fetchMetrics.call($data); window.metricsscope = $data">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="20" x2="12" y2="10"/>
+        <line x1="18" y1="20" x2="18" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="16"/>
+      </svg>
+      <h1 style="font-size:18px;font-weight:600;color:var(--fg-0)">Metrics</h1>
+    </div>
+    <span style="font-size:12px;color:var(--fg-3)">Auto-refreshes every 30s</span>
+  </div>
+
+  <!-- Summary Cards -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+    <!-- Total Requests -->
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Total Requests</div>
+        <div x-show="!analytics" class="skeleton" style="width:64px;height:28px;border-radius:6px"></div>
+        <div x-show="analytics" style="font-size:18px;font-weight:700;color:var(--fg-0)" x-text="(analytics?.totalRequests ?? 0).toLocaleString()" x-cloak></div>
+      </div>
+    </div>
+    <!-- Total Tokens Used -->
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Tokens Used</div>
+        <div x-show="!analytics" class="skeleton" style="width:64px;height:28px;border-radius:6px"></div>
+        <div x-show="analytics" style="font-size:18px;font-weight:700;color:var(--fg-0)" x-text="(analytics?.totalTokensUsed ?? 0).toLocaleString()" x-cloak></div>
+      </div>
+    </div>
+    <!-- Cache Hit Rate -->
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <circle cx="12" cy="12" r="6"/>
+        <circle cx="12" cy="12" r="2"/>
+      </svg>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Cache Hit Rate</div>
+        <div x-show="!analytics" class="skeleton" style="width:56px;height:28px;border-radius:6px"></div>
+        <div x-show="analytics" style="font-size:18px;font-weight:700;color:var(--fg-0)" x-text="(analytics?.cacheHitRate ?? '0.0') + '%'" x-cloak></div>
+      </div>
+    </div>
+    <!-- Avg Latency -->
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Avg Latency</div>
+        <div x-show="!analytics" class="skeleton" style="width:64px;height:28px;border-radius:6px"></div>
+        <div x-show="analytics" style="font-size:18px;font-weight:700;color:var(--fg-0)" x-text="(analytics?.avgLatency ?? 0).toFixed(0) + ' ms'" x-cloak></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Request Volume Chart -->
+  <div class="card" style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="font-size:14px;font-weight:600;color:var(--fg-1)">Daily Request Volume</h2>
+    </div>
+    <div x-show="!analytics" class="skeleton" style="height:220px;width:100%;border-radius:var(--radius-sm)"></div>
+    <div x-show="analytics" x-cloak style="position:relative">
+      <canvas id="metrics-volume-chart" height="220" style="width:100%"></canvas>
+    </div>
+  </div>
+
+  <!-- Provider Breakdown -->
+  <div class="card" style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+        <line x1="12" y1="2" x2="12" y2="12"/>
+      </svg>
+      <h2 style="font-size:14px;font-weight:600;color:var(--fg-1)">Provider Breakdown</h2>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Requests</th>
+          <th>Tokens</th>
+          <th>% of Total</th>
+          <th>Usage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-if="!usage">
+          <tr><td colspan="5" style="text-align:center;padding:24px"><div class="spinner" style="margin:0 auto"></div></td></tr>
+        </template>
+        <template x-if="usage && (!usage.providers || usage.providers.length === 0)">
+          <tr><td colspan="5"><div class="empty-state"><p>No provider data yet</p></div></td></tr>
+        </template>
+        <template x-for="(p, i) in (usage?.providers || [])" :key="p.provider || i">
+          <tr>
+            <td style="font-size:13px;font-weight:500" x-text="p.provider || '\u2014'"></td>
+            <td style="font-size:12px;color:var(--fg-3)" x-text="(p.requests || 0).toLocaleString()"></td>
+            <td style="font-size:12px;color:var(--fg-3);font-family:var(--mono)" x-text="(p.tokens || 0).toLocaleString()"></td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:6px;border-radius:3px;background:var(--border-light);overflow:hidden">
+                  <div style="height:100%;border-radius:3px;background:var(--primary)" :style="'width:' + providerPercent(i) + '%'"></div>
+                </div>
+                <span style="font-size:12px;color:var(--fg-3)" x-text="providerPercent(i).toFixed(1) + '%'"></span>
+              </div>
+            </td>
+            <td>
+              <span style="font-size:12px" :style="providerPercent(i) > 30 ? 'color:var(--primary);font-weight:600' : providerPercent(i) > 10 ? 'color:var(--fg-1)' : 'color:var(--fg-3)'">
+                <span x-text="providerPercent(i) > 30 ? 'Heavy' : providerPercent(i) > 10 ? 'Medium' : 'Light'"></span>
+              </span>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Model Breakdown -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      <h2 style="font-size:14px;font-weight:600;color:var(--fg-1)">Model Breakdown</h2>
+      <span style="font-size:12px;color:var(--fg-3)" x-show="usage?.models">
+        (<span x-text="(usage?.models || []).length"></span> models)
+      </span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Requests</th>
+          <th>Tokens</th>
+          <th>% of Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-if="!usage">
+          <tr><td colspan="4" style="text-align:center;padding:24px"><div class="spinner" style="margin:0 auto"></div></td></tr>
+        </template>
+        <template x-if="usage && (!usage.models || usage.models.length === 0)">
+          <tr><td colspan="4"><div class="empty-state"><p>No model data yet</p></div></td></tr>
+        </template>
+        <template x-for="(m, i) in (usage?.models || []).slice(0, 15)" :key="m.model || i">
+          <tr>
+            <td style="font-size:13px;font-weight:500" x-text="m.model || '\u2014'"></td>
+            <td style="font-size:12px;color:var(--fg-3)" x-text="(m.requests || 0).toLocaleString()"></td>
+            <td style="font-size:12px;color:var(--fg-3);font-family:var(--mono)" x-text="(m.tokens || 0).toLocaleString()"></td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:6px;border-radius:3px;background:var(--border-light);overflow:hidden">
+                  <div style="height:100%;border-radius:3px;background:#6366f1" :style="'width:' + modelPercent(i) + '%'"></div>
+                </div>
+                <span style="font-size:12px;color:var(--fg-3)" x-text="modelPercent(i).toFixed(1) + '%'"></span>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <p x-show="usage && (usage.models || []).length > 15" style="font-size:12px;color:var(--fg-3);margin-top:8px;text-align:center">
+      Showing top 15 of <span x-text="(usage?.models || []).length"></span> models
+    </p>
+  </div>
+</div>
+
+<script>
+function metricsData() {
+  return {
+    analytics: null,
+    usage: null,
+
+    async fetchMetrics() {
+      try {
+        // Fetch analytics stats
+        let a = await fetch('/api/analytics');
+        if (a.ok) {
+          this.analytics = await a.json();
+        }
+      } catch(e) { console.error('Analytics fetch failed', e); }
+
+      try {
+        // Fetch usage data for provider & model breakdown
+        let u = await fetch('/api/usage');
+        if (u.ok) {
+          this.usage = await u.json();
+        }
+      } catch(e) { console.error('Usage fetch failed', e); }
+
+      // Render chart after DOM update
+      await this.$nextTick();
+      this.renderChart();
+
+      // Auto-refresh
+      setTimeout(() => this.fetchMetrics(), 30000);
+    },
+
+    providerPercent(idx) {
+      if (!this.usage?.providers) return 0;
+      const providers = this.usage.providers;
+      const totalTokens = providers.reduce((sum, p) => sum + (p.tokens || 0), 0);
+      if (totalTokens === 0) return 0;
+      return ((providers[idx]?.tokens || 0) / totalTokens) * 100;
+    },
+
+    modelPercent(idx) {
+      if (!this.usage?.models) return 0;
+      const models = this.usage.models.slice(0, 15);
+      const totalTokens = models.reduce((sum, m) => sum + (m.tokens || 0), 0);
+      if (totalTokens === 0) return 0;
+      return ((models[idx]?.tokens || 0) / totalTokens) * 100;
+    },
+
+    renderChart() {
+      let canvas = document.getElementById('metrics-volume-chart');
+      if (!canvas || !this.analytics?.daily) return;
+
+      let ctx = canvas.getContext('2d');
+      let daily = this.analytics.daily || [];
+      // Sort by date ascending
+      daily = [...daily].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      let values = daily.map(d => d.requests || 0);
+      let labels = daily.map(d => {
+        let parts = (d.date || '').split('-');
+        return parts.length >= 2 ? parts[1] + '/' + parts[2] : d.date || '';
+      });
+
+      // Use device pixel ratio for crisp rendering
+      let dpr = window.devicePixelRatio || 1;
+      let rect = canvas.parentElement.getBoundingClientRect();
+      let w = rect.width;
+      let h = 220;
+
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.scale(dpr, dpr);
+
+      // Clear
+      ctx.clearRect(0, 0, w, h);
+
+      let max = Math.max(...values, 1);
+      let padding = { top: 30, bottom: 40, left: 10, right: 10 };
+      let chartW = w - padding.left - padding.right;
+      let chartH = h - padding.top - padding.bottom;
+      let barCount = values.length;
+      let barGap = Math.max(4, chartW * 0.02);
+      let barW = (chartW - barGap * (barCount + 1)) / barCount;
+
+      // Gradient for bars
+      let gradient = ctx.createLinearGradient(0, h - padding.bottom, 0, padding.top);
+      gradient.addColorStop(0, '#6366f1');
+      gradient.addColorStop(1, '#a78bfa');
+
+      // Draw bars
+      values.forEach((v, i) => {
+        let barH = Math.max(2, (v / max) * chartH);
+        let x = padding.left + barGap + i * (barW + barGap);
+        let y = h - padding.bottom - barH;
+
+        // Bar with rounded top
+        let radius = Math.min(4, barW / 2);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(x, y + radius);
+        ctx.arcTo(x, y, x + radius, y, radius);
+        ctx.arcTo(x + barW, y, x + barW, y + radius, radius);
+        ctx.lineTo(x + barW, h - padding.bottom);
+        ctx.lineTo(x, h - padding.bottom);
+        ctx.closePath();
+        ctx.fill();
+
+        // Value label above bar (show only if enough space)
+        if (barH > 20 || barCount <= 14) {
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-fg-2').trim() || '#888';
+          ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(v, x + barW / 2, y - 4);
+        }
+
+        // Date label below bar, rotate if too many
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-fg-3').trim() || '#666';
+        if (barCount > 14) {
+          ctx.save();
+          ctx.translate(x + barW / 2, h - padding.bottom + 24);
+          ctx.rotate(-Math.PI / 4);
+          ctx.font = '9px -apple-system, BlinkMacSystemFont, sans-serif';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'top';
+          ctx.fillText(labels[i] || '#' + (i + 1), 0, 0);
+          ctx.restore();
+        } else {
+          ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+          ctx.textBaseline = 'top';
+          ctx.textAlign = 'center';
+          ctx.fillText(labels[i] || '#' + (i + 1), x + barW / 2, h - padding.bottom + 6);
+        }
+      });
+    }
+  };
+}
+
+
+</script>
