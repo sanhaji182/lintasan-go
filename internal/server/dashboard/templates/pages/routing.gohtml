@@ -1,9 +1,12 @@
 {{define "pages/routing.gohtml"}}
 <div x-data="{ routes: null }" x-init="fetchRoutes()">
-  <div class="flex items-center justify-between mb-5">
+  <div class="page-header">
     <div>
-      <h1 class="text-xl font-bold text-[var(--color-fg-0)]">🔀 Routing</h1>
-      <p class="text-sm text-[var(--color-fg-2)]">Configure routing priority — drag rows to reorder. Higher priority providers are tried first.</p>
+      <h1 class="page-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+        Routing
+      </h1>
+      <p class="page-desc">Configure routing priority — drag rows to reorder. Higher priority providers are tried first.</p>
     </div>
   </div>
 
@@ -21,19 +24,19 @@
       </thead>
       <tbody id="routing-rows">
         <template x-if="!routes">
-          <tr><td colspan="6" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+          <tr><td colspan="6" class="text-center"><div class="spinner mx-auto"></div></td></tr>
         </template>
         <template x-if="routes && routes.length === 0">
-          <tr><td colspan="6" class="text-center p-6"><div class="empty-state"><p>No routing rules configured</p></div></td></tr>
+          <tr><td colspan="6" class="text-center"><div class="empty-state"><p>No routing rules configured</p></div></td></tr>
         </template>
         <template x-for="(route, index) in routes" :key="route.id">
           <tr data-id="route.id">
             <td class="drag-handle">⋮⋮</td>
-            <td class="text-sm font-medium" x-text="routes.length - index"></td>
-            <td class="text-sm font-medium" x-text="route.model || '—'"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="route.provider_name || route.provider || '—'"></td>
-            <td><span class="badge" :class="route.is_active ? 'badge-success' : 'badge-danger'" x-text="route.is_active ? 'Active' : 'Inactive'"></span></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="route.latency_ms ? route.latency_ms + 'ms' : '—'"></td>
+            <td class="cell-priority" x-text="routes.length - index"></td>
+            <td class="cell-model" x-text="route.model || '—'"></td>
+            <td class="cell-provider" x-text="route.provider_name || route.provider || '—'"></td>
+            <td><span class="badge" :class="route.is_active ? 'badge-success' : 'badge-error'" x-text="route.is_active ? 'Active' : 'Inactive'"></span></td>
+            <td class="cell-latency" x-text="route.latency_ms ? route.latency_ms + 'ms' : '—'"></td>
           </tr>
         </template>
       </tbody>
@@ -79,9 +82,16 @@
     }
   </script>
   <style>
-    .drag-handle { cursor: grab; color: var(--color-fg-3); font-size: 16px; user-select: none; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .page-title { font-size: 18px; font-weight: 700; color: var(--fg-0); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .page-desc { font-size: 13px; color: var(--fg-2); }
+    .cell-priority { font-size: 13px; font-weight: 600; }
+    .cell-model { font-size: 13px; font-weight: 600; }
+    .cell-provider { font-size: 12px; color: var(--fg-2); }
+    .cell-latency { font-size: 12px; color: var(--fg-2); }
+    .drag-handle { cursor: grab; color: var(--fg-3); font-size: 16px; user-select: none; }
     .drag-handle:active { cursor: grabbing; }
-    .sortable-ghost { opacity: 0.4; background: var(--color-primary-light); }
+    .sortable-ghost { opacity: 0.4; background: var(--primary); }
   </style>
 </div>
 {{end}}

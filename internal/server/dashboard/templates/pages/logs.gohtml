@@ -16,23 +16,26 @@
     }
   });
 ">
-  <div class="flex items-center justify-between mb-5">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
     <div>
-      <h1 class="text-xl font-bold text-[var(--color-fg-0)]">📋 Logs</h1>
-      <p class="text-sm text-[var(--color-fg-2)]">Real-time server logs.</p>
+      <h1 style="font-size:20px;font-weight:700;color:var(--fg-0);margin:0 0 4px;display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Logs
+      </h1>
+      <p style="font-size:13px;color:var(--fg-2);margin:0">Real-time server logs.</p>
     </div>
-    <div class="flex items-center gap-2">
+    <div style="display:flex;align-items:center;gap:8px">
       <button class="btn btn-sm" x-bind:class="level === 'all' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('all')">All</button>
       <button class="btn btn-sm" x-bind:class="level === 'info' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('info')">Info</button>
       <button class="btn btn-sm" x-bind:class="level === 'warn' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('warn')">Warn</button>
       <button class="btn btn-sm" x-bind:class="level === 'error' ? 'btn-primary' : 'btn-secondary'" x-on:click="toggleLevel('error')">Error</button>
-      <span class="mx-2"></span>
-      <button class="btn btn-sm btn-secondary" x-on:click="paused = !paused" x-text="paused ? '▶ Resume' : '⏸ Pause'"></button>
+      <span style="margin:0 8px"></span>
+      <button class="btn btn-sm btn-secondary" x-on:click="paused = !paused" x-text="paused ? 'Resume' : 'Pause'"></button>
       <button class="btn btn-sm btn-ghost" x-on:click="clearLogs()">Clear</button>
     </div>
   </div>
 
-  <div class="card max-h-[calc(100vh-200px)] overflow-y-auto" id="log-container"
+  <div class="card" style="max-height:calc(100vh - 200px);overflow-y:auto" id="log-container"
        x-init="
          var obs = new MutationObserver(function() {
            if (autoScroll) { $el.scrollTop = $el.scrollHeight; }
@@ -50,27 +53,27 @@
       <tbody id="log-entries">
         <template x-if="logs.length === 0">
           <tr>
-            <td colspan="3" class="text-center p-6 text-[var(--color-fg-3)]">
+            <td colspan="3" style="text-align:center;padding:24px;color:var(--fg-3)">
               Waiting for log events...
             </td>
           </tr>
         </template>
         <template x-for="(log, i) in logs" :key="i">
           <tr>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="log.timestamp || log.time || ''"></td>
+            <td style="font-size:12px;color:var(--fg-3)" x-text="log.timestamp || log.time || ''"></td>
             <td>
               <span class="badge" 
-                    :class="log.level === 'error' ? 'badge-danger' : (log.level === 'warn' ? 'badge-warning' : 'badge-default')"
+                    :class="log.level === 'error' ? 'badge-error' : (log.level === 'warn' ? 'badge-warning' : 'badge-info')"
                     x-text="log.level || 'info'"></span>
             </td>
-            <td class="text-sm text-[var(--color-fg-2)]" x-text="log.message || log.msg || ''"></td>
+            <td style="font-size:13px;color:var(--fg-2)" x-text="log.message || log.msg || ''"></td>
           </tr>
         </template>
       </tbody>
     </table>
   </div>
 
-  <div class="flex items-center gap-4 mt-2 text-xs text-[var(--color-fg-3)]">
+  <div style="display:flex;align-items:center;gap:16px;margin-top:8px;font-size:12px;color:var(--fg-3)">
     <span x-text="logCount + ' entries'">0 entries</span>
     <span x-show="paused">(Paused)</span>
   </div>

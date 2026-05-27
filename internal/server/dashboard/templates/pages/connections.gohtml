@@ -4,27 +4,41 @@
   x-init="init()"
   x-cloak
 >
-  <!-- ── Top Bar ── -->
-  <div class="flex items-center justify-between mb-5">
+  <!-- Top Bar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
     <div>
-      <h1 class="text-xl font-bold text-[var(--color-fg-0)]">🔌 Provider Accounts</h1>
-      <p class="text-sm text-[var(--color-fg-2)]">Manage connections to AI model providers.</p>
+      <h1 style="font-size:18px;font-weight:600;color:var(--fg-0);margin:0 0 4px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:6px;display:inline"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Provider Accounts
+      </h1>
+      <p style="font-size:13px;color:var(--fg-2);margin:0">Manage connections to AI model providers.</p>
     </div>
-    <div class="flex gap-2">
+    <div style="display:flex;gap:8px">
       <button
         class="btn btn-secondary"
         x-on:click="syncAll()"
         x-bind:disabled="syncLoading"
-        x-text="syncLoading ? 'Syncing…' : '🔄 Sync All'"
-      ></button>
+      >
+        <span x-show="!syncLoading" style="display:flex;align-items:center;gap:6px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Sync All
+        </span>
+        <span x-show="syncLoading" x-cloak style="display:flex;align-items:center;gap:6px">
+          <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+          Syncing…
+        </span>
+      </button>
       <button
         class="btn btn-primary"
         x-on:click="openAddModal()"
-      >+ Add Provider</button>
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Add Provider
+      </button>
     </div>
   </div>
 
-  <!-- ── Connections Table ── -->
+  <!-- Connections Table -->
   <div class="card">
     <table>
       <thead>
@@ -40,27 +54,27 @@
       <tbody>
         <template x-if="connections === null">
           <tr>
-            <td colspan="6" class="text-center p-6">
-              <div class="spinner mx-auto"></div>
+            <td colspan="6" style="text-align:center;padding:32px 12px">
+              <div class="spinner" style="margin:0 auto"></div>
             </td>
           </tr>
         </template>
         <template x-if="connections !== null && connections.length === 0">
           <tr>
-            <td colspan="6" class="text-center p-6">
+            <td colspan="6" style="text-align:center;padding:0">
               <div class="empty-state">
-                <div class="empty-state-icon">🔌</div>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px;opacity:0.4"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 <p>No provider connections yet.</p>
-                <p class="text-xs text-[var(--color-fg-3)] mt-1">Click "+ Add Provider" to get started.</p>
+                <p style="font-size:12px;color:var(--fg-3);margin-top:4px">Click "Add Provider" to get started.</p>
               </div>
             </td>
           </tr>
         </template>
         <template x-for="conn in connections" x-bind:key="conn.id">
           <tr>
-            <td class="text-sm font-medium" x-text="conn.name"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="conn.provider"></td>
-            <td class="text-xs text-[var(--color-fg-2)]">
+            <td style="font-size:13px;font-weight:500" x-text="conn.name"></td>
+            <td style="font-size:12px;color:var(--fg-2)" x-text="conn.provider"></td>
+            <td style="font-size:12px;color:var(--fg-2)">
               <span x-text="conn.models_count != null ? conn.models_count : '—'"></span>
             </td>
             <td>
@@ -70,13 +84,19 @@
                 x-text="conn.is_active ? 'Active' : 'Inactive'"
               ></span>
             </td>
-            <td class="text-xs text-[var(--color-fg-2)]">
+            <td style="font-size:12px;color:var(--fg-2)">
               <span x-text="conn.latency_ms != null ? conn.latency_ms + 'ms' : '—'"></span>
             </td>
             <td>
-              <div class="flex gap-1">
-                <button class="btn btn-ghost btn-sm" x-on:click="openEditModal(conn)">✏️ Edit</button>
-                <button class="btn btn-ghost btn-sm text-red-500" x-on:click="confirmDelete(conn)">🗑 Delete</button>
+              <div style="display:flex;gap:4px">
+                <button class="btn btn-ghost btn-sm" x-on:click="openEditModal(conn)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Edit
+                </button>
+                <button class="btn btn-ghost btn-sm" style="color:var(--error)" x-on:click="confirmDelete(conn)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  Delete
+                </button>
               </div>
             </td>
           </tr>
@@ -92,48 +112,56 @@
     <div>
       <div class="modal-backdrop" x-on:click="closeModal()"></div>
       <div
-        class="max-w-[640px] modal-panel"
+        class="modal-panel"
+        style="max-width:640px"
         x-on:click.outside="closeModal()"
       >
         <!-- header -->
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-[var(--color-fg-0)]" x-text="modalTitle"></h2>
-          <button class="btn-icon text-lg" x-on:click="closeModal()">&times;</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0" x-text="modalTitle"></h2>
+          <button
+            style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
+            x-on:click="closeModal()"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
-        <!-- ── STEP 1: Preset grid (add mode, no preset chosen yet) ── -->
+        <!-- STEP 1: Preset grid (add mode, no preset chosen yet) -->
         <template x-if="!editMode && !selectedPreset">
           <div>
-            <p class="text-sm text-[var(--color-fg-2)] mb-3">
+            <p style="font-size:13px;color:var(--fg-2);margin:0 0 12px">
               Choose a provider preset to get started:
             </p>
 
             <!-- loading -->
             <template x-if="presets === null">
-              <div class="text-center py-6">
-                <div class="spinner mx-auto mb-2"></div>
-                <p class="text-xs text-[var(--color-fg-3)]">Loading presets…</p>
+              <div style="text-align:center;padding:24px 0">
+                <div class="spinner" style="margin:0 auto 8px"></div>
+                <p style="font-size:12px;color:var(--fg-3);margin:0">Loading presets…</p>
               </div>
             </template>
 
             <!-- error -->
             <template x-if="presets && presets._error">
-              <div class="text-center py-4">
-                <p class="text-sm text-red-500" x-text="presets._error"></p>
-                <button class="btn btn-ghost btn-sm mt-2" x-on:click="loadPresets()">Retry</button>
+              <div style="text-align:center;padding:16px 0">
+                <p style="font-size:13px;color:var(--error);margin:0" x-text="presets._error"></p>
+                <button class="btn btn-ghost btn-sm" style="margin-top:8px" x-on:click="loadPresets()">Retry</button>
               </div>
             </template>
 
             <!-- preset cards grid -->
             <template x-if="presets && !presets._error && presets.length">
-              <div class="grid grid-cols-2 gap-2 mb-4 max-h-[360px] overflow-y-auto pr-1">
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;max-height:360px;overflow-y:auto;padding-right:4px">
                 <template x-for="p in presets" x-bind:key="p.provider || p.name">
                   <button
                     type="button"
-                    class="btn btn-secondary btn-sm justify-start p-2 text-left"
+                    class="btn btn-secondary btn-sm"
+                    style="justify-content:flex-start;padding:8px;text-align:left"
                     x-on:click="selectPreset(p)"
                   >
-                    <span x-text="(p.icon || '🔌') + ' ' + (p.label || p.name || p.provider)"></span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    <span x-text="p.label || p.name || p.provider"></span>
                   </button>
                 </template>
               </div>
@@ -141,19 +169,23 @@
 
             <!-- fallback: no presets returned but no error -->
             <template x-if="presets && !presets._error && presets.length === 0">
-              <div class="text-center py-4">
-                <p class="text-xs text-[var(--color-fg-3)]">No presets available.</p>
+              <div style="text-align:center;padding:16px 0">
+                <p style="font-size:12px;color:var(--fg-3);margin:0">No presets available.</p>
               </div>
             </template>
 
             <button
-              class="btn btn-ghost mt-2"
-              x-on:click="selectPreset({ provider: 'custom', name: '', label: 'Custom', icon: '⚙️' })"
-            >⚙️ Manual Configuration</button>
+              class="btn btn-ghost"
+              style="margin-top:8px"
+              x-on:click="selectPreset({ provider: 'custom', name: '', label: 'Custom' })"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Manual Configuration
+            </button>
           </div>
         </template>
 
-        <!-- ── STEP 2: Manual form (preset chosen OR edit mode) ── -->
+        <!-- STEP 2: Manual form (preset chosen OR edit mode) -->
         <template x-if="selectedPreset || editMode">
           <form x-on:submit.prevent="saveConnection()">
             <!-- hidden id when editing -->
@@ -161,57 +193,52 @@
               <input type="hidden" name="id" x-bind:value="editId" />
             </template>
 
-            <div class="space-y-3">
+            <div>
               <!-- Display Name -->
-              <div>
-                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">Display Name</label>
+              <div style="margin-bottom:12px">
+                <label style="font-size:13px;font-weight:500;color:var(--fg-1);margin-bottom:4px">Display Name</label>
                 <input
                   type="text"
-                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
                   placeholder="e.g., OpenAI Production"
                   x-model="form.name"
                 />
               </div>
 
               <!-- Provider -->
-              <div>
-                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">Provider</label>
+              <div style="margin-bottom:12px">
+                <label style="font-size:13px;font-weight:500;color:var(--fg-1);margin-bottom:4px">Provider</label>
                 <input
                   type="text"
-                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
                   placeholder="openai"
                   x-model="form.provider"
                 />
               </div>
 
               <!-- API Key -->
-              <div>
-                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">API Key</label>
+              <div style="margin-bottom:12px">
+                <label style="font-size:13px;font-weight:500;color:var(--fg-1);margin-bottom:4px">API Key</label>
                 <input
                   type="password"
-                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
                   placeholder="sk-..."
                   x-model="form.api_key"
                 />
               </div>
 
               <!-- Base URL -->
-              <div>
-                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">Base URL <span class="text-[var(--color-fg-3)]">(optional)</span></label>
+              <div style="margin-bottom:12px">
+                <label style="font-size:13px;font-weight:500;color:var(--fg-1);margin-bottom:4px">Base URL <span style="color:var(--fg-3);font-weight:400">(optional)</span></label>
                 <input
                   type="text"
-                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
                   placeholder="https://api.openai.com/v1"
                   x-model="form.base_url"
                 />
               </div>
 
               <!-- Models -->
-              <div>
-                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">Models <span class="text-[var(--color-fg-3)]">(comma-separated)</span></label>
+              <div style="margin-bottom:12px">
+                <label style="font-size:13px;font-weight:500;color:var(--fg-1);margin-bottom:4px">Models <span style="color:var(--fg-3);font-weight:400">(comma-separated)</span></label>
                 <input
                   type="text"
-                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
                   placeholder="gpt-4o, gpt-4o-mini"
                   x-model="form.models"
                 />
@@ -219,30 +246,49 @@
             </div>
 
             <!-- Test Connection row -->
-            <div class="flex items-center gap-3 mt-4">
+            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
               <button
                 type="button"
                 class="btn btn-secondary"
                 x-on:click="testConnection()"
                 x-bind:disabled="testLoading"
-                x-text="testLoading ? 'Testing…' : '🔍 Test Connection'"
-              ></button>
+              >
+                <span x-show="!testLoading" style="display:flex;align-items:center;gap:6px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Test Connection
+                </span>
+                <span x-show="testLoading" x-cloak style="display:flex;align-items:center;gap:6px">
+                  <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+                  Testing…
+                </span>
+              </button>
               <span
-                x-show="testResult !== null"
-                class="text-sm font-medium"
-                x-bind:class="testResult === true ? 'text-green-600' : 'text-red-600'"
-                x-text="testResult === true ? '✓ Connection successful' : '✗ Connection failed'"
-              ></span>
+                x-show="testResult === true"
+                style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:var(--success)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Connection successful
+              </span>
+              <span
+                x-show="testResult === false"
+                style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:var(--error)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Connection failed
+              </span>
             </div>
 
             <!-- Actions -->
-            <div class="flex gap-2 justify-end mt-5 pt-4 border-t border-[var(--color-border)]">
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
               <button
                 type="button"
                 class="btn btn-secondary"
                 x-on:click="backToPresets()"
                 x-show="!editMode"
-              >← Back</button>
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Back
+              </button>
               <button
                 type="button"
                 class="btn btn-secondary"
@@ -252,8 +298,13 @@
                 type="submit"
                 class="btn btn-primary"
                 x-bind:disabled="!form.name.trim() || !form.provider.trim() || saving"
-                x-text="saving ? 'Saving…' : (editMode ? 'Update' : 'Save')"
-              ></button>
+              >
+                <span x-show="!saving" x-text="editMode ? 'Update' : 'Save'"></span>
+                <span x-show="saving" x-cloak style="display:flex;align-items:center;gap:6px">
+                  <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+                  Saving…
+                </span>
+              </button>
             </div>
           </form>
         </template>
@@ -268,36 +319,46 @@
     <div>
       <div class="modal-backdrop" x-on:click="deleteTarget = null"></div>
       <div class="modal-panel" x-on:click.outside="deleteTarget = null">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-[var(--color-fg-0)]">Delete Provider</h2>
-          <button class="btn-icon text-lg" x-on:click="deleteTarget = null">&times;</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0">Delete Provider</h2>
+          <button
+            style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
+            x-on:click="deleteTarget = null"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
-        <p class="text-sm text-[var(--color-fg-2)] mb-2">
+        <p style="font-size:13px;color:var(--fg-2);margin:0 0 8px">
           Are you sure you want to delete
-          <strong class="text-[var(--color-fg-0)]" x-text="deleteTarget.name"></strong>?
+          <strong style="color:var(--fg-0)" x-text="deleteTarget.name"></strong>?
         </p>
-        <p class="text-xs text-[var(--color-fg-3)] mb-5">
+        <p style="font-size:12px;color:var(--fg-3);margin:0 0 20px">
           This will remove the connection and all associated data. This action cannot be undone.
         </p>
-        <div class="flex gap-2 justify-end">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
           <button class="btn btn-secondary" x-on:click="deleteTarget = null">Cancel</button>
           <button
             class="btn btn-danger"
             x-on:click="doDelete()"
             x-bind:disabled="deleting"
-            x-text="deleting ? 'Deleting…' : 'Delete'"
-          ></button>
+          >
+            <span x-show="!deleting">Delete</span>
+            <span x-show="deleting" x-cloak style="display:flex;align-items:center;gap:6px">
+              <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+              Deleting…
+            </span>
+          </button>
         </div>
       </div>
     </div>
   </template>
 
-  <!-- ── Toasts ── -->
-  <div class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2">
+  <!-- Toasts -->
+  <div style="position:fixed;bottom:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px">
     <template x-for="(t, idx) in toasts" x-bind:key="idx">
       <div
-        class="rounded-[var(--radius)] px-5 py-3 text-sm text-white shadow-lg animate-fade-in"
-        x-bind:class="t.type === 'success' ? 'bg-green-700' : 'bg-red-700'"
+        style="border-radius:var(--radius);padding:12px 20px;font-size:13px;font-weight:500;color:#fff;box-shadow:var(--shadow-md);animation:fadeInScale .3s ease-out;max-width:360px"
+        x-bind:style="t.type === 'success' ? 'background:#166534' : 'background:#991b1b'"
         x-text="t.message"
         x-init="setTimeout(() => toasts.splice(idx, 1), 3500)"
       ></div>

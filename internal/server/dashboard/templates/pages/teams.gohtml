@@ -1,11 +1,17 @@
 {{define "pages/teams.gohtml"}}
 <div x-data="{ showCreateModal: false, newTeamName: '', teams: null, toasts: [] }" x-init="fetchTeams()">
-  <div class="flex items-center justify-between mb-5">
+  <div class="page-header">
     <div>
-      <h1 class="text-xl font-bold text-[var(--color-fg-0)]">👥 Teams</h1>
-      <p class="text-sm text-[var(--color-fg-2)]">Manage teams and their rate limits.</p>
+      <h1 class="page-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Teams
+      </h1>
+      <p class="page-desc">Manage teams and their rate limits.</p>
     </div>
-    <button class="btn btn-primary" x-on:click="showCreateModal = true">+ Create Team</button>
+    <button class="btn btn-primary" x-on:click="showCreateModal = true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Create Team
+    </button>
   </div>
 
   <!-- Teams Table -->
@@ -22,20 +28,20 @@
       </thead>
       <tbody>
         <template x-if="!teams">
-          <tr><td colspan="5" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+          <tr><td colspan="5" class="text-center"><div class="spinner mx-auto"></div></td></tr>
         </template>
         <template x-if="teams && teams.length === 0">
-          <tr><td colspan="5" class="text-center p-6"><div class="empty-state"><p>No teams yet</p></div></td></tr>
+          <tr><td colspan="5" class="text-center"><div class="empty-state"><p>No teams yet</p></div></td></tr>
         </template>
         <template x-for="team in teams" :key="team.id">
           <tr>
-            <td class="text-sm font-medium" x-text="team.name"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="team.members || 0"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="team.rate_limit ? team.rate_limit + '/min' : 'Unlimited'"></td>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="team.created_at || '—'"></td>
-            <td>
+            <td class="cell-name" x-text="team.name"></td>
+            <td class="cell-meta" x-text="team.members || 0"></td>
+            <td class="cell-meta" x-text="team.rate_limit ? team.rate_limit + '/min' : 'Unlimited'"></td>
+            <td class="cell-date" x-text="team.created_at || '—'"></td>
+            <td class="cell-actions">
               <button class="btn btn-ghost btn-sm" x-on:click="editTeam(team)">Edit</button>
-              <button class="btn btn-ghost btn-sm text-red-500" x-on:click="deleteTeam(team.id)">Delete</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text" x-on:click="deleteTeam(team.id)">Delete</button>
             </td>
           </tr>
         </template>
@@ -48,21 +54,23 @@
     <div>
       <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
       <div class="modal-panel" x-on:click.outside="showCreateModal = false">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-[var(--color-fg-0)]" x-text="editMode ? 'Edit Team' : 'Create Team'"></h2>
-          <button class="btn-icon text-lg" x-on:click="showCreateModal = false">&times;</button>
+        <div class="modal-header">
+          <h2 class="modal-title" x-text="editMode ? 'Edit Team' : 'Create Team'"></h2>
+          <button class="btn-icon" x-on:click="showCreateModal = false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <form x-on:submit="saveTeam()">
           <template x-if="editMode">
             <input type="hidden" name="id" x-bind:value="editId">
           </template>
-          <label>Team Name</label>
-          <input type="text" name="name" x-model="newTeamName" placeholder="e.g., Engineering, Support">
-          <label>Rate Limit (requests/min)</label>
-          <input type="number" name="rate_limit" x-model="newRateLimit" placeholder="Leave empty for unlimited" min="0">
-          <div class="flex gap-2 justify-end mt-4">
+          <label class="form-label">Team Name</label>
+          <input type="text" name="name" x-model="newTeamName" placeholder="e.g., Engineering, Support" class="form-input">
+          <label class="form-label">Rate Limit (requests/min)</label>
+          <input type="number" name="rate_limit" x-model="newRateLimit" placeholder="Leave empty for unlimited" min="0" class="form-input">
+          <div class="modal-actions">
             <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" x-bind:disabled="!newTeamName.trim()">Create</button>
+            <button type="submit" class="btn btn-primary" x-bind:disabled="!newTeamName.trim()" x-text="editMode ? 'Update' : 'Create'"></button>
           </div>
         </form>
       </div>
@@ -110,6 +118,7 @@ async function saveTeam() {
       this.showCreateModal = false;
       this.newTeamName = '';
       this.newRateLimit = '';
+      this.editMode = false;
       this.fetchTeams();
       this.toasts.push({ type: 'success', message: 'Team saved successfully' });
     }
@@ -127,4 +136,33 @@ async function deleteTeam(id) {
   } catch(e) { console.error('Delete team failed', e); }
 }
 </script>
+
+<style>
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.page-title { font-size: 18px; font-weight: 700; color: var(--fg-0); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.page-desc { font-size: 13px; color: var(--fg-2); }
+.cell-name { font-size: 13px; font-weight: 600; }
+.cell-meta { font-size: 12px; color: var(--fg-2); }
+.cell-date { font-size: 12px; color: var(--fg-3); }
+.cell-actions { display: flex; gap: 4px; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal-title { font-size: 15px; font-weight: 600; color: var(--fg-0); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.btn-icon { background: none; border: none; padding: 4px; cursor: pointer; color: var(--fg-2); display: flex; align-items: center; justify-content: center; }
+.btn-icon:hover { color: var(--fg-0); }
+.btn-danger-text { color: var(--error) !important; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 11px; font-weight: 600; color: var(--fg-2); margin-bottom: 4px; }
+.form-input { width: 100%; margin-top: 4px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-body); color: var(--fg-0); font-size: 13px; }
+.form-input:focus { outline: none; border-color: var(--primary); }
+.form-hint { font-size: 11px; color: var(--fg-3); margin-top: 4px; }
+.checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.checkbox-label input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--primary); }
+.section-card { margin-bottom: 16px; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--fg-1); margin-bottom: 12px; }
+.form-actions { display: flex; align-items: center; gap: 12px; }
+.success-msg { font-size: 13px; color: var(--success); }
+.spinner-sm { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border-light); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 4px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 {{end}}

@@ -1,21 +1,39 @@
 {{define "pages/backup.gohtml"}}
 <div x-data="backupData()" x-init="fetchBackup()">
-  <div class="flex items-center justify-between mb-5">
+  <style>
+    .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
+    .pg-title svg{width:20px;height:20px;color:var(--color-primary);flex-shrink:0}
+    .pg-sub{font-size:13px;color:var(--color-fg-2);margin-top:2px}
+    .card-mb{margin-bottom:16px}
+    .section-title{font-size:13px;font-weight:600;color:var(--color-fg-1);margin-bottom:12px}
+    .skeleton-row{height:60px}
+    .status-row{display:flex;align-items:center;justify-content:space-between}
+    .status-label{font-size:13px;color:var(--color-fg-2)}
+    .status-value{font-size:13px;font-weight:500;color:var(--color-fg-0)}
+    .card-desc{font-size:13px;color:var(--color-fg-2);margin-bottom:16px}
+    .spinner-inline{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:middle}
+  </style>
+
+  <div class="pg-hdr">
     <div>
-      <h1 class="text-xl font-bold text-[var(--color-fg-0)]">💾 Backup</h1>
-      <p class="text-sm text-[var(--color-fg-2)]">Database backup and restore.</p>
+      <h1 class="pg-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Backup
+      </h1>
+      <p class="pg-sub">Database backup and restore.</p>
     </div>
   </div>
 
   <!-- Backup Status -->
-  <div class="card mb-4">
-    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Backup Status</h2>
-    <div x-show="!backup" class="skeleton rounded" style="height:60px"></div>
+  <div class="card card-mb">
+    <h2 class="section-title">Backup Status</h2>
+    <div x-show="!backup" class="skeleton skeleton-row"></div>
     <div x-show="backup" x-cloak>
-      <div class="flex items-center justify-between">
+      <div class="status-row">
         <div>
-          <span class="text-sm text-[var(--color-fg-2)]">Last Backup:</span>
-          <span class="text-sm font-medium text-[var(--color-fg-0)]" x-text="backup.lastBackup || 'Never'"></span>
+          <span class="status-label">Last Backup:</span>
+          <span class="status-value" x-text="backup.lastBackup || 'Never'"></span>
         </div>
         <div>
           <span class="badge" :class="backup.isRunning ? 'badge-warning' : 'badge-success'" x-text="backup.isRunning ? 'Running...' : 'Ready'"></span>
@@ -26,14 +44,14 @@
 
   <!-- Create Backup -->
   <div class="card">
-    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Create Backup</h2>
-    <p class="text-sm text-[var(--color-fg-2)] mb-4">
+    <h2 class="section-title">Create Backup</h2>
+    <p class="card-desc">
       Create a full backup of your Lintasan database including all settings, keys, teams, users, and routing configuration.
     </p>
     <button class="btn btn-primary"
             x-on:click="createBackup()"
             x-bind:disabled="loading">
-      <span x-show="loading" class="align-middle h-[14px] inline-block mr-1 spinner w-[14px]"></span>
+      <span x-show="loading" class="spinner spinner-inline"></span>
       <span x-text="loading ? 'Creating...' : 'Create Backup Now'"></span>
     </button>
   </div>

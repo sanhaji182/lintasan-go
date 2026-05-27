@@ -1,9 +1,26 @@
 {{define "pages/keys.gohtml"}}
 <div x-data="{ showCreateModal: false, newKeyName: '', keys: null, toasts: [] }" x-init="fetchKeys()">
-  <div class="flex items-center justify-between mb-5">
+  <style>
+    .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
+    .pg-title svg{width:20px;height:20px;color:var(--color-primary);flex-shrink:0}
+    .pg-sub{font-size:13px;color:var(--color-fg-2);margin-top:2px}
+    .modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .modal-title{font-size:15px;font-weight:600;color:var(--color-fg-0)}
+    .btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .td-ctr{text-align:center;padding:24px}
+    .key-mono{font-size:12px;font-family:var(--mono);color:var(--color-fg-2)}
+    .copy-btn{display:inline-flex;align-items:center;margin-left:4px}
+    .copy-btn svg{width:14px;height:14px}
+  </style>
+
+  <div class="pg-hdr">
     <div>
-      <h1 class="text-xl font-bold text-[var(--color-fg-0)]">🔑 API Keys</h1>
-      <p class="text-sm text-[var(--color-fg-2)]">Manage API keys for authenticating requests.</p>
+      <h1 class="pg-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        API Keys
+      </h1>
+      <p class="pg-sub">Manage API keys for authenticating requests.</p>
     </div>
     <button class="btn btn-primary" x-on:click="showCreateModal = true">+ Create Key</button>
   </div>
@@ -22,22 +39,24 @@
       </thead>
       <tbody>
         <template x-if="!keys">
-          <tr><td colspan="5" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+          <tr><td colspan="5" class="td-ctr"><div class="spinner" style="margin:0 auto"></div></td></tr>
         </template>
         <template x-if="keys && keys.length === 0">
-          <tr><td colspan="5" class="text-center p-6"><div class="empty-state"><p>No API keys yet</p></div></td></tr>
+          <tr><td colspan="5" class="td-ctr"><div class="empty-state"><p>No API keys yet</p></div></td></tr>
         </template>
         <template x-for="key in keys" :key="key.id">
           <tr>
-            <td class="text-sm font-medium" x-text="key.name"></td>
-            <td class="text-xs font-mono text-[var(--color-fg-2)]">
-              <span x-text="key.key ? key.key.substring(0, 8) + '...' : '—'"></span>
-              <button class="btn btn-ghost btn-sm ml-1" x-on:click="copyKey(key)">📋</button>
-            </td>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="key.created_at || '—'"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="key.requests || 0"></td>
+            <td style="font-size:13px;font-weight:500" x-text="key.name"></td>
             <td>
-              <button class="btn btn-ghost btn-sm text-red-500" x-on:click="deleteKey(key.id)">Revoke</button>
+              <span class="key-mono" x-text="key.key ? key.key.substring(0, 8) + '...' : '—'"></span>
+              <button class="btn btn-ghost btn-sm copy-btn" x-on:click="copyKey(key)" title="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              </button>
+            </td>
+            <td style="font-size:12px;color:var(--color-fg-3)" x-text="key.created_at || '—'"></td>
+            <td style="font-size:12px;color:var(--color-fg-2)" x-text="key.requests || 0"></td>
+            <td>
+              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" x-on:click="deleteKey(key.id)">Revoke</button>
             </td>
           </tr>
         </template>
@@ -50,14 +69,14 @@
     <div>
       <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
       <div class="modal-panel" x-on:click.outside="showCreateModal = false">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-[var(--color-fg-0)]">Create API Key</h2>
-          <button class="btn-icon text-lg" x-on:click="showCreateModal = false">&times;</button>
+        <div class="modal-hdr">
+          <h2 class="modal-title">Create API Key</h2>
+          <button class="btn-icon" style="font-size:18px" x-on:click="showCreateModal = false">&times;</button>
         </div>
         <form x-on:submit="createKey()">
           <label>Key Name</label>
           <input type="text" name="name" x-model="newKeyName" placeholder="e.g., Production, Development">
-          <div class="flex gap-2 justify-end mt-4">
+          <div class="btn-row">
             <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" x-bind:disabled="!newKeyName.trim()">Create</button>
           </div>

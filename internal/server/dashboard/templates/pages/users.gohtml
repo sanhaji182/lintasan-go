@@ -1,9 +1,23 @@
 {{define "pages/users.gohtml"}}
 <div x-data="{ showCreateModal: false, newUserName: '', newUserEmail: '', users: null, toasts: [] }" x-init="fetchUsers()">
-  <div class="flex items-center justify-between mb-5">
+  <style>
+    .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
+    .pg-title svg{width:20px;height:20px;color:var(--color-primary);flex-shrink:0}
+    .pg-sub{font-size:13px;color:var(--color-fg-2);margin-top:2px}
+    .modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .modal-title{font-size:15px;font-weight:600;color:var(--color-fg-0)}
+    .btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .td-ctr{text-align:center;padding:24px}
+  </style>
+
+  <div class="pg-hdr">
     <div>
-      <h1 class="text-xl font-bold text-[var(--color-fg-0)]">👤 Users</h1>
-      <p class="text-sm text-[var(--color-fg-2)]">Manage dashboard and API users.</p>
+      <h1 class="pg-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Users
+      </h1>
+      <p class="pg-sub">Manage dashboard and API users.</p>
     </div>
     <button class="btn btn-primary" x-on:click="showCreateModal = true">+ Add User</button>
   </div>
@@ -23,20 +37,20 @@
       </thead>
       <tbody>
         <template x-if="!users">
-          <tr><td colspan="6" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+          <tr><td colspan="6" class="td-ctr"><div class="spinner" style="margin:0 auto"></div></td></tr>
         </template>
         <template x-if="users && users.length === 0">
-          <tr><td colspan="6" class="text-center p-6"><div class="empty-state"><p>No users yet</p></div></td></tr>
+          <tr><td colspan="6" class="td-ctr"><div class="empty-state"><p>No users yet</p></div></td></tr>
         </template>
         <template x-for="user in users" :key="user.id">
           <tr>
-            <td class="text-sm font-medium" x-text="user.name || '—'"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="user.email || '—'"></td>
+            <td style="font-size:13px;font-weight:500" x-text="user.name || '—'"></td>
+            <td style="font-size:12px;color:var(--color-fg-2)" x-text="user.email || '—'"></td>
             <td><span class="badge" :class="user.role === 'admin' ? 'badge-primary' : 'badge-default'" x-text="user.role || 'member'"></span></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="user.team_name || '—'"></td>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="user.created_at || '—'"></td>
+            <td style="font-size:12px;color:var(--color-fg-2)" x-text="user.team_name || '—'"></td>
+            <td style="font-size:12px;color:var(--color-fg-3)" x-text="user.created_at || '—'"></td>
             <td>
-              <button class="btn btn-ghost btn-sm text-red-500" x-on:click="deleteUser(user.id)">Remove</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" x-on:click="deleteUser(user.id)">Remove</button>
             </td>
           </tr>
         </template>
@@ -49,9 +63,9 @@
     <div>
       <div class="modal-backdrop" x-on:click="showCreateModal = false"></div>
       <div class="modal-panel" x-on:click.outside="showCreateModal = false">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-[var(--color-fg-0)]">Add User</h2>
-          <button class="btn-icon text-lg" x-on:click="showCreateModal = false">&times;</button>
+        <div class="modal-hdr">
+          <h2 class="modal-title">Add User</h2>
+          <button class="btn-icon" style="font-size:18px" x-on:click="showCreateModal = false">&times;</button>
         </div>
         <form x-on:submit="createUser()">
           <label>Name</label>
@@ -63,7 +77,7 @@
             <option value="member">Member</option>
             <option value="admin">Admin</option>
           </select>
-          <div class="flex gap-2 justify-end mt-4">
+          <div class="btn-row">
             <button type="button" class="btn btn-secondary" x-on:click="showCreateModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" x-bind:disabled="!newUserName.trim() || !newUserEmail.trim()">Add User</button>
           </div>

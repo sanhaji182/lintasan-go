@@ -1,80 +1,110 @@
 {{define "pages/analytics.gohtml"}}
 <div x-data="analyticsData()" x-init="fetchData()">
-  <div class="flex items-center justify-between mb-5">
-    <h1 class="text-xl font-bold text-[var(--color-fg-0)]">📈 Analytics</h1>
-    <span class="text-xs text-[var(--color-fg-3)]">Auto-refreshes every 30s</span>
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+        <polyline points="17 6 23 6 23 12"/>
+      </svg>
+      <h1 style="font-size:18px;font-weight:600;color:var(--fg-0)">Analytics</h1>
+    </div>
+    <span style="font-size:12px;color:var(--fg-3)">Auto-refreshes every 30s</span>
   </div>
 
   <!-- Period Selector -->
-  <div class="flex items-center gap-2 mb-4">
-    <span class="text-xs font-semibold uppercase text-[var(--color-fg-3)] tracking-wide">Period:</span>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+    <span style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Period:</span>
     <button type="button"
-      class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
-      :class="period === 'daily' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg-2)] text-[var(--color-fg-2)] border-[var(--color-border)] hover:border-[var(--color-fg-3)]'"
+      class="btn btn-sm"
+      :class="period === 'daily' ? 'btn-primary' : 'btn-secondary'"
       @click="period='daily'; fetchData()">Daily</button>
     <button type="button"
-      class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
-      :class="period === 'weekly' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg-2)] text-[var(--color-fg-2)] border-[var(--color-border)] hover:border-[var(--color-fg-3)]'"
+      class="btn btn-sm"
+      :class="period === 'weekly' ? 'btn-primary' : 'btn-secondary'"
       @click="period='weekly'; fetchData()">Weekly</button>
     <button type="button"
-      class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
-      :class="period === 'monthly' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg-2)] text-[var(--color-fg-2)] border-[var(--color-border)] hover:border-[var(--color-fg-3)]'"
+      class="btn btn-sm"
+      :class="period === 'monthly' ? 'btn-primary' : 'btn-secondary'"
       @click="period='monthly'; fetchData()">Monthly</button>
   </div>
 
   <!-- Summary Cards -->
-  <div class="grid grid-cols-4 gap-4 mb-6">
-    <div class="card flex items-center gap-3">
-      <div class="text-2xl">📊</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+    <!-- Total Requests -->
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
       <div>
-        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Total Requests</div>
-        <div x-show="!data" class="skeleton w-16 h-7 rounded"></div>
-        <div x-show="data" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(data?.totalRequests ?? 0).toLocaleString()" x-cloak></div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Total Requests</div>
+        <div x-show="!data" class="skeleton" style="width:64px;height:28px;border-radius:6px"></div>
+        <div x-show="data" style="font-size:18px;font-weight:700;color:var(--fg-0)" x-text="(data?.totalRequests ?? 0).toLocaleString()" x-cloak></div>
       </div>
     </div>
-    <div class="card flex items-center gap-3">
-      <div class="text-2xl">⚡</div>
+    <!-- Avg Latency -->
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
       <div>
-        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Avg Latency</div>
-        <div x-show="!data" class="skeleton w-16 h-7 rounded"></div>
-        <div x-show="data" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(data?.avgLatency ?? 0).toFixed(0) + ' ms'" x-cloak></div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Avg Latency</div>
+        <div x-show="!data" class="skeleton" style="width:64px;height:28px;border-radius:6px"></div>
+        <div x-show="data" style="font-size:18px;font-weight:700;color:var(--fg-0)" x-text="(data?.avgLatency ?? 0).toFixed(0) + ' ms'" x-cloak></div>
       </div>
     </div>
-    <div class="card flex items-center gap-3">
-      <div class="text-2xl">🎯</div>
+    <!-- Cache Hit Rate -->
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <circle cx="12" cy="12" r="6"/>
+        <circle cx="12" cy="12" r="2"/>
+      </svg>
       <div>
-        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Cache Hit Rate</div>
-        <div x-show="!data" class="skeleton w-14 h-7 rounded"></div>
-        <div x-show="data" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(data?.cacheHitRate ?? 0).toFixed(1) + '%'" x-cloak></div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Cache Hit Rate</div>
+        <div x-show="!data" class="skeleton" style="width:56px;height:28px;border-radius:6px"></div>
+        <div x-show="data" style="font-size:18px;font-weight:700;color:var(--fg-0)" x-text="(data?.cacheHitRate ?? 0).toFixed(1) + '%'" x-cloak></div>
       </div>
     </div>
-    <div class="card flex items-center gap-3">
-      <div class="text-2xl">🔌</div>
+    <!-- Active Providers -->
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+        <line x1="12" y1="2" x2="12" y2="12"/>
+      </svg>
       <div>
-        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Active Providers</div>
-        <div x-show="!data" class="skeleton w-12 h-7 rounded"></div>
-        <div x-show="data" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(data?.providers || []).filter(p => p.healthy).length" x-cloak></div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Active Providers</div>
+        <div x-show="!data" class="skeleton" style="width:48px;height:28px;border-radius:6px"></div>
+        <div x-show="data" style="font-size:18px;font-weight:700;color:var(--fg-0)" x-text="(data?.providers || []).filter(p => p.healthy).length" x-cloak></div>
       </div>
     </div>
   </div>
 
   <!-- Request Volume Chart -->
-  <div class="card mb-6">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-sm font-semibold text-[var(--color-fg-1)]">
+  <div class="card" style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="font-size:14px;font-weight:600;color:var(--fg-1)">
         Request Volume
-        <span class="text-xs font-normal text-[var(--color-fg-3)] ml-1" x-text="'(' + periodLabel + ')'"></span>
+        <span style="font-size:12px;font-weight:400;color:var(--fg-3);margin-left:4px" x-text="'(' + periodLabel + ')'"></span>
       </h2>
     </div>
-    <div x-show="!data" class="skeleton rounded" style="height:220px"></div>
-    <div x-show="data" x-cloak class="relative">
-      <canvas id="volume-chart" height="220" class="w-full"></canvas>
+    <div x-show="!data" class="skeleton" style="height:220px;width:100%;border-radius:var(--radius-sm)"></div>
+    <div x-show="data" x-cloak style="position:relative">
+      <canvas id="volume-chart" height="220" style="width:100%"></canvas>
     </div>
   </div>
 
   <!-- Cost Breakdown Table -->
-  <div class="card mb-6">
-    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">💰 Cost Breakdown</h2>
+  <div class="card" style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+      <h2 style="font-size:14px;font-weight:600;color:var(--fg-1)">Cost Breakdown</h2>
+    </div>
     <table>
       <thead>
         <tr>
@@ -88,40 +118,46 @@
       </thead>
       <tbody>
         <template x-if="!usageData">
-          <tr><td colspan="6" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+          <tr><td colspan="6" style="text-align:center;padding:24px"><div class="spinner" style="margin:0 auto"></div></td></tr>
         </template>
         <template x-if="usageData && (!usageData.models || usageData.models.length === 0)">
           <tr><td colspan="6"><div class="empty-state"><p>No usage data yet</p></div></td></tr>
         </template>
         <template x-for="(m, i) in (usageData?.models || []).slice(0, 10)" :key="m.model">
           <tr>
-            <td class="text-sm font-medium" x-text="m.model || '—'"></td>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="(m.requests || 0).toLocaleString()"></td>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="(m.input_tokens || 0).toLocaleString()"></td>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="(m.output_tokens || 0).toLocaleString()"></td>
-            <td class="text-xs font-mono text-[var(--color-fg-2)]">
+            <td style="font-size:13px;font-weight:500" x-text="m.model || '\u2014'"></td>
+            <td style="font-size:12px;color:var(--fg-3)" x-text="(m.requests || 0).toLocaleString()"></td>
+            <td style="font-size:12px;color:var(--fg-3)" x-text="(m.input_tokens || 0).toLocaleString()"></td>
+            <td style="font-size:12px;color:var(--fg-3)" x-text="(m.output_tokens || 0).toLocaleString()"></td>
+            <td style="font-size:12px;font-family:var(--mono);color:var(--fg-2)">
               <span x-text="'$' + estimatedCost(m).toFixed(4)"></span>
             </td>
             <td>
-              <div class="flex items-center gap-2">
-                <div class="flex-1 h-1.5 rounded-full bg-[var(--color-bg-2)] overflow-hidden">
-                  <div class="h-full rounded-full bg-[var(--color-primary)]" :style="'width:' + costPercent(i) + '%'"></div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:6px;border-radius:3px;background:var(--border-light);overflow:hidden">
+                  <div style="height:100%;border-radius:3px;background:var(--primary)" :style="'width:' + costPercent(i) + '%'"></div>
                 </div>
-                <span class="text-xs text-[var(--color-fg-3)]" x-text="costPercent(i).toFixed(1) + '%'"></span>
+                <span style="font-size:12px;color:var(--fg-3)" x-text="costPercent(i).toFixed(1) + '%'"></span>
               </div>
             </td>
           </tr>
         </template>
       </tbody>
     </table>
-    <p x-show="usageData && (usageData.models || []).length > 10" class="text-xs text-[var(--color-fg-3)] mt-2 text-center">
+    <p x-show="usageData && (usageData.models || []).length > 10" style="font-size:12px;color:var(--fg-3);margin-top:8px;text-align:center">
       Showing top 10 of <span x-text="(usageData?.models || []).length"></span> models
     </p>
   </div>
 
   <!-- Provider Performance Grid -->
-  <div class="card mb-6">
-    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">⚙️ Provider Performance</h2>
+  <div class="card" style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <h2 style="font-size:14px;font-weight:600;color:var(--fg-1)">Provider Performance</h2>
+    </div>
     <table>
       <thead>
         <tr>
@@ -140,21 +176,21 @@
         </template>
         <template x-for="p in providerPerf" :key="p.name">
           <tr>
-            <td class="text-sm font-medium" x-text="p.name || '—'"></td>
-            <td class="text-xs text-[var(--color-fg-3)] uppercase" x-text="p.format || '—'"></td>
+            <td style="font-size:13px;font-weight:500" x-text="p.name || '\u2014'"></td>
+            <td style="font-size:12px;color:var(--fg-3);text-transform:uppercase" x-text="p.format || '\u2014'"></td>
             <td>
               <span class="badge" :class="p.healthy ? 'badge-success' : 'badge-danger'" x-text="p.healthy ? 'Healthy' : 'Down'"></span>
             </td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="(p.avg_latency || 0).toFixed(0) + ' ms'"></td>
+            <td style="font-size:12px;color:var(--fg-2)" x-text="(p.avg_latency || 0).toFixed(0) + ' ms'"></td>
             <td>
-              <span class="text-xs" :class="(p.success_rate || 100) >= 95 ? 'text-[var(--color-success)]' : (p.success_rate || 100) >= 80 ? 'text-[var(--color-warning)]' : 'text-[var(--color-danger)]'"
+              <span style="font-size:12px" :style="(p.success_rate || 100) >= 95 ? 'color:var(--success)' : (p.success_rate || 100) >= 80 ? 'color:var(--warning)' : 'color:var(--error)'"
                 x-text="(p.success_rate ?? 100).toFixed(1) + '%'"></span>
             </td>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="(p.total_tokens || 0).toLocaleString()"></td>
+            <td style="font-size:12px;color:var(--fg-3)" x-text="(p.total_tokens || 0).toLocaleString()"></td>
             <td>
-              <div class="flex items-center gap-1.5">
-                <div class="w-2 h-2 rounded-full" :class="(p.success_rate || 100) >= 95 ? 'bg-[var(--color-success)]' : (p.success_rate || 100) >= 80 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-danger)]'"></div>
-                <span class="text-xs text-[var(--color-fg-3)]" x-text="(p.success_rate || 100) >= 95 ? 'Excellent' : (p.success_rate || 100) >= 80 ? 'Fair' : 'Poor'"></span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="width:8px;height:8px;border-radius:50%" :style="'background:' + ((p.success_rate || 100) >= 95 ? 'var(--success)' : (p.success_rate || 100) >= 80 ? 'var(--warning)' : 'var(--error)')"></div>
+                <span style="font-size:12px;color:var(--fg-3)" x-text="(p.success_rate || 100) >= 95 ? 'Excellent' : (p.success_rate || 100) >= 80 ? 'Fair' : 'Poor'"></span>
               </div>
             </td>
           </tr>
@@ -163,9 +199,9 @@
     </table>
   </div>
 
-  <!-- Provider Breakdown (original) -->
+  <!-- Provider Breakdown -->
   <div class="card">
-    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Provider Breakdown</h2>
+    <h2 style="font-size:14px;font-weight:600;color:var(--fg-1);margin-bottom:12px">Provider Breakdown</h2>
     <table>
       <thead>
         <tr>
@@ -177,16 +213,16 @@
       </thead>
       <tbody>
         <template x-if="!data">
-          <tr><td colspan="4" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+          <tr><td colspan="4" style="text-align:center;padding:24px"><div class="spinner" style="margin:0 auto"></div></td></tr>
         </template>
         <template x-if="data && (!data.providers || data.providers.length === 0)">
           <tr><td colspan="4"><div class="empty-state"><p>No provider data yet</p></div></td></tr>
         </template>
         <template x-for="p in data?.providers" :key="p.name">
           <tr>
-            <td class="text-sm font-medium" x-text="p.name"></td>
-            <td class="text-xs text-[var(--color-fg-3)] uppercase" x-text="p.format || '—'"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="(p.latency || 0).toFixed(0) + ' ms'"></td>
+            <td style="font-size:13px;font-weight:500" x-text="p.name"></td>
+            <td style="font-size:12px;color:var(--fg-3);text-transform:uppercase" x-text="p.format || '\u2014'"></td>
+            <td style="font-size:12px;color:var(--fg-2)" x-text="(p.latency || 0).toFixed(0) + ' ms'"></td>
             <td>
               <span class="badge" :class="p.healthy ? 'badge-success' : 'badge-danger'" x-text="p.healthy ? 'Healthy' : 'Down'"></span>
             </td>
@@ -250,7 +286,7 @@ function analyticsData() {
     buildProviderPerf() {
       const providers = (this.data?.providers || []).map(p => ({
         name: p.name,
-        format: p.format || '—',
+        format: p.format || '\u2014',
         healthy: p.healthy,
         avg_latency: p.latency || 0,
         success_rate: 100,
@@ -269,7 +305,7 @@ function analyticsData() {
           } else if (name) {
             providers.push({
               name: name,
-              format: '—',
+              format: '\u2014',
               healthy: true,
               avg_latency: this.data?.avgLatency || 0,
               success_rate: 100,
