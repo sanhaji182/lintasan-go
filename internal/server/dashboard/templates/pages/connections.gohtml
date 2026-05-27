@@ -414,7 +414,8 @@ function connectionsPage() {
         const r = await fetch('/api/providers/presets');
         if (r.ok) {
           const data = await r.json();
-          this.presets = Array.isArray(data) ? data : (data.data || data.presets || []);
+          const extracted = Array.isArray(data) ? data : (data.data || data.presets || []);
+          this.presets = Array.isArray(extracted) ? extracted : [];
         } else {
           this.presets = { _error: 'Failed to load presets (HTTP ' + r.status + ')' };
         }

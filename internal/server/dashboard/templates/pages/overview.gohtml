@@ -248,8 +248,9 @@ function overviewData() {
       let barCount = values.length;
       let gap = Math.max(8, cw * 0.03);
       let bw = (cw - gap * (barCount + 1)) / barCount;
+      let primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#3c50e0';
       let grad = ctx.createLinearGradient(0, h-pad.bottom, 0, pad.top);
-      grad.addColorStop(0, 'var(--primary)');
+      grad.addColorStop(0, primaryColor);
       grad.addColorStop(1, '#6366f1');
       let isDark = document.documentElement.classList.contains('dark');
       let lc = isDark ? '#9095a8' : '#64748b';
@@ -258,16 +259,20 @@ function overviewData() {
         let bh = Math.max(2, (v/max)*ch);
         let x = pad.left + gap + i*(bw+gap);
         let y = h - pad.bottom - bh;
-        let r = Math.min(4, bw/2);
-        ctx.fillStyle = isDark ? '#6366f1' : '#3c50e0';
-        ctx.beginPath();
-        ctx.moveTo(x, y+r);
-        ctx.arcTo(x,y,x+r,y,r);
-        ctx.arcTo(x+bw,y,x+bw,y+r,r);
-        ctx.lineTo(x+bw, h-pad.bottom);
-        ctx.lineTo(x, h-pad.bottom);
-        ctx.closePath();
-        ctx.fill();
+        let r = Math.max(0, Math.min(4, bw/2));
+        ctx.fillStyle = primaryColor;
+        if (r > 0 && bw > 4) {
+          ctx.beginPath();
+          ctx.moveTo(x, y+r);
+          ctx.arcTo(x,y,x+r,y,r);
+          ctx.arcTo(x+bw,y,x+bw,y+r,r);
+          ctx.lineTo(x+bw, h-pad.bottom);
+          ctx.lineTo(x, h-pad.bottom);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillRect(x, y, Math.max(1, bw), Math.max(0, bh));
+        }
         ctx.fillStyle = lc;
         ctx.font = 'bold 11px Inter, system-ui, sans-serif';
         ctx.textAlign = 'center';
@@ -284,6 +289,7 @@ function overviewData() {
       let canvas = document.getElementById('cache-donut');
       if (!canvas || !this.stats) return;
       let ctx = canvas.getContext('2d');
+      let primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#3c50e0';
       let dpr = window.devicePixelRatio || 1;
       let size = 150;
       let cx = size/2, cy = size/2;
@@ -305,7 +311,7 @@ function overviewData() {
       ctx.arc(cx,cy,outerR,sa,sa+ha);
       ctx.arc(cx,cy,innerR,sa+ha,sa,true);
       ctx.closePath();
-      ctx.fillStyle = isDark ? '#6366f1' : '#3c50e0';
+      ctx.fillStyle = primaryColor;
       ctx.fill();
       if (100-hitRate > 0) {
         let ma = ((100-hitRate)/100)*2*Math.PI;
