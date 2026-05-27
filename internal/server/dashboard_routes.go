@@ -2,6 +2,7 @@ package server
 
 import (
 	"embed"
+	"io/fs"
 	"net/http"
 	"strings"
 )
@@ -62,8 +63,9 @@ func (s *Server) registerDashboardRoutes() {
 	})
 
 	// Static files (CSS, JS)
-	staticHandler := http.StripPrefix("/static/", http.FileServer(http.FS(staticFS)))
-	mux.HandleFunc("GET /static/", func(w http.ResponseWriter, r *http.Request) {
+	staticSub, _ := fs.Sub(staticFS, "dashboard/static")
+	staticHandler := http.StripPrefix("/static/", http.FileServer(http.FS(staticSub)))
+	mux.HandleFunc("GET /static/{path...}", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, ".html") || strings.HasSuffix(r.URL.Path, ".gohtml") {
 			http.NotFound(w, r)
 			return
