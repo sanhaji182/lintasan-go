@@ -1,4 +1,4 @@
-<div x-data="{ showCreateModal: false, newKeyName: '', keys: null, toasts: [] }" x-init="fetchKeys.call(this); window.keysScope = $data">
+<div x-data="{ showCreateModal: false, newKeyName: '', keys: null, toasts: [] }" x-init="fetchKeys()">
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
@@ -21,10 +21,9 @@
       </h1>
       <p class="pg-sub">Manage API keys for authenticating requests.</p>
     </div>
-    <button class="btn btn-primary" onclick="window.keysScope.showCreateModal = true">+ Create Key</button>
+    <button class="btn btn-primary" onclick="ks.showCreateModal()">+ Create Key</button>
   </div>
 
-  <!-- Keys Table -->
   <div class="card">
     <table>
       <thead>
@@ -48,14 +47,14 @@
             <td style="font-size:13px;font-weight:500" x-text="key.name"></td>
             <td>
               <span class="key-mono" x-text="key.key ? key.key.substring(0, 8) + '...' : '—'"></span>
-              <button class="btn btn-ghost btn-sm copy-btn" onclick="window.keysScope.copyKey(key)" title="Copy to clipboard">
+              <button class="btn btn-ghost btn-sm copy-btn" onclick="ks.copyKey(this)" title="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
               </button>
             </td>
             <td style="font-size:12px;color:var(--color-fg-3)" x-text="key.created_at || '—'"></td>
             <td style="font-size:12px;color:var(--color-fg-2)" x-text="key.requests || 0"></td>
             <td>
-              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="window.keysScope.deleteKey(key.id)">Revoke</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" onclick="ks.deleteKey(this)">Revoke</button>
             </td>
           </tr>
         </template>
@@ -63,28 +62,26 @@
     </table>
   </div>
 
-  <!-- Create Key Modal -->
   <template x-if="showCreateModal">
     <div>
-      <div class="modal-backdrop" onclick="window.keysScope.showCreateModal = false"></div>
-      <div class="modal-panel" onclick="window.keysScope.showCreateModal = false">
+      <div class="modal-backdrop" onclick="ks.hideCreateModal()"></div>
+      <div class="modal-panel">
         <div class="modal-hdr">
           <h2 class="modal-title">Create API Key</h2>
-          <button class="btn-icon" style="font-size:18px" onclick="window.keysScope.showCreateModal = false">&times;</button>
+          <button class="btn-icon" style="font-size:18px" onclick="ks.hideCreateModal()">&times;</button>
         </div>
-        <form onsubmit="event.preventDefault(); createKey.call(window.keysScope)">
+        <form onsubmit="event.preventDefault(); ks.createKey()">
           <label>Key Name</label>
           <input type="text" name="name" x-model="newKeyName" placeholder="e.g., Production, Development">
           <div class="btn-row">
-            <button type="button" class="btn btn-secondary" onclick="window.keysScope.showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="!newKeyName.trim()" onclick="createKey.call(window.keysScope)">Create</button>
+            <button type="button" class="btn btn-secondary" onclick="ks.hideCreateModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="!newKeyName.trim()">Create</button>
           </div>
         </form>
       </div>
     </div>
   </template>
 
-  <!-- Toast container -->
   <div>
     <template x-for="(t, i) in toasts" :key="i">
       <div class="toast" :class="'toast-' + t.type" x-init="setTimeout(() => toasts.splice(i, 1), 3000)" x-text="t.message"></div>
@@ -93,49 +90,71 @@
 </div>
 
 <script>
-async function fetchKeys() {
-  try {
-    let r = await fetch('/api/keys');
-    if (r.ok) {
-      this.keys = await r.json();
-    }
-  } catch(e) { console.error('Keys fetch failed', e); }
-}
-
-async function createKey() {
-  try {
-    let r = await fetch('/api/keys', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: this.newKeyName })
-    });
-    if (r.ok) {
-      let data = await r.json();
-      this.showCreateModal = false;
-      this.newKeyName = '';
-      this.fetchKeys();
-      this.toasts.push({ type: 'success', message: 'API key created successfully' });
-    }
-  } catch(e) { console.error('Create key failed', e); }
-}
-
-async function deleteKey(id) {
-  if (!confirm('Revoke this API key? This cannot be undone.')) return;
-  try {
-    let r = await fetch('/api/keys?id=' + id, { method: 'DELETE' });
-    if (r.ok) {
-      this.fetchKeys();
-      this.toasts.push({ type: 'success', message: 'API key revoked' });
-    }
-  } catch(e) { console.error('Delete key failed', e); }
-}
-
-function copyKey(key) {
-  if (key && key.key) {
-    navigator.clipboard.writeText(key.key).catch(() => {});
-    this.toasts.push({ type: 'success', message: 'Key copied to clipboard' });
+(function() {
+  function getData() {
+    var el = document.querySelector('[x-data]');
+    return el ? Alpine.$data(el) : null;
   }
-}
 
+  window.ks = {
+    showCreateModal: function() { var d = getData(); if (d) d.showCreateModal = true; },
+    hideCreateModal: function() { var d = getData(); if (d) d.showCreateModal = false; },
 
+    copyKey: function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var key = d.keys[idx];
+      if (key && key.key) {
+        navigator.clipboard.writeText(key.key).catch(function(){});
+        d.toasts.push({ type: 'success', message: 'Key copied to clipboard' });
+      }
+    },
+
+    deleteKey: async function(btn) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
+      var key = d.keys[idx];
+      if (!key || !key.id) return;
+      if (!confirm('Revoke API key \"' + key.name + '\"? This cannot be undone.')) return;
+      try {
+        var r = await fetch('/api/keys?id=' + key.id, { method: 'DELETE' });
+        if (r.ok) {
+          d.keys = d.keys.filter(function(k) { return k.id !== key.id; });
+          d.toasts.push({ type: 'success', message: 'API key revoked' });
+        }
+      } catch(e) { console.error('Delete key failed', e); }
+    },
+
+    createKey: async function() {
+      var d = getData(); if (!d) return;
+      try {
+        var r = await fetch('/api/keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: d.newKeyName })
+        });
+        if (r.ok) {
+          d.showCreateModal = false;
+          d.newKeyName = '';
+          await fetchKeys();
+          d.toasts.push({ type: 'success', message: 'API key created' });
+        }
+      } catch(e) { console.error('Create key failed', e); }
+    }
+  };
+
+  window.fetchKeys = async function() {
+    var d = getData();
+    if (!d) { setTimeout(fetchKeys, 100); return; }
+    try {
+      var r = await fetch('/api/keys');
+      if (r.ok) {
+        var data = await r.json();
+        d.keys = Array.isArray(data) ? data : (data.data || []);
+      }
+    } catch(e) { console.error('Keys fetch failed', e); }
+  };
+})();
 </script>
