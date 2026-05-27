@@ -341,7 +341,61 @@ func (s *Server) handleModelsManual(w http.ResponseWriter, r *http.Request){
     s.db.Conn().Exec("UPDATE connections SET models_count=(SELECT COUNT(*) FROM discovered_models WHERE connection_id=? AND is_active=1) WHERE id=?",connID,connID)
     writeJSON(w,map[string]any{"success":true,"data":map[string]any{"count":len(models)}})
 }
-func (s *Server) handleCache(w http.ResponseWriter,r *http.Request){ var emb,sem int; s.db.Conn().QueryRow("SELECT COUNT(*) FROM embedding_cache").Scan(&emb); s.db.Conn().QueryRow("SELECT COUNT(*) FROM semantic_cache").Scan(&sem); writeJSON(w,map[string]any{"embedding_cache":emb,"semantic_cache":sem,"total":emb+sem}) }
+func (s *Server) handleCache(w http.ResponseWriter, r *http.Request) {
+	// Cache performance stats matching Node schema:
+	// exact_hits, stream_hits, semantic_hits, misses, hit_rate
+
+	// Exact cache hits: count from request_logs where cached = 1
+	var exactHits int
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM request_logs WHERE cached = 1").Scan(&exactHits)
+
+	// Stream cache hits: count entries in stream_response_cache
+	var streamHits int
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM stream_response_cache").Scan(&streamHits)
+
+	// Semantic cache hits: sum hits from semantic_cache
+	var semanticHits int
+	s.db.Conn().QueryRow("SELECT COALESCE(SUM(hits), 0) FROM semantic_cache").Scan(&semanticHits)
+
+	// Also count embedding_cache entries
+	var embeddingCount int
+	s.db.Conn().QueryRow("SELECT COALESCE(SUM(hits), 0) FROM embedding_cache").Scan(&embeddingCount)
+
+	// Misses: total requests minus cached
+	var totalRequests int
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM request_logs").Scan(&totalRequests)
+	misses := totalRequests - exactHits
+	if misses < 0 {
+		misses = 0
+	}
+
+	total := float64(exactHits + streamHits + semanticHits + misses)
+	hitRate := "0.0%"
+	if total > 0 {
+		rate := float64(exactHits+streamHits+semanticHits) / total * 100
+		hitRate = fmt.Sprintf("%.1f%%", rate)
+	}
+
+	// Also return raw cache table counts for the frontend
+	var exactEntries, streamEntries, semanticEntries int
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM response_cache").Scan(&exactEntries)
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM stream_response_cache").Scan(&streamEntries)
+	s.db.Conn().QueryRow("SELECT COUNT(*) FROM semantic_cache").Scan(&semanticEntries)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"exact_hits":       exactHits,
+		"stream_hits":      streamHits,
+		"semantic_hits":    semanticHits,
+		"embedding_hits":   embeddingCount,
+		"misses":           misses,
+		"hit_rate":         hitRate,
+		"total_requests":   totalRequests,
+		"exact_entries":    exactEntries,
+		"stream_entries":   streamEntries,
+		"semantic_entries": semanticEntries,
+	})
+}
 func (s *Server) handleCacheAction(w http.ResponseWriter,r *http.Request){ s.db.Conn().Exec("DELETE FROM embedding_cache"); s.db.Conn().Exec("DELETE FROM semantic_cache"); writeJSON(w,map[string]any{"success":true,"status":"cleared"}) }
 func (s *Server) handleCosts(w http.ResponseWriter,r *http.Request){ writeData(w,map[string]any{"today":0,"month":0,"currency":"USD","by_model":[]any{}}) }
 func (s *Server) handleQuota(w http.ResponseWriter,r *http.Request){ writeData(w,[]any{map[string]any{"limits":s.getJSONSetting("quota_limits",map[string]any{}),"usage":map[string]any{"requests_today":0,"tokens_today":0}}}) }

@@ -39,6 +39,7 @@ body {
 .btn-secondary { background:var(--color-bg-input); color:var(--color-fg-1); } .btn-secondary:hover { background:var(--color-border); }
 .btn-danger { background:var(--color-danger); color:#fff; } .btn-danger:hover { background:var(--color-danger-hover); }
 .btn-ghost { background:transparent; color:var(--color-fg-2); } .btn-ghost:hover { background:var(--color-bg-input); }
+.btn-success { background:var(--color-success); color:#fff; } .btn-success:hover { background:#16a34a; }
 .btn-sm { padding:4px 10px; font-size:12px; }
 .badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:100px; font-size:11px; font-weight:500; }
 .badge-success { background:#dcfce7; color:#166534; } .badge-danger { background:#fee2e2; color:#991b1b; }

@@ -9,6 +9,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
@@ -36,6 +37,26 @@
     }
   </script>
   <style>
+    /* Dark mode overrides when .dark class is on <html> */
+    html.dark { --color-bg-body: #0f1117; --color-bg-card: #1a1d27; --color-bg-card-hover: #22252f; --color-bg-input: #22252f; --color-border: #2a2e3a; --color-fg-0: #e4e6ed; --color-fg-1: #c8cad3; --color-fg-2: #9095a8; --color-fg-3: #656b7c; }
+    html.dark body { background: #0f1117; color: #e4e6ed; }
+    html.dark .card { background: #1a1d27; border-color: #2a2e3a; }
+    html.dark .btn-secondary { background: #22252f; color: #c8cad3; }
+    html.dark table th { border-color: #2a2e3a; }
+    html.dark table td { border-color: #2a2e3a; }
+    html.dark tr:hover td { background: #22252f; }
+    html.dark .skeleton { background: linear-gradient(90deg, #22252f 25%, #2a2e3a 50%, #22252f 75%); background-size: 200% 100%; }
+    html.dark .badge-success { background: rgba(62,207,142,0.15); color: #3ecf8e; }
+    html.dark .badge-danger { background: rgba(239,83,80,0.15); color: #ef5350; }
+    html.dark .bg-\[var\(--color-bg-input\)\] { background: #22252f; }
+    html.dark .text-\[var\(--color-fg-0\)\] { color: #e4e6ed; }
+    html.dark .text-\[var\(--color-fg-1\)\] { color: #c8cad3; }
+    html.dark .text-\[var\(--color-fg-2\)\] { color: #9095a8; }
+    html.dark .text-\[var\(--color-fg-3\)\] { color: #656b7c; }
+    html.dark .sidebar { background: #1a1d27; border-color: #2a2e3a; }
+    html.dark .sidebar-link { color: #9095a8; }
+    html.dark .sidebar-link:hover { background: #22252f; color: #e4e6ed; }
+    html.dark .sidebar-link.active { background: rgba(99,102,241,0.15); color: #a5b4fc; }
     [x-cloak] { display: none !important; }
   </style>
 </head>

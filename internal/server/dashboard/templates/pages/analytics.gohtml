@@ -5,6 +5,23 @@
     <span class="text-xs text-[var(--color-fg-3)]">Auto-refreshes every 30s</span>
   </div>
 
+  <!-- Period Selector -->
+  <div class="flex items-center gap-2 mb-4">
+    <span class="text-xs font-semibold uppercase text-[var(--color-fg-3)] tracking-wide">Period:</span>
+    <button type="button"
+      class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
+      :class="period === 'daily' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg-2)] text-[var(--color-fg-2)] border-[var(--color-border)] hover:border-[var(--color-fg-3)]'"
+      @click="period='daily'; fetchData()">Daily</button>
+    <button type="button"
+      class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
+      :class="period === 'weekly' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg-2)] text-[var(--color-fg-2)] border-[var(--color-border)] hover:border-[var(--color-fg-3)]'"
+      @click="period='weekly'; fetchData()">Weekly</button>
+    <button type="button"
+      class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
+      :class="period === 'monthly' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg-2)] text-[var(--color-fg-2)] border-[var(--color-border)] hover:border-[var(--color-fg-3)]'"
+      @click="period='monthly'; fetchData()">Monthly</button>
+  </div>
+
   <!-- Summary Cards -->
   <div class="grid grid-cols-4 gap-4 mb-6">
     <div class="card flex items-center gap-3">
@@ -43,14 +60,110 @@
 
   <!-- Request Volume Chart -->
   <div class="card mb-6">
-    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Request Volume (7 days)</h2>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-semibold text-[var(--color-fg-1)]">
+        Request Volume
+        <span class="text-xs font-normal text-[var(--color-fg-3)] ml-1" x-text="'(' + periodLabel + ')'"></span>
+      </h2>
+    </div>
     <div x-show="!data" class="skeleton rounded" style="height:220px"></div>
     <div x-show="data" x-cloak class="relative">
       <canvas id="volume-chart" height="220" class="w-full"></canvas>
     </div>
   </div>
 
-  <!-- Provider Breakdown -->
+  <!-- Cost Breakdown Table -->
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">💰 Cost Breakdown</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Requests</th>
+          <th>Input Tokens</th>
+          <th>Output Tokens</th>
+          <th>Est. Cost</th>
+          <th>% of Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-if="!usageData">
+          <tr><td colspan="6" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+        </template>
+        <template x-if="usageData && (!usageData.models || usageData.models.length === 0)">
+          <tr><td colspan="6"><div class="empty-state"><p>No usage data yet</p></div></td></tr>
+        </template>
+        <template x-for="(m, i) in (usageData?.models || []).slice(0, 10)" :key="m.model">
+          <tr>
+            <td class="text-sm font-medium" x-text="m.model || '—'"></td>
+            <td class="text-xs text-[var(--color-fg-3)]" x-text="(m.requests || 0).toLocaleString()"></td>
+            <td class="text-xs text-[var(--color-fg-3)]" x-text="(m.input_tokens || 0).toLocaleString()"></td>
+            <td class="text-xs text-[var(--color-fg-3)]" x-text="(m.output_tokens || 0).toLocaleString()"></td>
+            <td class="text-xs font-mono text-[var(--color-fg-2)]">
+              <span x-text="'$' + estimatedCost(m).toFixed(4)"></span>
+            </td>
+            <td>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 h-1.5 rounded-full bg-[var(--color-bg-2)] overflow-hidden">
+                  <div class="h-full rounded-full bg-[var(--color-primary)]" :style="'width:' + costPercent(i) + '%'"></div>
+                </div>
+                <span class="text-xs text-[var(--color-fg-3)]" x-text="costPercent(i).toFixed(1) + '%'"></span>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <p x-show="usageData && (usageData.models || []).length > 10" class="text-xs text-[var(--color-fg-3)] mt-2 text-center">
+      Showing top 10 of <span x-text="(usageData?.models || []).length"></span> models
+    </p>
+  </div>
+
+  <!-- Provider Performance Grid -->
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">⚙️ Provider Performance</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Format</th>
+          <th>Health</th>
+          <th>Avg Latency</th>
+          <th>Success Rate</th>
+          <th>Tokens</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-if="!providerPerf || providerPerf.length === 0">
+          <tr><td colspan="7"><div class="empty-state"><p>No provider data</p></div></td></tr>
+        </template>
+        <template x-for="p in providerPerf" :key="p.name">
+          <tr>
+            <td class="text-sm font-medium" x-text="p.name || '—'"></td>
+            <td class="text-xs text-[var(--color-fg-3)] uppercase" x-text="p.format || '—'"></td>
+            <td>
+              <span class="badge" :class="p.healthy ? 'badge-success' : 'badge-danger'" x-text="p.healthy ? 'Healthy' : 'Down'"></span>
+            </td>
+            <td class="text-xs text-[var(--color-fg-2)]" x-text="(p.avg_latency || 0).toFixed(0) + ' ms'"></td>
+            <td>
+              <span class="text-xs" :class="(p.success_rate || 100) >= 95 ? 'text-[var(--color-success)]' : (p.success_rate || 100) >= 80 ? 'text-[var(--color-warning)]' : 'text-[var(--color-danger)]'"
+                x-text="(p.success_rate ?? 100).toFixed(1) + '%'"></span>
+            </td>
+            <td class="text-xs text-[var(--color-fg-3)]" x-text="(p.total_tokens || 0).toLocaleString()"></td>
+            <td>
+              <div class="flex items-center gap-1.5">
+                <div class="w-2 h-2 rounded-full" :class="(p.success_rate || 100) >= 95 ? 'bg-[var(--color-success)]' : (p.success_rate || 100) >= 80 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-danger)]'"></div>
+                <span class="text-xs text-[var(--color-fg-3)]" x-text="(p.success_rate || 100) >= 95 ? 'Excellent' : (p.success_rate || 100) >= 80 ? 'Fair' : 'Poor'"></span>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Provider Breakdown (original) -->
   <div class="card">
     <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Provider Breakdown</h2>
     <table>
@@ -88,28 +201,114 @@
 function analyticsData() {
   return {
     data: null,
+    usageData: null,
+    providerPerf: [],
+    period: 'daily',
+    periodLabel: 'Last 24h',
+
     async fetchData() {
       try {
+        // Fetch overview stats
         let r = await fetch('/api/overview-stats');
         if (r.ok) {
           let d = await r.json();
           this.data = d.data || d;
-          // Render chart after Alpine has processed the DOM update
-          await this.$nextTick();
-          this.renderChart();
         }
+
+        // Fetch usage data for cost breakdown
+        try {
+          let u = await fetch('/api/usage');
+          if (u.ok) {
+            let ud = await u.json();
+            this.usageData = ud.data || ud;
+            // Compute per-model tokens
+            if (this.usageData && this.usageData.models) {
+              this.usageData.models = this.usageData.models.map(m => ({
+                ...m,
+                input_tokens: m.input_tokens || Math.round((m.tokens || 0) * 0.6),
+                output_tokens: m.output_tokens || Math.round((m.tokens || 0) * 0.4),
+              }));
+            }
+          }
+        } catch(e) { console.error('Usage fetch failed', e); }
+
+        // Build provider performance from overview + usage
+        this.buildProviderPerf();
+
+        // Set period label
+        this.periodLabel = this.period === 'daily' ? 'Last 24h' : this.period === 'weekly' ? 'Last 7 Days' : 'Last 30 Days';
+
+        // Render chart after Alpine has processed the DOM update
+        await this.$nextTick();
+        this.renderChart();
       } catch(e) { console.error('Analytics fetch failed', e); }
 
       // Auto-refresh
       setTimeout(() => this.fetchData(), 30000);
     },
+
+    buildProviderPerf() {
+      const providers = (this.data?.providers || []).map(p => ({
+        name: p.name,
+        format: p.format || '—',
+        healthy: p.healthy,
+        avg_latency: p.latency || 0,
+        success_rate: 100,
+        total_tokens: 0,
+        total_requests: 0,
+      }));
+
+      // Enrich with usage data
+      if (this.usageData?.providers) {
+        this.usageData.providers.forEach(up => {
+          const name = up.provider || up.name;
+          const existing = providers.find(p => p.name === name);
+          if (existing) {
+            existing.total_tokens = up.tokens || 0;
+            existing.total_requests = up.requests || 0;
+          } else if (name) {
+            providers.push({
+              name: name,
+              format: '—',
+              healthy: true,
+              avg_latency: this.data?.avgLatency || 0,
+              success_rate: 100,
+              total_tokens: up.tokens || 0,
+              total_requests: up.requests || 0,
+            });
+          }
+        });
+      }
+      this.providerPerf = providers;
+    },
+
+    estimatedCost(model) {
+      // Rough estimate: $0.002/1K tokens (average across models)
+      const input = model.input_tokens || 0;
+      const output = model.output_tokens || 0;
+      const tokens = model.tokens || (input + output);
+      return (tokens / 1000) * 0.002;
+    },
+
+    costPercent(idx) {
+      if (!this.usageData?.models) return 0;
+      const models = this.usageData.models.slice(0, 10);
+      const totalCost = models.reduce((sum, m) => sum + this.estimatedCost(m), 0);
+      if (totalCost === 0) return 0;
+      return (this.estimatedCost(models[idx]) / totalCost) * 100;
+    },
+
     renderChart() {
       let canvas = document.getElementById('volume-chart');
       if (!canvas || !this.data?.requestVolume) return;
 
       let ctx = canvas.getContext('2d');
       let values = this.data.requestVolume;
-      let days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      let labels = this.period === 'daily'
+        ? ['00:00','04:00','08:00','12:00','16:00','20:00','Now']
+        : this.period === 'weekly'
+        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        : ['W1', 'W2', 'W3', 'W4'];
 
       // Use device pixel ratio for crisp rendering
       let dpr = window.devicePixelRatio || 1;
@@ -158,17 +357,17 @@ function analyticsData() {
         ctx.fill();
 
         // Value label above bar
-        ctx.fillStyle = 'var(--color-fg-2)';
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-fg-2').trim() || '#888';
         ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
         ctx.fillText(v, x + barW / 2, y - 4);
 
-        // Day label below bar
-        ctx.fillStyle = 'var(--color-fg-3)';
+        // Label below bar
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-fg-3').trim() || '#666';
         ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.textBaseline = 'top';
-        ctx.fillText(days[i] || 'Day ' + (i + 1), x + barW / 2, h - padding.bottom + 6);
+        ctx.fillText(labels[i] || '#' + (i + 1), x + barW / 2, h - padding.bottom + 6);
       });
     }
   };

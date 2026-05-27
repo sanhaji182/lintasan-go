@@ -1,23 +1,30 @@
 {{define "pages/connections.gohtml"}}
-<div x-data="{
-  showModal: false,
-  modalTitle: 'Add Provider',
-  editMode: false,
-  editId: '',
-  selectedPreset: null,
-  presets: [],
-  connections: null,
-  form: { name: '', provider: '', api_key: '', base_url: '', models: '' }
-}" x-init="fetchConnections()">
+<div
+  x-data="connectionsPage()"
+  x-init="init()"
+  x-cloak
+>
+  <!-- ── Top Bar ── -->
   <div class="flex items-center justify-between mb-5">
     <div>
       <h1 class="text-xl font-bold text-[var(--color-fg-0)]">🔌 Provider Accounts</h1>
       <p class="text-sm text-[var(--color-fg-2)]">Manage connections to AI model providers.</p>
     </div>
-    <button class="btn btn-primary" x-on:click="showModal = true; modalTitle = 'Add Provider'; editMode = false; selectedPreset = null; form = { name: '', provider: '', api_key: '', base_url: '', models: '' }; $nextTick(() => $refs.presetsGrid && loadPresets())">+ Add Provider</button>
+    <div class="flex gap-2">
+      <button
+        class="btn btn-secondary"
+        x-on:click="syncAll()"
+        x-bind:disabled="syncLoading"
+        x-text="syncLoading ? 'Syncing…' : '🔄 Sync All'"
+      ></button>
+      <button
+        class="btn btn-primary"
+        x-on:click="openAddModal()"
+      >+ Add Provider</button>
+    </div>
   </div>
 
-  <!-- Connections Table -->
+  <!-- ── Connections Table ── -->
   <div class="card">
     <table>
       <thead>
@@ -31,22 +38,46 @@
         </tr>
       </thead>
       <tbody>
-        <template x-if="!connections">
-          <tr><td colspan="6" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+        <template x-if="connections === null">
+          <tr>
+            <td colspan="6" class="text-center p-6">
+              <div class="spinner mx-auto"></div>
+            </td>
+          </tr>
         </template>
-        <template x-if="connections && connections.length === 0">
-          <tr><td colspan="6" class="text-center p-6"><div class="empty-state"><p>No connections yet</p></div></td></tr>
+        <template x-if="connections !== null && connections.length === 0">
+          <tr>
+            <td colspan="6" class="text-center p-6">
+              <div class="empty-state">
+                <div class="empty-state-icon">🔌</div>
+                <p>No provider connections yet.</p>
+                <p class="text-xs text-[var(--color-fg-3)] mt-1">Click "+ Add Provider" to get started.</p>
+              </div>
+            </td>
+          </tr>
         </template>
-        <template x-for="conn in connections" :key="conn.id">
+        <template x-for="conn in connections" x-bind:key="conn.id">
           <tr>
             <td class="text-sm font-medium" x-text="conn.name"></td>
             <td class="text-xs text-[var(--color-fg-2)]" x-text="conn.provider"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="conn.models_count || '—'"></td>
-            <td><span class="badge" :class="conn.is_active ? 'badge-success' : 'badge-danger'" x-text="conn.is_active ? 'Active' : 'Inactive'"></span></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="conn.latency_ms ? conn.latency_ms + 'ms' : '—'"></td>
+            <td class="text-xs text-[var(--color-fg-2)]">
+              <span x-text="conn.models_count != null ? conn.models_count : '—'"></span>
+            </td>
             <td>
-              <button class="btn btn-ghost btn-sm" x-on:click="editConnection(conn)">Edit</button>
-              <button class="btn btn-ghost btn-sm text-red-500" x-on:click="deleteConnection(conn.id)">Delete</button>
+              <span
+                class="badge"
+                x-bind:class="conn.is_active ? 'badge-success' : 'badge-danger'"
+                x-text="conn.is_active ? 'Active' : 'Inactive'"
+              ></span>
+            </td>
+            <td class="text-xs text-[var(--color-fg-2)]">
+              <span x-text="conn.latency_ms != null ? conn.latency_ms + 'ms' : '—'"></span>
+            </td>
+            <td>
+              <div class="flex gap-1">
+                <button class="btn btn-ghost btn-sm" x-on:click="openEditModal(conn)">✏️ Edit</button>
+                <button class="btn btn-ghost btn-sm text-red-500" x-on:click="confirmDelete(conn)">🗑 Delete</button>
+              </div>
             </td>
           </tr>
         </template>
@@ -54,57 +85,175 @@
     </table>
   </div>
 
-  <!-- Add/Edit Provider Modal -->
+  <!-- ════════════════════════════════════════════ -->
+  <!--  Add / Edit Provider Modal                   -->
+  <!-- ════════════════════════════════════════════ -->
   <template x-if="showModal">
     <div>
-      <div class="modal-backdrop" x-on:click="showModal = false"></div>
-      <div class="max-w-[640px] modal-panel" x-on:click.outside="showModal = false">
+      <div class="modal-backdrop" x-on:click="closeModal()"></div>
+      <div
+        class="max-w-[640px] modal-panel"
+        x-on:click.outside="closeModal()"
+      >
+        <!-- header -->
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-base font-semibold text-[var(--color-fg-0)]" x-text="modalTitle"></h2>
-          <button class="btn-icon text-lg" x-on:click="showModal = false">&times;</button>
+          <button class="btn-icon text-lg" x-on:click="closeModal()">&times;</button>
         </div>
 
-        <!-- Preset Grid (only when adding) -->
+        <!-- ── STEP 1: Preset grid (add mode, no preset chosen yet) ── -->
         <template x-if="!editMode && !selectedPreset">
           <div>
-            <p class="text-sm text-[var(--color-fg-2)] mb-3">Choose a provider preset to get started:</p>
-            <div x-ref="presetsGrid" id="presets-grid" class="grid grid-cols-2 gap-2 mb-4">
-            </div>
-            <button class="btn btn-ghost" x-on:click="selectedPreset = { provider: 'custom', name: '' }; form.provider = 'custom'">Manual Configuration</button>
+            <p class="text-sm text-[var(--color-fg-2)] mb-3">
+              Choose a provider preset to get started:
+            </p>
+
+            <!-- loading -->
+            <template x-if="presets === null">
+              <div class="text-center py-6">
+                <div class="spinner mx-auto mb-2"></div>
+                <p class="text-xs text-[var(--color-fg-3)]">Loading presets…</p>
+              </div>
+            </template>
+
+            <!-- error -->
+            <template x-if="presets && presets._error">
+              <div class="text-center py-4">
+                <p class="text-sm text-red-500" x-text="presets._error"></p>
+                <button class="btn btn-ghost btn-sm mt-2" x-on:click="loadPresets()">Retry</button>
+              </div>
+            </template>
+
+            <!-- preset cards grid -->
+            <template x-if="presets && !presets._error && presets.length">
+              <div class="grid grid-cols-2 gap-2 mb-4 max-h-[360px] overflow-y-auto pr-1">
+                <template x-for="p in presets" x-bind:key="p.provider || p.name">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm justify-start p-2 text-left"
+                    x-on:click="selectPreset(p)"
+                  >
+                    <span x-text="(p.icon || '🔌') + ' ' + (p.label || p.name || p.provider)"></span>
+                  </button>
+                </template>
+              </div>
+            </template>
+
+            <!-- fallback: no presets returned but no error -->
+            <template x-if="presets && !presets._error && presets.length === 0">
+              <div class="text-center py-4">
+                <p class="text-xs text-[var(--color-fg-3)]">No presets available.</p>
+              </div>
+            </template>
+
+            <button
+              class="btn btn-ghost mt-2"
+              x-on:click="selectPreset({ provider: 'custom', name: '', label: 'Custom', icon: '⚙️' })"
+            >⚙️ Manual Configuration</button>
           </div>
         </template>
 
-        <!-- Manual form (after preset or edit) -->
+        <!-- ── STEP 2: Manual form (preset chosen OR edit mode) ── -->
         <template x-if="selectedPreset || editMode">
-          <form x-on:submit="saveConnection()">
+          <form x-on:submit.prevent="saveConnection()">
+            <!-- hidden id when editing -->
             <template x-if="editMode">
-              <input type="hidden" name="id" x-bind:value="editId">
+              <input type="hidden" name="id" x-bind:value="editId" />
             </template>
-            <label>Display Name</label>
-            <input type="text" name="name" x-model="form.name" placeholder="e.g., OpenAI Production">
 
-            <label>Provider</label>
-            <input type="text" name="provider" x-model="form.provider" placeholder="openai">
+            <div class="space-y-3">
+              <!-- Display Name -->
+              <div>
+                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">Display Name</label>
+                <input
+                  type="text"
+                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
+                  placeholder="e.g., OpenAI Production"
+                  x-model="form.name"
+                />
+              </div>
 
-            <label>API Key</label>
-            <input type="password" name="api_key" x-model="form.api_key" placeholder="sk-...">
+              <!-- Provider -->
+              <div>
+                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">Provider</label>
+                <input
+                  type="text"
+                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
+                  placeholder="openai"
+                  x-model="form.provider"
+                />
+              </div>
 
-            <label>Base URL (optional)</label>
-            <input type="text" name="base_url" x-model="form.base_url" placeholder="https://api.openai.com/v1">
+              <!-- API Key -->
+              <div>
+                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">API Key</label>
+                <input
+                  type="password"
+                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
+                  placeholder="sk-..."
+                  x-model="form.api_key"
+                />
+              </div>
 
-            <label>Models (comma-separated)</label>
-            <input type="text" name="models" x-model="form.models" placeholder="gpt-4o, gpt-4o-mini">
+              <!-- Base URL -->
+              <div>
+                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">Base URL <span class="text-[var(--color-fg-3)]">(optional)</span></label>
+                <input
+                  type="text"
+                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
+                  placeholder="https://api.openai.com/v1"
+                  x-model="form.base_url"
+                />
+              </div>
 
-            <div class="flex gap-2 mt-4">
-              <button type="button" class="btn btn-secondary"
-                      x-on:click="testConnection()">
-                Test Connection
-              </button>
-              <div id="test-result" class="flex items-center text-sm"></div>
+              <!-- Models -->
+              <div>
+                <label class="block text-sm font-medium text-[var(--color-fg-1)] mb-1">Models <span class="text-[var(--color-fg-3)]">(comma-separated)</span></label>
+                <input
+                  type="text"
+                  class="w-full rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-fg-0)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-border-focus)]"
+                  placeholder="gpt-4o, gpt-4o-mini"
+                  x-model="form.models"
+                />
+              </div>
             </div>
-            <div class="flex gap-2 justify-end mt-4">
-              <button type="button" class="btn btn-secondary" x-on:click="selectedPreset = null; if (editMode) { showModal = false }">Back</button>
-              <button type="submit" class="btn btn-primary" x-bind:disabled="!form.name.trim() || !form.provider.trim()">Save</button>
+
+            <!-- Test Connection row -->
+            <div class="flex items-center gap-3 mt-4">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                x-on:click="testConnection()"
+                x-bind:disabled="testLoading"
+                x-text="testLoading ? 'Testing…' : '🔍 Test Connection'"
+              ></button>
+              <span
+                x-show="testResult !== null"
+                class="text-sm font-medium"
+                x-bind:class="testResult === true ? 'text-green-600' : 'text-red-600'"
+                x-text="testResult === true ? '✓ Connection successful' : '✗ Connection failed'"
+              ></span>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-2 justify-end mt-5 pt-4 border-t border-[var(--color-border)]">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                x-on:click="backToPresets()"
+                x-show="!editMode"
+              >← Back</button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                x-on:click="closeModal()"
+              >Cancel</button>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                x-bind:disabled="!form.name.trim() || !form.provider.trim() || saving"
+                x-text="saving ? 'Saving…' : (editMode ? 'Update' : 'Save')"
+              ></button>
             </div>
           </form>
         </template>
@@ -112,98 +261,290 @@
     </div>
   </template>
 
-  <script>
-    function loadPresets() {
-      var grid = document.getElementById('presets-grid');
-      if (!grid) return;
-      grid.innerHTML = '<div class="col-span-full mx-auto spinner"></div>';
-      fetch('/api/providers/presets')
-        .then(r => r.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            grid.innerHTML = data.map(p =>
-              '<button type="button" class="btn btn-secondary btn-sm justify-start p-2" ' +
-              'onclick="var d=Alpine.$data(document.querySelector(\'[x-data]\')); ' +
-              'd.selectedPreset = ' + JSON.stringify(p).replace(/"/g, '&quot;') + '; ' +
-              'd.form = { name: \'' + (p.name || p.provider).replace(/'/g, "\\'") + '\', provider: \'' + (p.provider || '').replace(/'/g, "\\'") + '\', api_key: \'\', base_url: \'' + (p.base_url || '').replace(/'/g, "\\'") + '\', models: \'\' };">' +
-              (p.icon || '🔌') + ' ' + (p.label || p.provider || p.name) +
-              '</button>'
-            ).join('');
-          }
-        })
-        .catch(() => {
-          grid.innerHTML = '<span>Failed to load presets</span>';
-        });
-    }
+  <!-- ════════════════════════════════════════════ -->
+  <!--  Delete Confirmation Modal                   -->
+  <!-- ════════════════════════════════════════════ -->
+  <template x-if="deleteTarget">
+    <div>
+      <div class="modal-backdrop" x-on:click="deleteTarget = null"></div>
+      <div class="modal-panel" x-on:click.outside="deleteTarget = null">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold text-[var(--color-fg-0)]">Delete Provider</h2>
+          <button class="btn-icon text-lg" x-on:click="deleteTarget = null">&times;</button>
+        </div>
+        <p class="text-sm text-[var(--color-fg-2)] mb-2">
+          Are you sure you want to delete
+          <strong class="text-[var(--color-fg-0)]" x-text="deleteTarget.name"></strong>?
+        </p>
+        <p class="text-xs text-[var(--color-fg-3)] mb-5">
+          This will remove the connection and all associated data. This action cannot be undone.
+        </p>
+        <div class="flex gap-2 justify-end">
+          <button class="btn btn-secondary" x-on:click="deleteTarget = null">Cancel</button>
+          <button
+            class="btn btn-danger"
+            x-on:click="doDelete()"
+            x-bind:disabled="deleting"
+            x-text="deleting ? 'Deleting…' : 'Delete'"
+          ></button>
+        </div>
+      </div>
+    </div>
+  </template>
 
-    async function fetchConnections() {
+  <!-- ── Toasts ── -->
+  <div class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2">
+    <template x-for="(t, idx) in toasts" x-bind:key="idx">
+      <div
+        class="rounded-[var(--radius)] px-5 py-3 text-sm text-white shadow-lg animate-fade-in"
+        x-bind:class="t.type === 'success' ? 'bg-green-700' : 'bg-red-700'"
+        x-text="t.message"
+        x-init="setTimeout(() => toasts.splice(idx, 1), 3500)"
+      ></div>
+    </template>
+  </div>
+</div>
+
+<script>
+function connectionsPage() {
+  return {
+    // ── state ──
+    connections: null,        // null = loading, [] = empty, [...] = rows
+    presets: null,            // null = loading, { _error: '...' } = error, [...] = loaded
+    showModal: false,
+    modalTitle: 'Add Provider',
+    editMode: false,
+    editId: '',
+    selectedPreset: null,
+    form: { name: '', provider: '', api_key: '', base_url: '', models: '' },
+    saving: false,
+    testLoading: false,
+    testResult: null,         // null = no test yet, true = pass, false = fail
+    syncLoading: false,
+    deleteTarget: null,       // { id, name } or null
+    deleting: false,
+    toasts: [],
+
+    // ── init ──
+    init() {
+      this.fetchConnections();
+    },
+
+    // ── API: fetch connections ──
+    async fetchConnections() {
       try {
-        let r = await fetch('/api/connections');
+        const r = await fetch('/api/connections');
         if (r.ok) {
-          let data = await r.json();
-          this.connections = data || [];
+          const data = await r.json();
+          this.connections = Array.isArray(data) ? data : (data.data || []);
+        } else {
+          this.connections = [];
         }
-      } catch(e) { console.error('Connections fetch failed', e); }
-    }
+      } catch (e) {
+        console.error('Fetch connections failed', e);
+        this.connections = this.connections || [];
+      }
+    },
 
-    function editConnection(conn) {
+    // ── API: load presets ──
+    async loadPresets() {
+      this.presets = null;
+      try {
+        const r = await fetch('/api/providers/presets');
+        if (r.ok) {
+          const data = await r.json();
+          this.presets = Array.isArray(data) ? data : (data.data || data.presets || []);
+        } else {
+          this.presets = { _error: 'Failed to load presets (HTTP ' + r.status + ')' };
+        }
+      } catch (e) {
+        console.error('Load presets failed', e);
+        this.presets = { _error: 'Network error loading presets' };
+      }
+    },
+
+    // ── open add modal ──
+    openAddModal() {
+      this.showModal = true;
+      this.modalTitle = 'Add Provider';
+      this.editMode = false;
+      this.editId = '';
+      this.selectedPreset = null;
+      this.form = { name: '', provider: '', api_key: '', base_url: '', models: '' };
+      this.testResult = null;
+      this.loadPresets();
+    },
+
+    // ── select a preset ──
+    selectPreset(p) {
+      this.selectedPreset = p;
+      this.form = {
+        name: p.name || p.label || p.provider || '',
+        provider: p.provider || 'custom',
+        api_key: '',
+        base_url: p.base_url || '',
+        models: (p.models || []).join(', '),
+      };
+      this.testResult = null;
+    },
+
+    // ── back from form to presets ──
+    backToPresets() {
+      this.selectedPreset = null;
+      this.form = { name: '', provider: '', api_key: '', base_url: '', models: '' };
+      this.testResult = null;
+      this.loadPresets();
+    },
+
+    // ── open edit modal ──
+    openEditModal(conn) {
       this.showModal = true;
       this.modalTitle = 'Edit Provider';
       this.editMode = true;
       this.editId = conn.id;
+      this.selectedPreset = { provider: conn.provider, name: conn.name };
       this.form = {
         name: conn.name || '',
         provider: conn.provider || '',
-        api_key: '',
+        api_key: '',                     // never pre-fill the key
         base_url: conn.base_url || '',
-        models: ''
+        models: Array.isArray(conn.models)
+          ? conn.models.join(', ')
+          : (conn.models || ''),
       };
-      this.selectedPreset = { provider: conn.provider, name: conn.name };
-    }
+      this.testResult = null;
+    },
 
-    async function saveConnection() {
+    // ── close modal ──
+    closeModal() {
+      this.showModal = false;
+      this.selectedPreset = null;
+      this.editMode = false;
+      this.testResult = null;
+    },
+
+    // ── save (create / update) ──
+    async saveConnection() {
+      if (!this.form.name.trim() || !this.form.provider.trim()) return;
+      this.saving = true;
       try {
-        let method = this.editMode ? 'PUT' : 'POST';
-        let r = await fetch('/api/connections', {
-          method: method,
+        const payload = {
+          name: this.form.name.trim(),
+          provider: this.form.provider.trim(),
+          api_key: this.form.api_key,
+          base_url: this.form.base_url.trim(),
+          models: this.form.models
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean),
+        };
+        if (this.editMode && this.editId) {
+          payload.id = this.editId;
+        }
+
+        const method = this.editMode ? 'PUT' : 'POST';
+        const r = await fetch('/api/connections', {
+          method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.form)
+          body: JSON.stringify(payload),
         });
-        if (r.ok) {
-          this.showModal = false;
-          this.fetchConnections();
-        }
-      } catch(e) { console.error('Save connection failed', e); }
-    }
 
-    async function deleteConnection(id) {
-      if (!confirm('Delete this connection?')) return;
-      try {
-        let r = await fetch('/api/connections?id=' + id, { method: 'DELETE' });
         if (r.ok) {
-          this.fetchConnections();
+          this.closeModal();
+          await this.fetchConnections();
+          this.addToast('success', this.editMode ? 'Connection updated.' : 'Connection created.');
+        } else {
+          const err = await r.text().catch(() => '');
+          this.addToast('error', 'Save failed: ' + (err || 'HTTP ' + r.status));
         }
-      } catch(e) { console.error('Delete connection failed', e); }
-    }
+      } catch (e) {
+        console.error('Save connection failed', e);
+        this.addToast('error', 'Network error while saving.');
+      } finally {
+        this.saving = false;
+      }
+    },
 
-    async function testConnection() {
-      let result = document.getElementById('test-result');
-      result.innerHTML = '<span class="spinner mr-2"></span> Testing...';
+    // ── test connection ──
+    async testConnection() {
+      this.testLoading = true;
+      this.testResult = null;
       try {
-        let r = await fetch('/api/connections/test', {
+        const r = await fetch('/api/connections/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.form)
+          body: JSON.stringify({
+            name: this.form.name,
+            provider: this.form.provider,
+            api_key: this.form.api_key,
+            base_url: this.form.base_url,
+            models: this.form.models
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean),
+          }),
+        });
+        this.testResult = r.ok;
+      } catch (e) {
+        console.error('Test connection failed', e);
+        this.testResult = false;
+      } finally {
+        this.testLoading = false;
+      }
+    },
+
+    // ── delete confirmation ──
+    confirmDelete(conn) {
+      this.deleteTarget = { id: conn.id, name: conn.name };
+    },
+
+    // ── execute delete ──
+    async doDelete() {
+      if (!this.deleteTarget) return;
+      this.deleting = true;
+      try {
+        const r = await fetch('/api/connections?id=' + encodeURIComponent(this.deleteTarget.id), {
+          method: 'DELETE',
         });
         if (r.ok) {
-          result.innerHTML = '<span class="text-green-500">✓ Success</span>';
+          this.deleteTarget = null;
+          await this.fetchConnections();
+          this.addToast('success', 'Connection deleted.');
         } else {
-          result.innerHTML = '<span class="text-red-500">✗ Failed</span>';
+          this.addToast('error', 'Delete failed (HTTP ' + r.status + ')');
         }
-      } catch(e) {
-        result.innerHTML = '<span class="text-red-500">✗ Error</span>';
+      } catch (e) {
+        console.error('Delete connection failed', e);
+        this.addToast('error', 'Network error while deleting.');
+      } finally {
+        this.deleting = false;
       }
-    }
-  </script>
-</div>
+    },
+
+    // ── sync all ──
+    async syncAll() {
+      this.syncLoading = true;
+      try {
+        const r = await fetch('/api/connections/sync', { method: 'POST' });
+        if (r.ok) {
+          await this.fetchConnections();
+          this.addToast('success', 'All connections synced.');
+        } else {
+          this.addToast('error', 'Sync failed (HTTP ' + r.status + ')');
+        }
+      } catch (e) {
+        console.error('Sync all failed', e);
+        this.addToast('error', 'Network error during sync.');
+      } finally {
+        this.syncLoading = false;
+      }
+    },
+
+    // ── helpers ──
+    addToast(type, message) {
+      this.toasts.push({ type, message });
+    },
+  };
+}
+</script>
 {{end}}

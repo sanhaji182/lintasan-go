@@ -1,79 +1,224 @@
 {{define "pages/overview.gohtml"}}
 <div x-data="overviewData()" x-init="fetchStats()">
-  <div class="flex items-center justify-between mb-5">
-    <h1 class="text-xl font-bold text-[var(--color-fg-0)]">Overview</h1>
-    <span class="text-xs text-[var(--color-fg-3)]">Auto-refreshes every 30s</span>
-  </div>
-
-  <!-- Stats Cards -->
-  <div class="grid grid-cols-4 gap-4 mb-6">
-    <div class="card flex items-center gap-3">
-      <div class="text-2xl">🔌</div>
-      <div>
-        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Active Connections</div>
-        <div x-show="!stats" class="skeleton w-12 h-7 rounded"></div>
-        <div x-show="stats" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="stats?.activeConnections ?? '—'" x-cloak></div>
-      </div>
+  <!-- Top Bar -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <h1 class="text-xl font-bold text-[var(--color-fg-0)]">📊 Overview</h1>
+      <span class="text-xs text-[var(--color-fg-3)]">Auto-refreshes every 30s</span>
     </div>
-    <div class="card flex items-center gap-3">
-      <div class="text-2xl">📊</div>
-      <div>
-        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Total Requests</div>
-        <div x-show="!stats" class="skeleton w-16 h-7 rounded"></div>
-        <div x-show="stats" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(stats?.totalRequests ?? 0).toLocaleString()" x-cloak></div>
-      </div>
-    </div>
-    <div class="card flex items-center gap-3">
-      <div class="text-2xl">⚡</div>
-      <div>
-        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Cache Hit Rate</div>
-        <div x-show="!stats" class="skeleton w-14 h-7 rounded"></div>
-        <div x-show="stats" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(stats?.cacheHitRate ?? 0).toFixed(1) + '%'" x-cloak></div>
-      </div>
-    </div>
-    <div class="card flex items-center gap-3">
-      <div class="text-2xl">🪙</div>
-      <div>
-        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)]">Tokens Today</div>
-        <div x-show="!stats" class="skeleton w-[72px] h-7 rounded"></div>
-        <div x-show="stats" class="text-lg font-bold text-[var(--color-fg-0)]" x-text="(stats?.tokensToday ?? 0).toLocaleString()" x-cloak></div>
+    <div class="flex items-center gap-3">
+      <!-- Dark Mode Toggle -->
+      <button
+        @click="darkMode = !darkMode; applyDarkMode()"
+        class="btn btn-ghost btn-sm flex items-center gap-1.5"
+        :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+      >
+        <span x-show="!darkMode">🌙</span>
+        <span x-show="darkMode">☀️</span>
+        <span class="text-xs" x-text="darkMode ? 'Dark' : 'Light'"></span>
+      </button>
+      <!-- User Initials + Port -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-[var(--color-fg-3)]" x-text="port ? 'Port ' + port : ''"></span>
+        <div class="w-8 h-8 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center text-xs font-bold">SR</div>
       </div>
     </div>
   </div>
 
-  <!-- Recent Activity -->
+  <!-- (A) Hero: Base URL + Copy Button -->
+  <div class="card mb-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-xs font-semibold uppercase text-[var(--color-fg-3)] tracking-wide mb-1">API Base URL</div>
+        <div class="flex items-center gap-3">
+          <code class="text-base font-mono font-semibold text-[var(--color-primary)] bg-[var(--color-bg-input)] px-3 py-1 rounded" x-text="baseUrl"></code>
+          <span class="text-xs text-[var(--color-fg-3)]">— use this as your <span class="font-medium">baseURL</span> in SDKs</span>
+        </div>
+      </div>
+      <button
+        @click="copyUrl()"
+        class="btn btn-secondary btn-sm flex items-center gap-1.5"
+        :class="copied ? 'btn-success' : ''"
+      >
+        <span x-show="!copied">📋</span>
+        <span x-show="copied">✅</span>
+        <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- (B) Charts Row: Request Volume + Cache Donut -->
+  <div class="grid grid-cols-3 gap-4 mb-6">
+    <!-- Request Volume Bar Chart (Canvas) -->
+    <div class="card col-span-2">
+      <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Request Volume <span class="text-[var(--color-fg-3)] font-normal">(7 days)</span></h2>
+      <div x-show="!stats" class="skeleton rounded" style="height:180px"></div>
+      <div x-show="stats" x-cloak class="relative">
+        <canvas id="volume-chart" height="180" class="w-full"></canvas>
+      </div>
+    </div>
+
+    <!-- Cache Donut Chart (Canvas) -->
+    <div class="card">
+      <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Cache Performance</h2>
+      <div x-show="!stats" class="skeleton rounded" style="height:180px"></div>
+      <div x-show="stats" x-cloak class="flex flex-col items-center">
+        <canvas id="cache-donut" height="160" class="w-full" style="max-height:160px"></canvas>
+        <div class="text-center mt-2">
+          <div class="text-2xl font-bold text-[var(--color-fg-0)]" x-text="(stats?.cacheHitRate ?? 0).toFixed(1) + '%'"></div>
+          <div class="text-xs text-[var(--color-fg-3)]">cache hit rate</div>
+        </div>
+        <div class="flex gap-4 mt-2 text-xs">
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-[var(--color-primary)]"></span>
+            <span class="text-[var(--color-fg-2)]">Hits: <span class="font-medium" x-text="(stats?.cachedRequests ?? 0).toLocaleString()"></span></span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-[var(--color-border)]"></span>
+            <span class="text-[var(--color-fg-2)]">Misses: <span class="font-medium" x-text="((stats?.totalRequests ?? 0) - (stats?.cachedRequests ?? 0)).toLocaleString()"></span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- (C) Features Grid -->
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Features</h2>
+    <div x-show="!stats" class="skeleton rounded" style="height:80px"></div>
+    <div x-show="stats" x-cloak>
+      <div class="grid grid-cols-3 gap-2">
+        <template x-for="f in (stats?.features || [])" :key="f.name">
+          <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--color-bg-input)]">
+            <span class="text-sm text-[var(--color-fg-1)]" x-text="f.name"></span>
+            <span
+              class="badge text-xs"
+              :class="f.enabled ? 'badge-success' : 'badge-danger'"
+              x-text="f.enabled ? 'Enabled' : 'Disabled'"
+            ></span>
+          </div>
+        </template>
+        <template x-if="stats && (!stats.features || stats.features.length === 0)">
+          <div class="col-span-3 text-center py-4 text-[var(--color-fg-3)] text-sm">No features data</div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- (D) Provider Health Cards + (E) Token Stats Row -->
+  <div class="grid grid-cols-2 gap-4 mb-6">
+    <!-- (D) Provider Health Cards -->
+    <div class="card">
+      <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Provider Health</h2>
+      <div x-show="!stats" class="skeleton rounded" style="height:100px"></div>
+      <div x-show="stats" x-cloak>
+        <div class="space-y-2">
+          <template x-for="p in (stats?.providers || [])" :key="p.name">
+            <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--color-bg-input)]">
+              <div class="flex items-center gap-2">
+                <span
+                  class="w-2 h-2 rounded-full flex-shrink-0"
+                  :class="p.healthy ? 'bg-[var(--color-success)]' : 'bg-[var(--color-danger)]'"
+                ></span>
+                <span class="text-sm font-medium text-[var(--color-fg-0)]" x-text="p.name"></span>
+                <span class="text-xs text-[var(--color-fg-3)] uppercase" x-text="p.format || ''"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-[var(--color-fg-3)]" x-show="p.latency > 0" x-text="(p.latency || 0).toFixed(0) + 'ms'"></span>
+                <span class="badge text-xs" :class="p.healthy ? 'badge-success' : 'badge-danger'" x-text="p.healthy ? 'Healthy' : 'Down'"></span>
+              </div>
+            </div>
+          </template>
+          <template x-if="stats && (!stats.providers || stats.providers.length === 0)">
+            <div class="text-center py-4 text-[var(--color-fg-3)] text-sm">No providers configured</div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- (E) Token Stats (4 cards) -->
+    <div class="card">
+      <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Token Stats</h2>
+      <div x-show="!stats" class="skeleton rounded" style="height:100px"></div>
+      <div x-show="stats" x-cloak>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-bg-input)]">
+            <div class="text-xl">🪙</div>
+            <div>
+              <div class="text-xs text-[var(--color-fg-3)]">Tokens Today</div>
+              <div class="text-sm font-bold text-[var(--color-fg-0)]" x-text="(stats?.tokensToday ?? 0).toLocaleString()"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-bg-input)]">
+            <div class="text-xl">📅</div>
+            <div>
+              <div class="text-xs text-[var(--color-fg-3)]">Tokens This Month</div>
+              <div class="text-sm font-bold text-[var(--color-fg-0)]" x-text="(stats?.tokensMonth ?? 0).toLocaleString()"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-bg-input)]">
+            <div class="text-xl">💾</div>
+            <div>
+              <div class="text-xs text-[var(--color-fg-3)]">Tokens Saved</div>
+              <div class="text-sm font-bold text-[var(--color-fg-0)]" x-text="(stats?.tokensSaved ?? 0).toLocaleString()"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-bg-input)]">
+            <div class="text-xl">🗜️</div>
+            <div>
+              <div class="text-xs text-[var(--color-fg-3)]">Tokens Compressed</div>
+              <div class="text-sm font-bold text-[var(--color-fg-0)]" x-text="(stats?.tokensCompressed ?? 0).toLocaleString()"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Requests Table -->
   <div class="card">
-    <h2 class="text-sm font-semibold text-[var(--color-fg-1)] mb-3">Recent Activity</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>Model</th>
-          <th>Provider</th>
-          <th>Status</th>
-          <th>Tokens</th>
-          <th>Duration</th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-if="!logs">
-          <tr><td colspan="6" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
-        </template>
-        <template x-if="logs && logs.length === 0">
-          <tr><td colspan="6" class="text-center p-6"><div class="empty-state"><p>No activity yet</p></div></td></tr>
-        </template>
-        <template x-for="l in logs" :key="l.timestamp">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-semibold text-[var(--color-fg-1)]">Recent Requests</h2>
+      <a href="/dashboard/logs" class="text-xs text-[var(--color-primary)] hover:underline">View all →</a>
+    </div>
+    <div class="overflow-x-auto">
+      <table>
+        <thead>
           <tr>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="l.timestamp"></td>
-            <td class="text-sm font-medium" x-text="l.model"></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="l.provider || '—'"></td>
-            <td><span class="badge" :class="l.status >= 200 && l.status < 300 ? 'badge-success' : 'badge-danger'" x-text="l.status"></span></td>
-            <td class="text-xs text-[var(--color-fg-2)]" x-text="'In:' + l.tokens_in + ' / Out:' + l.tokens_out"></td>
-            <td class="text-xs text-[var(--color-fg-3)]" x-text="l.latency_ms + 'ms'"></td>
+            <th>Time</th>
+            <th>Model</th>
+            <th>Provider</th>
+            <th>Status</th>
+            <th>Tokens</th>
+            <th>Duration</th>
           </tr>
-        </template>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <template x-if="!logs">
+            <tr><td colspan="6" class="text-center p-6"><div class="spinner mx-auto"></div></td></tr>
+          </template>
+          <template x-if="logs && logs.length === 0">
+            <tr><td colspan="6" class="text-center p-6"><div class="empty-state"><p>No requests yet</p></div></td></tr>
+          </template>
+          <template x-for="l in logs" :key="l.timestamp">
+            <tr>
+              <td class="text-xs text-[var(--color-fg-3)]" x-text="l.timestamp || '—'"></td>
+              <td class="text-sm font-medium text-[var(--color-fg-0)]" x-text="l.model || '—'"></td>
+              <td class="text-xs text-[var(--color-fg-2)]" x-text="l.provider || '—'"></td>
+              <td>
+                <span
+                  class="badge"
+                  :class="(l.status >= 200 && l.status < 300) ? 'badge-success' : 'badge-danger'"
+                  x-text="l.status || '—'"
+                ></span>
+              </td>
+              <td class="text-xs text-[var(--color-fg-2)]" x-text="'In:' + (l.tokens_in || 0) + ' / Out:' + (l.tokens_out || 0)"></td>
+              <td class="text-xs text-[var(--color-fg-3)]" x-text="(l.latency_ms || 0) + 'ms'"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -82,13 +227,20 @@ function overviewData() {
   return {
     stats: null,
     logs: null,
+    copied: false,
+    darkMode: false,
+    port: window.location.port || '',
+    baseUrl: (window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + '/api/v1'),
+
     async fetchStats() {
       try {
         let r = await fetch('/api/overview-stats');
         if (r.ok) {
           let data = await r.json();
           this.stats = data.data || data;
-          console.log('Stats loaded', this.stats);
+          await this.$nextTick();
+          this.renderVolumeChart();
+          this.renderCacheDonut();
         }
       } catch(e) { console.error('Stats fetch failed', e); }
 
@@ -99,8 +251,173 @@ function overviewData() {
         }
       } catch(e) { console.error('Logs fetch failed', e); }
 
-      // Refresh every 30s
       setTimeout(() => this.fetchStats(), 30000);
+    },
+
+    async copyUrl() {
+      try {
+        await navigator.clipboard.writeText(this.baseUrl);
+        this.copied = true;
+        setTimeout(() => { this.copied = false; }, 2000);
+      } catch(e) {
+        // Fallback for non-secure contexts
+        let inp = document.createElement('input');
+        inp.value = this.baseUrl;
+        document.body.appendChild(inp);
+        inp.select();
+        document.execCommand('copy');
+        document.body.removeChild(inp);
+        this.copied = true;
+        setTimeout(() => { this.copied = false; }, 2000);
+      }
+    },
+
+    applyDarkMode() {
+      if (this.darkMode) {
+        document.documentElement.classList.add('dark');
+        document.body.style.background = '#0f1117';
+        document.body.style.color = '#e4e6ed';
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.style.background = '';
+        document.body.style.color = '';
+      }
+      // Re-render charts after theme change
+      this.$nextTick(() => {
+        this.renderVolumeChart();
+        this.renderCacheDonut();
+      });
+    },
+
+    renderVolumeChart() {
+      let canvas = document.getElementById('volume-chart');
+      if (!canvas || !this.stats?.requestVolume) return;
+
+      let ctx = canvas.getContext('2d');
+      let values = this.stats.requestVolume;
+      let days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+      let dpr = window.devicePixelRatio || 1;
+      let rect = canvas.parentElement.getBoundingClientRect();
+      let w = rect.width || canvas.offsetWidth;
+      let h = 180;
+
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, w, h);
+
+      let max = Math.max(...values, 1);
+      let padding = { top: 30, bottom: 30, left: 10, right: 10 };
+      let chartW = w - padding.left - padding.right;
+      let chartH = h - padding.top - padding.bottom;
+      let barCount = values.length;
+      let barGap = Math.max(6, chartW * 0.02);
+      let barW = (chartW - barGap * (barCount + 1)) / barCount;
+
+      let gradient = ctx.createLinearGradient(0, h - padding.bottom, 0, padding.top);
+      gradient.addColorStop(0, '#6366f1');
+      gradient.addColorStop(1, '#a78bfa');
+
+      let isDark = document.documentElement.classList.contains('dark');
+      let labelColor = isDark ? '#9095a8' : 'var(--color-fg-2)';
+      let labelColorDim = isDark ? '#656b7c' : 'var(--color-fg-3)';
+
+      values.forEach((v, i) => {
+        let barH = Math.max(2, (v / max) * chartH);
+        let x = padding.left + barGap + i * (barW + barGap);
+        let y = h - padding.bottom - barH;
+
+        let radius = Math.min(4, barW / 2);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(x, y + radius);
+        ctx.arcTo(x, y, x + radius, y, radius);
+        ctx.arcTo(x + barW, y, x + barW, y + radius, radius);
+        ctx.lineTo(x + barW, h - padding.bottom);
+        ctx.lineTo(x, h - padding.bottom);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = labelColor;
+        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(v, x + barW / 2, y - 4);
+
+        ctx.fillStyle = labelColorDim;
+        ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText(days[i] || 'D' + (i + 1), x + barW / 2, h - padding.bottom + 6);
+      });
+    },
+
+    renderCacheDonut() {
+      let canvas = document.getElementById('cache-donut');
+      if (!canvas || !this.stats) return;
+
+      let ctx = canvas.getContext('2d');
+      let dpr = window.devicePixelRatio || 1;
+      let parent = canvas.parentElement;
+      let rect = parent.getBoundingClientRect();
+      let size = Math.min(rect.width || 160, 160);
+      let cx = size / 2;
+      let cy = size / 2;
+      let outerR = size / 2 - 8;
+      let innerR = outerR * 0.62;
+
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, size, size);
+
+      let total = this.stats.totalRequests || 1;
+      let cached = this.stats.cachedRequests || 0;
+      let hitRate = (cached / total) * 100;
+      let missRate = 100 - hitRate;
+
+      let isDark = document.documentElement.classList.contains('dark');
+      let hitColor = '#6366f1';
+      let missColor = isDark ? '#2a2e3a' : '#e9ecef';
+
+      let startAngle = -Math.PI / 2;
+
+      // Hit arc
+      let hitAngle = (hitRate / 100) * 2 * Math.PI;
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR, startAngle, startAngle + hitAngle);
+      ctx.arc(cx, cy, innerR, startAngle + hitAngle, startAngle, true);
+      ctx.closePath();
+      ctx.fillStyle = hitColor;
+      ctx.fill();
+
+      // Miss arc
+      if (missRate > 0) {
+        let missAngle = (missRate / 100) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, startAngle + hitAngle, startAngle + hitAngle + missAngle);
+        ctx.arc(cx, cy, innerR, startAngle + hitAngle + missAngle, startAngle + hitAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = missColor;
+        ctx.fill();
+      }
+
+      // Center label
+      ctx.fillStyle = isDark ? '#e4e6ed' : 'var(--color-fg-0)';
+      ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(hitRate.toFixed(0) + '%', cx, cy - 6);
+
+      ctx.fillStyle = isDark ? '#656b7c' : 'var(--color-fg-3)';
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText('HIT', cx, cy + 10);
     }
   };
 }
