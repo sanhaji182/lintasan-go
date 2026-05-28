@@ -92,7 +92,7 @@ func (s *Server) handleFallbackDelete(w http.ResponseWriter, r *http.Request){ w
 func (s *Server) handleKeys(w http.ResponseWriter, r *http.Request){ writeData(w, s.getJSONSetting("api_keys", []any{})) }
 func (s *Server) handleKeysAction(w http.ResponseWriter, r *http.Request){ var in map[string]any; json.NewDecoder(r.Body).Decode(&in); action,_:=in["action"].(string); arr:=s.getJSONSetting("api_keys", []any{}).([]any); if action=="create"{ in["id"]=uuid.New().String(); in["key"]="sk-lintasan-"+strings.ReplaceAll(uuid.New().String(),"-",""); in["created_at"]=time.Now().Format(time.RFC3339); arr=append(arr,in); s.setJSONSetting("api_keys",arr); writeJSON(w,in); return }; writeJSON(w,map[string]any{"status":"ok"}) }
 
-func (s *Server) handleLoadBalancer(w http.ResponseWriter,r *http.Request){ v,_:=s.db.GetSetting("load_balancer_strategy"); if v==""{v="priority"}; writeData(w,map[string]any{"strategy":v}) }
+func (s *Server) handleLoadBalancer(w http.ResponseWriter,r *http.Request){ v,_:=s.db.GetSetting("lb_strategy"); if v==""{v="priority"}; writeData(w,map[string]any{"strategy":v}) }
 func (s *Server) handleLoadBalancerAction(w http.ResponseWriter,r *http.Request){
 	var in map[string]string
 	json.NewDecoder(r.Body).Decode(&in)
@@ -100,7 +100,7 @@ func (s *Server) handleLoadBalancerAction(w http.ResponseWriter,r *http.Request)
 		writeJSON(w,map[string]any{"error":"strategy required"})
 		return
 	}
-	s.db.SetSetting("load_balancer_strategy",in["strategy"])
+	s.db.SetSetting("lb_strategy",in["strategy"])
 	writeJSON(w,map[string]any{"status":"updated"})
 }
 func (s *Server) handleAliases(w http.ResponseWriter,r *http.Request){ writeData(w,s.getJSONSetting("aliases",map[string]any{})) }

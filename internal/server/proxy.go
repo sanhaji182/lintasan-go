@@ -987,12 +987,31 @@ func (p *ProxyHandler) resolveRoute(model string) ([]*Connection, string, string
 func (p *ProxyHandler) resolveAlias(model string) string {
 	v, _ := p.db.GetSetting("aliases")
 	if v == "" { return model }
+
+	// Try array format: [{name: "X", target: "Y"}, ...]
+	var arr []any
+	if json.Unmarshal([]byte(v), &arr) == nil {
+		for _, item := range arr {
+			m, _ := item.(map[string]any)
+			if m == nil { continue }
+			name, _ := m["name"].(string)
+			alias, _ := m["alias"].(string)
+			if name == model || alias == model {
+				if target, _ := m["target"].(string); target != "" { return target }
+				if mod, _ := m["model"].(string); mod != "" { return mod }
+			}
+		}
+		return model
+	}
+
+	// Try map format: {"alias": {"model": "..."}, ...}
 	var m map[string]any
-	if json.Unmarshal([]byte(v), &m) != nil { return model }
-	if raw, ok := m[model]; ok {
-		switch t := raw.(type) {
-		case string: return t
-		case map[string]any: if s, _ := t["model"].(string); s != "" { return s }
+	if json.Unmarshal([]byte(v), &m) == nil {
+		if raw, ok := m[model]; ok {
+			switch t := raw.(type) {
+			case string: return t
+			case map[string]any: if s, _ := t["model"].(string); s != "" { return s }
+			}
 		}
 	}
 	return model

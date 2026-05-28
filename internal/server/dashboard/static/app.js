@@ -1535,6 +1535,8 @@ function routingPage() {
     aliasEditId: null,
     aliasSaving: false,
     aliasForm: { name: '', target: '', provider: '' },
+    aliasTestInput: '',
+    aliasTestResult: '',
     toasts: [],
     init: function() {
       this.fetchCombos();
@@ -1645,6 +1647,21 @@ function routingPage() {
         if (r.ok) { this.aliases = this.aliases.filter(function(a){ return (a.id || a.name) !== id; }); this.addToast('success', 'Alias deleted.'); this.updateStats(); }
         else { this.addToast('error', 'Delete failed.'); }
       } catch(e) { this.addToast('error', 'Network error.'); }
+    },
+
+    testAlias: function() {
+      var input = this.aliasTestInput.trim();
+      if (!input) { this.aliasTestResult = ''; return; }
+      var found = (this.aliases || []).find(function(a) {
+        return (a.name || a.alias) === input;
+      });
+      if (found) {
+        this.aliasTestResult = input + ' → ' + (found.target || found.model);
+      } else {
+        this.aliasTestResult = '"' + input + '" not found';
+      }
+      var self = this;
+      setTimeout(function() { self.aliasTestResult = ''; }, 5000);
     },
   };
 }

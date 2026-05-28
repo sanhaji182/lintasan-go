@@ -13,7 +13,7 @@
       <div class="stat-value" x-text="stats.combos ?? '—'">—</div>
     </div>
     <div class="stat-card fade-in" style="animation-delay:0.06s">
-      <div class="stat-label">Strategy</div>
+      <div class="stat-label">Active Strategy</div>
       <div class="stat-value" x-text="stats.strategy || '—'" style="font-size:16px">—</div>
     </div>
     <div class="stat-card fade-in" style="animation-delay:0.12s">
@@ -31,7 +31,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:6px;display:inline"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
         Routing
       </h1>
-      <p style="font-size:13px;color:var(--fg-2);margin:0">Configure model routing, load balancing, and aliases.</p>
+      <p style="font-size:13px;color:var(--fg-2);margin:0">Configure how Lintasan routes requests to providers, models, and API keys.</p>
     </div>
     <button class="btn-primary" @click="openNewCombo()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -40,13 +40,17 @@
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!--  SECTION 1: Combos                             -->
+  <!--  SECTION 1: Model Combos                      -->
   <!-- ════════════════════════════════════════════ -->
   <div class="card" style="margin-bottom:24px">
-    <h2 style="font-size:14px;font-weight:600;color:var(--fg-1);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+    <h2 style="font-size:14px;font-weight:600;color:var(--fg-1);margin-bottom:8px;display:flex;align-items:center;gap:8px">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
       Model Combos
     </h2>
+    <p style="font-size:12px;color:var(--fg-3);margin:0 0 16px">
+      Group multiple models into a combo with a fallback/rotation strategy. 
+      When a request matches a combo name, Lintasan routes it through the combo's strategy instead of default routing.
+    </p>
 
     <table>
       <thead>
@@ -74,7 +78,7 @@
               <div class="empty-state">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px;opacity:0.4"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
                 <p>No combos configured yet.</p>
-                <p style="font-size:12px;color:var(--fg-3);margin-top:4px">Create a combo to route requests across multiple models.</p>
+                <p style="font-size:12px;color:var(--fg-3);margin-top:4px">Create a combo to group models with fallback or rotation.</p>
               </div>
             </td>
           </tr>
@@ -118,11 +122,14 @@
   <!--  SECTION 2: Load Balancer Strategy            -->
   <!-- ════════════════════════════════════════════ -->
   <div class="card" style="margin-bottom:24px">
-    <h2 style="font-size:14px;font-weight:600;color:var(--fg-1);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+    <h2 style="font-size:14px;font-weight:600;color:var(--fg-1);margin-bottom:8px;display:flex;align-items:center;gap:8px">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
       Load Balancer
     </h2>
-    <p style="font-size:12px;color:var(--fg-3);margin:0 0 16px">Select the strategy for distributing requests across connections and combo entries.</p>
+    <p style="font-size:12px;color:var(--fg-3);margin:0 0 16px">
+      When multiple providers support the same model, this strategy decides which provider gets the request. 
+      Click a strategy to select it, then <strong>Apply</strong> to activate.
+    </p>
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
       <!-- Priority -->
@@ -133,7 +140,7 @@
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
         <span style="font-size:12px;font-weight:600;color:var(--fg-0)">Priority</span>
-        <span style="font-size:10px;color:var(--fg-3);text-align:center">Try in order, stop on success</span>
+        <span style="font-size:10px;color:var(--fg-3);text-align:center">Always pick the highest-priority provider first. Falls back on failure.</span>
       </label>
 
       <!-- Round-Robin -->
@@ -144,7 +151,7 @@
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span style="font-size:12px;font-weight:600;color:var(--fg-0)">Round-Robin</span>
-        <span style="font-size:10px;color:var(--fg-3);text-align:center">Cycle through evenly</span>
+        <span style="font-size:10px;color:var(--fg-3);text-align:center">Distribute requests evenly across all providers in rotation.</span>
       </label>
 
       <!-- Least-Connections -->
@@ -155,7 +162,7 @@
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span style="font-size:12px;font-weight:600;color:var(--fg-0)">Least-Conn</span>
-        <span style="font-size:10px;color:var(--fg-3);text-align:center">Send to fewest active requests</span>
+        <span style="font-size:10px;color:var(--fg-3);text-align:center">Send to the provider with fewest active requests. Balances load dynamically.</span>
       </label>
 
       <!-- Latency-based -->
@@ -166,7 +173,7 @@
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         <span style="font-size:12px;font-weight:600;color:var(--fg-0)">Latency</span>
-        <span style="font-size:10px;color:var(--fg-3);text-align:center">Pick the fastest provider</span>
+        <span style="font-size:10px;color:var(--fg-3);text-align:center">Track response times and route to the fastest provider automatically.</span>
       </label>
     </div>
 
@@ -194,7 +201,7 @@
   <!--  SECTION 3: Model Aliases                     -->
   <!-- ════════════════════════════════════════════ -->
   <div class="card" style="margin-bottom:24px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <h2 style="font-size:14px;font-weight:600;color:var(--fg-1);margin:0;display:flex;align-items:center;gap:8px">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         Model Aliases
@@ -204,7 +211,21 @@
         Add Alias
       </button>
     </div>
-    <p style="font-size:12px;color:var(--fg-3);margin:0 0 16px">Map short names to full model identifiers. E.g., <code style="font-family:var(--mono);font-size:11px;color:var(--primary);background:var(--primary-light);padding:1px 5px;border-radius:3px">gpt-4</code> → <code style="font-family:var(--mono);font-size:11px;color:var(--primary);background:var(--primary-light);padding:1px 5px;border-radius:3px">openai/gpt-4o</code></p>
+    <p style="font-size:12px;color:var(--fg-3);margin:0 0 16px">
+      Give short nicknames to long model names. When your app sends <code style="font-family:var(--mono);font-size:11px;color:var(--primary);background:var(--primary-light);padding:1px 5px;border-radius:3px">gpt-4</code>,
+      Lintasan automatically translates it to <code style="font-family:var(--mono);font-size:11px;color:var(--primary);background:var(--primary-light);padding:1px 5px;border-radius:3px">openai/gpt-4o</code> before routing.
+      Use the <strong>Test</strong> button to verify an alias resolves correctly.
+    </p>
+
+    <!-- Alias Test Box -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--bg-body);border:1px solid var(--border);border-radius:var(--radius-sm)">
+      <input type="text" class="input-field" style="flex:1;margin:0" placeholder="Type an alias to test (e.g. gpt-4)" x-model="aliasTestInput" @keydown.enter="testAlias()" />
+      <button class="btn-small" @click="testAlias()" :disabled="!aliasTestInput.trim()">Test</button>
+      <span x-show="aliasTestResult" style="font-size:12px;font-family:var(--mono);padding:4px 8px;border-radius:var(--radius-sm);white-space:nowrap"
+        :style="aliasTestResult && aliasTestResult.includes('→') ? 'color:var(--success);background:var(--success-light,rgba(22,101,52,0.1))' : 'color:var(--error);background:rgba(153,27,27,0.1)'"
+        x-text="aliasTestResult">
+      </span>
+    </div>
 
     <table>
       <thead>
@@ -279,6 +300,7 @@
           <div style="margin-bottom:12px">
             <label class="label-st">Combo Name</label>
             <input type="text" class="input-field" placeholder="e.g., coding-team, cheap-fallback" x-model="comboForm.name" />
+            <p style="font-size:11px;color:var(--fg-3);margin:4px 0 0">This name is used in API requests. Send model="combo-name" to route through this combo.</p>
           </div>
 
           <!-- Description -->
@@ -289,18 +311,18 @@
 
           <!-- Strategy -->
           <div style="margin-bottom:12px">
-            <label class="label-st">Strategy</label>
+            <label class="label-st">Combo Strategy</label>
             <select class="input-field" x-model="comboForm.strategy">
-              <option value="priority">Priority (try in order)</option>
-              <option value="round-robin">Round-Robin (cycle evenly)</option>
-              <option value="least-connections">Least-Connections</option>
-              <option value="latency">Latency-based</option>
+              <option value="priority">Priority — try models top-to-bottom, stop on first success</option>
+              <option value="round-robin">Round-Robin — rotate through models evenly</option>
+              <option value="least-connections">Least-Connections — pick the model with fewest active requests</option>
+              <option value="latency">Latency — pick the model with fastest response time</option>
             </select>
           </div>
 
           <!-- Sticky Limit -->
           <div style="margin-bottom:12px">
-            <label class="label-st">Sticky Limit <span style="color:var(--fg-3);font-weight:400">(requests before advancing)</span></label>
+            <label class="label-st">Sticky Limit <span style="color:var(--fg-3);font-weight:400">(for Round-Robin: requests before rotating)</span></label>
             <input type="number" class="input-field" placeholder="3" x-model="comboForm.sticky_limit" min="1" max="100" />
           </div>
 
@@ -310,24 +332,25 @@
               <span>Model Entries</span>
               <button type="button" class="btn-small" @click="addModelEntry()" style="font-size:11px;padding:3px 8px">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                Add
+                Add Model
               </button>
             </label>
 
             <div style="display:flex;flex-direction:column;gap:8px">
               <template x-for="(entry, idx) in comboForm.models" :key="idx">
                 <div style="display:flex;gap:8px;align-items:center;padding:8px;background:var(--bg-body);border:1px solid var(--border);border-radius:var(--radius-sm)">
+                  <span style="font-size:11px;color:var(--fg-3);min-width:20px" x-text="idx + 1 + '.'"></span>
                   <!-- Model name -->
                   <input
                     type="text"
                     class="input-field"
                     style="flex:2;margin:0"
-                    placeholder="gpt-4o"
+                    placeholder="e.g. gpt-4o, deepseek-v4-pro"
                     x-model="entry.model"
                   />
                   <!-- Account/Provider selector -->
                   <select class="input-field" style="flex:1;margin:0" x-model="entry.account">
-                    <option value="">Any account</option>
+                    <option value="">Any provider</option>
                     <template x-for="conn in connections" :key="conn.id">
                       <option :value="conn.id" x-text="conn.name"></option>
                     </template>
@@ -340,7 +363,11 @@
               </template>
             </div>
 
-            <p x-show="comboForm.models.length === 0" style="font-size:11px;color:var(--fg-3);margin:8px 0 0">No models added. Click "Add" to include models in this combo.</p>
+            <p x-show="comboForm.models.length === 0" style="font-size:11px;color:var(--fg-3);margin:8px 0 0">No models added yet. Click "Add Model" to include models in this combo.</p>
+            <p x-show="comboForm.models.length > 0" style="font-size:11px;color:var(--fg-3);margin:8px 0 0">
+              <span x-text="comboForm.strategy"></span> strategy: 
+              <span x-text="comboForm.strategy === 'priority' ? 'models tried top-to-bottom' : comboForm.strategy === 'round-robin' ? 'requests rotated across models' : comboForm.strategy === 'latency' ? 'fastest model picked' : 'least busy model picked'"></span>
+            </p>
           </div>
 
           <!-- Active toggle -->
@@ -353,7 +380,7 @@
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
             <button type="button" class="btn-secondary" @click="closeComboModal()">Cancel</button>
             <button type="submit" class="btn-primary" :disabled="!comboForm.name.trim() || comboSaving">
-              <span x-show="!comboSaving" x-text="comboEditMode ? 'Update' : 'Create'"></span>
+              <span x-show="!comboSaving" x-text="comboEditMode ? 'Update Combo' : 'Create Combo'"></span>
               <span x-show="comboSaving" x-cloak style="display:flex;align-items:center;gap:6px">
                 <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
                 Saving…
@@ -364,7 +391,7 @@
       </div>
     </div>
   </div>
-  </div>
+  
   <!-- ════════════════════════════════════════════ -->
   <!--  New / Edit Alias Modal                       -->
   <!-- ════════════════════════════════════════════ -->
@@ -387,19 +414,19 @@
 
           <!-- Alias Name -->
           <div style="margin-bottom:12px">
-            <label class="label-st">Alias Name <span style="color:var(--fg-3);font-weight:400">(short name)</span></label>
+            <label class="label-st">Alias Name <span style="color:var(--fg-3);font-weight:400">(short name your app sends)</span></label>
             <input type="text" class="input-field" placeholder="e.g., gpt-4, claude, cheap" x-model="aliasForm.name" />
           </div>
 
           <!-- Target Model -->
           <div style="margin-bottom:12px">
-            <label class="label-st">Target Model <span style="color:var(--fg-3);font-weight:400">(full identifier)</span></label>
+            <label class="label-st">Target Model <span style="color:var(--fg-3);font-weight:400">(real model identifier Lintasan resolves to)</span></label>
             <input type="text" class="input-field" placeholder="e.g., openai/gpt-4o, anthropic/claude-sonnet-4-20250514" x-model="aliasForm.target" />
           </div>
 
           <!-- Provider (optional) -->
           <div style="margin-bottom:12px">
-            <label class="label-st">Provider <span style="color:var(--fg-3);font-weight:400">(optional, restricts to account)</span></label>
+            <label class="label-st">Provider <span style="color:var(--fg-3);font-weight:400">(optional — pin to a specific provider)</span></label>
             <select class="input-field" x-model="aliasForm.provider">
               <option value="">Any provider</option>
               <template x-for="conn in connections" :key="conn.id">
@@ -412,7 +439,7 @@
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
             <button type="button" class="btn-secondary" @click="closeAliasModal()">Cancel</button>
             <button type="submit" class="btn-primary" :disabled="!aliasForm.name.trim() || !aliasForm.target.trim() || aliasSaving">
-              <span x-show="!aliasSaving" x-text="aliasEditMode ? 'Update' : 'Create'"></span>
+              <span x-show="!aliasSaving" x-text="aliasEditMode ? 'Update Alias' : 'Create Alias'"></span>
               <span x-show="aliasSaving" x-cloak style="display:flex;align-items:center;gap:6px">
                 <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
                 Saving…
