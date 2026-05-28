@@ -93,12 +93,86 @@ func (s *Server) handleKeys(w http.ResponseWriter, r *http.Request){ writeData(w
 func (s *Server) handleKeysAction(w http.ResponseWriter, r *http.Request){ var in map[string]any; json.NewDecoder(r.Body).Decode(&in); action,_:=in["action"].(string); arr:=s.getJSONSetting("api_keys", []any{}).([]any); if action=="create"{ in["id"]=uuid.New().String(); in["key"]="sk-lintasan-"+strings.ReplaceAll(uuid.New().String(),"-",""); in["created_at"]=time.Now().Format(time.RFC3339); arr=append(arr,in); s.setJSONSetting("api_keys",arr); writeJSON(w,in); return }; writeJSON(w,map[string]any{"status":"ok"}) }
 
 func (s *Server) handleLoadBalancer(w http.ResponseWriter,r *http.Request){ v,_:=s.db.GetSetting("load_balancer_strategy"); if v==""{v="priority"}; writeData(w,map[string]any{"strategy":v}) }
-func (s *Server) handleLoadBalancerAction(w http.ResponseWriter,r *http.Request){ var in map[string]string; json.NewDecoder(r.Body).Decode(&in); s.db.SetSetting("load_balancer_strategy",in["strategy"]); writeJSON(w,map[string]any{"status":"updated"}) }
+func (s *Server) handleLoadBalancerAction(w http.ResponseWriter,r *http.Request){
+	var in map[string]string
+	json.NewDecoder(r.Body).Decode(&in)
+	if in["strategy"] == "" {
+		writeJSON(w,map[string]any{"error":"strategy required"})
+		return
+	}
+	s.db.SetSetting("load_balancer_strategy",in["strategy"])
+	writeJSON(w,map[string]any{"status":"updated"})
+}
 func (s *Server) handleAliases(w http.ResponseWriter,r *http.Request){ writeData(w,s.getJSONSetting("aliases",map[string]any{})) }
+func (s *Server) handleAliasesDelete(w http.ResponseWriter, r *http.Request){
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	if id == "" {
+		http.Error(w, `{"error":"id required"}`, http.StatusBadRequest)
+		return
+	}
+	data := s.getJSONSetting("aliases", []any{})
+	fmt.Println("[aliases.delete] incoming id=", id, "type=", fmt.Sprintf("%T", data), "value=", data)
+	switch v := data.(type) {
+	case []any:
+		out := make([]any, 0, len(v))
+		for _, item := range v {
+			m, _ := item.(map[string]any)
+			if m == nil { out = append(out, item); continue }
+			matchID := fmt.Sprint(m["id"]) == id
+			matchName := fmt.Sprint(m["name"]) == id || fmt.Sprint(m["alias"]) == id
+			if matchID || matchName { continue }
+			out = append(out, item)
+		}
+		s.setJSONSetting("aliases", out)
+		fmt.Println("[aliases.delete] wrote []any len=", len(out))
+	case map[string]any:
+		// support alias-as-key and alias-as-name
+		if _, ok := v[id]; ok {
+			delete(v, id)
+		} else {
+			for key, item := range v {
+				m, _ := item.(map[string]any)
+				if m != nil && (fmt.Sprint(m["name"]) == id || fmt.Sprint(m["alias"]) == id) {
+					delete(v, key)
+				}
+			}
+		}
+		b, _ := json.Marshal(v)
+		fmt.Println("[aliases.delete] json=", string(b))
+		s.setJSONSetting("aliases", v)
+		fmt.Println("[aliases.delete] wrote map keys=", len(v))
+	default:
+		http.Error(w, `{"error":"aliases unsupported shape"}`, http.StatusBadRequest)
+		return
+	}
+	s.audit("aliases.delete","dashboard",id,map[string]any{})
+	writeJSON(w, map[string]any{"id": id, "status": "deleted"})
+}
 func (s *Server) handleAliasesAction(w http.ResponseWriter,r *http.Request){
 	var in map[string]any; json.NewDecoder(r.Body).Decode(&in)
 	// Node dashboard posts the whole alias map: {alias: {model: "..."}}
 	if _, hasAction := in["action"]; !hasAction {
+		if name, _ := in["name"].(string); name != "" {
+			existing := s.getJSONSetting("aliases", map[string]any{})
+			switch v := existing.(type) {
+			case []any:
+				found := false
+				for i, item := range v {
+					m, _ := item.(map[string]any)
+					if m != nil && (fmt.Sprint(m["name"]) == name || fmt.Sprint(m["id"]) == name) {
+						for k, val := range in { m[k] = val }
+						v[i] = m; found = true; break
+					}
+				}
+				if !found { v = append(v, in) }
+				s.setJSONSetting("aliases", v); s.audit("aliases.upsert","dashboard",name,in); writeData(w,v); return
+			case map[string]any:
+				if _, ok := v[name]; !ok { v[name] = map[string]any{"model": fmt.Sprint(in["target"])} }
+				s.setJSONSetting("aliases", v); s.audit("aliases.upsert","dashboard",name,in); writeData(w,v); return
+			default:
+				s.setJSONSetting("aliases", []any{in}); s.audit("aliases.upsert","dashboard",name,in); writeData(w,[]any{in}); return
+			}
+		}
 		s.setJSONSetting("aliases", in); s.audit("aliases.update", "dashboard", "aliases", in); writeData(w,in); return
 	}
 	aliases, _ := s.getJSONSetting("aliases",map[string]any{}).(map[string]any)
