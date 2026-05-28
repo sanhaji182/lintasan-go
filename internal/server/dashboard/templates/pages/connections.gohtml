@@ -41,7 +41,9 @@ x-init="csCSFfetchStats(); csCSFfetchConnections()"
 
   <!-- Add Provider Flow -->
   <template x-if="showModal">
-    <div class="card" style="margin-bottom:16px">
+    <div>
+      <div class="modal-backdrop" onclick="cs.hideModal()"></div>
+      <div class="modal-panel" style="max-width:700px;max-height:90vh">
 
       <!-- STEP 1: Pick preset -->
       <template x-if="step1">
@@ -181,6 +183,7 @@ x-init="csCSFfetchStats(); csCSFfetchConnections()"
           </form>
         </div>
       </template>
+      </div>
     </div>
   </template>
 
