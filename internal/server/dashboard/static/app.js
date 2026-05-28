@@ -463,9 +463,9 @@ function backupData() {
         var j = await r.json();
         if(j.error){ dd.error = j.error.message || 'Failed'; return; }
         dd.showModal = false; dd.toasts.push('Provider connected');
-        fetchConnections(); fetchStats();
+        csCSFcsCSFfetchConnections(); csCSFcsCSFfetchStats();
         var connId = (j.data && j.data.id) || j.id;
-        if(connId){ try{ await fetch('/api/models/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({connection_id:connId})}); fetchConnections(); fetchStats(); }catch(e){} }
+        if(connId){ try{ await fetch('/api/models/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({connection_id:connId})}); csCSFcsCSFfetchConnections(); csCSFcsCSFfetchStats(); }catch(e){} }
       } catch(e) { dd.error = 'Network error'; }
     },
     testSingle: async function(btn){
@@ -485,7 +485,7 @@ function backupData() {
       var conn = getConnById(connId); if(!conn) return;
       try {
         var r = await fetch('/api/models/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({connection_id:conn.id})});
-        if(r.ok){ await fetchConnections(); await fetchStats(); dd.toasts.push('Synced ' + conn.name); }
+        if(r.ok){ await csCSFcsCSFfetchConnections(); await csCSFcsCSFfetchStats(); dd.toasts.push('Synced ' + conn.name); }
         else dd.toasts.push('Sync failed');
       } catch(e) { dd.toasts.push('Sync error'); }
     },
@@ -495,7 +495,7 @@ function backupData() {
       var conn = getConnById(connId); if(!conn) return;
       try {
         var r = await fetch('/api/connections?id=' + encodeURIComponent(conn.id), { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ is_active: conn.is_active ? 0 : 1 }) });
-        if(r.ok){ conn.is_active = !conn.is_active; fetchStats(); dd.toasts.push(conn.is_active ? conn.name + ' enabled' : conn.name + ' disabled'); }
+        if(r.ok){ conn.is_active = !conn.is_active; csCSFfetchStats(); dd.toasts.push(conn.is_active ? conn.name + ' enabled' : conn.name + ' disabled'); }
       } catch(e){}
     },
     toggleExpand: function(el){
@@ -533,7 +533,7 @@ function backupData() {
       var models = value.split(',').map(function(m){ return m.trim(); }).filter(Boolean);
       try {
         var r = await fetch('/api/models/manual', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ connectionId: connId, models: models }) });
-        if(r.ok){ dd.addShow[connId] = false; dd.addValue[connId] = ''; cs.loadModels(connId); fetchConnections(); }
+        if(r.ok){ dd.addShow[connId] = false; dd.addValue[connId] = ''; cs.loadModels(connId); csCSFfetchConnections(); }
       } catch(e){}
       dd.addSaving[connId] = false;
     },
@@ -550,7 +550,7 @@ function backupData() {
       var curActive = parseInt(btn.getAttribute('data-is-active')) || 0;
       try {
         var r = await fetch('/api/models/manual', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ action: 'toggle', connectionId: connId, modelId: modelId, active: curActive ? false : true }) });
-        if(r.ok){ cs.loadModels(connId); fetchConnections(); }
+        if(r.ok){ cs.loadModels(connId); csCSFfetchConnections(); }
       } catch(e){}
     },
     removeModel: async function(ev, btn){
@@ -560,7 +560,7 @@ function backupData() {
       var modelId = btn.getAttribute('data-model-id');
       try {
         var r = await fetch('/api/models/manual?connectionId=' + encodeURIComponent(connId) + '&modelId=' + encodeURIComponent(modelId), { method: 'DELETE' });
-        if(r.ok){ cs.loadModels(connId); fetchConnections(); }
+        if(r.ok){ cs.loadModels(connId); csCSFfetchConnections(); }
       } catch(e){}
     },
     confirmDelete: function(btn){
@@ -574,7 +574,7 @@ function backupData() {
       var dd = getConnData(); if(!dd || !dd.deleteTarget) return;
       try {
         var r = await fetch('/api/connections/' + encodeURIComponent(dd.deleteTarget.id), { method: 'DELETE' });
-        if(r.ok){ dd.deleteTarget = null; await fetchConnections(); await fetchStats(); dd.toasts.push('Deleted'); }
+        if(r.ok){ dd.deleteTarget = null; await csCSFcsCSFfetchConnections(); await csCSFcsCSFfetchStats(); dd.toasts.push('Deleted'); }
         else dd.toasts.push('Delete failed');
       } catch(e){ dd.toasts.push('Delete error'); }
     },
@@ -582,23 +582,23 @@ function backupData() {
       var dd = getConnData(); if(!dd) return;
       try {
         var r = await fetch('/api/models/sync', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
-        if(r.ok){ await fetchConnections(); await fetchStats(); dd.toasts.push('All synced'); }
+        if(r.ok){ await csCSFcsCSFfetchConnections(); await csCSFcsCSFfetchStats(); dd.toasts.push('All synced'); }
       } catch(e){}
     }
   };
 
-  window.fetchStats = async function(){
-    var dd = getConnData(); if(!dd){ setTimeout(fetchStats,100); return; }
+  window.csCSFfetchStats = async function(){
+    var dd = getConnData(); if(!dd){ setTimeout(csCSFfetchStats,100); return; }
     try {
       var r = await fetch('/api/connections');
       if(r.ok){ var data = await r.json(); var conns = Array.isArray(data) ? data : (data.data||[]); dd.stats = { providers: conns.length, active: conns.filter(function(c){return c.is_active;}).length, totalModels: conns.reduce(function(s,c){return s+(c.models_count||0);},0) }; }
     } catch(e){}
   };
-  window.fetchConnections = async function(){
-    var dd = getConnData(); if(!dd){ setTimeout(fetchConnections,100); return; }
+  window.csCSFfetchConnections = async function(){
+    var dd = getConnData(); if(!dd){ setTimeout(csCSFfetchConnections,100); return; }
     try {
       var r = await fetch('/api/connections');
-      if(r.ok){ var data = await r.json(); var conns = Array.isArray(data) ? data : (data.data||[]); dd.connections = conns; fetchStats(); }
+      if(r.ok){ var data = await r.json(); var conns = Array.isArray(data) ? data : (data.data||[]); dd.connections = conns; csCSFfetchStats(); }
     } catch(e){}
   };
 })();
@@ -1556,15 +1556,15 @@ function routingPage() {
     return el ? Alpine.$data(el) : null;
   }
 
-  window.fetchStats = async function() {
-    var d = getData(); if (!d) { setTimeout(fetchStats, 100); return; }
+  window.rsFetchStats = async function() {
+    var d = getData(); if (!d) { setTimeout(rsFetchStats, 100); return; }
     var combos = (d.combos || []).length;
     var aliases = (d.aliases || []).length;
     d.stats = { combos: combos, strategy: d.lbStrategy || 'priority', aliases: aliases };
   };
 
-  window.fetchConnections = async function() {
-    var d = getData(); if (!d) { setTimeout(fetchConnections, 100); return; }
+  window.rsFetchConnections = async function() {
+    var d = getData(); if (!d) { setTimeout(rsFetchConnections, 100); return; }
     try {
       var r = await fetch('/api/connections');
       if (r.ok) {
@@ -1574,38 +1574,38 @@ function routingPage() {
     } catch(e) { console.error('Fetch connections failed', e); }
   };
 
-  window.fetchCombos = async function() {
-    var d = getData(); if (!d) { setTimeout(fetchCombos, 100); return; }
+  window.rsFetchCombos = async function() {
+    var d = getData(); if (!d) { setTimeout(rsFetchCombos, 100); return; }
     try {
       var r = await fetch('/api/combos');
       if (r.ok) {
         var data = await r.json();
         d.combos = Array.isArray(data) ? data : (data.data || []);
-        window.fetchStats();
+        window.rsFetchStats();
       }
     } catch(e) { console.error('Fetch combos failed', e); }
   };
 
-  window.fetchLoadBalancer = async function() {
-    var d = getData(); if (!d) { setTimeout(fetchLoadBalancer, 100); return; }
+  window.rsFetchLoadBalancer = async function() {
+    var d = getData(); if (!d) { setTimeout(rsFetchLoadBalancer, 100); return; }
     try {
       var r = await fetch('/api/load-balancer');
       if (r.ok) {
         var data = await r.json();
         d.lbStrategy = data.strategy || data.default || 'priority';
-        window.fetchStats();
+        window.rsFetchStats();
       }
     } catch(e) { console.error('Fetch load balancer failed', e); }
   };
 
-  window.fetchAliases = async function() {
-    var d = getData(); if (!d) { setTimeout(fetchAliases, 100); return; }
+  window.rsFetchAliases = async function() {
+    var d = getData(); if (!d) { setTimeout(rsFetchAliases, 100); return; }
     try {
       var r = await fetch('/api/aliases');
       if (r.ok) {
         var data = await r.json();
         d.aliases = Array.isArray(data) ? data : (data.data || []);
-        window.fetchStats();
+        window.rsFetchStats();
       }
     } catch(e) { console.error('Fetch aliases failed', e); }
   };
@@ -1618,7 +1618,7 @@ function routingPage() {
       d.comboEditMode = false;
       d.comboEditId = null;
       d.comboForm = { name: '', description: '', strategy: 'priority', sticky_limit: '3', is_active: true, models: [] };
-      window.fetchConnections();
+      window.rsFetchConnections();
     },
 
     editCombo: function(btn) {
@@ -1645,7 +1645,7 @@ function routingPage() {
         is_active: combo.is_active !== false,
         models: models,
       };
-      window.fetchConnections();
+      window.rsFetchConnections();
     },
 
     closeComboModal: function() {
@@ -1686,7 +1686,7 @@ function routingPage() {
 
         if (r.ok) {
           rs.closeComboModal();
-          await fetchCombos();
+          await rsFetchCombos();
           d.addToast('success', d.comboEditMode ? 'Combo updated.' : 'Combo created.');
         } else {
           var err = await r.text().catch(function(){ return ''; });
@@ -1712,7 +1712,7 @@ function routingPage() {
         if (r.ok) {
           d.combos = d.combos.filter(function(c){ return c.id !== combo.id; });
           d.addToast('success', 'Combo deleted.');
-          window.fetchStats();
+          window.rsFetchStats();
         } else {
           d.addToast('error', 'Delete failed.');
         }
@@ -1750,7 +1750,7 @@ function routingPage() {
         });
         if (r.ok) {
           d.lbSaved = true;
-          window.fetchStats();
+          window.rsFetchStats();
           setTimeout(function() { d.lbSaved = false; }, 3000);
         } else {
           d.addToast('error', 'Failed to save strategy.');
@@ -1769,7 +1769,7 @@ function routingPage() {
       d.aliasEditMode = false;
       d.aliasEditId = null;
       d.aliasForm = { name: '', target: '', provider: '' };
-      window.fetchConnections();
+      window.rsFetchConnections();
     },
 
     editAlias: function(btn) {
@@ -1786,7 +1786,7 @@ function routingPage() {
         target: alias.target || alias.model || '',
         provider: alias.provider || alias.provider_id || '',
       };
-      window.fetchConnections();
+      window.rsFetchConnections();
     },
 
     closeAliasModal: function() {
@@ -1821,7 +1821,7 @@ function routingPage() {
 
         if (r.ok) {
           rs.closeAliasModal();
-          await fetchAliases();
+          await rsFetchAliases();
           d.addToast('success', d.aliasEditMode ? 'Alias updated.' : 'Alias created.');
         } else {
           var err = await r.text().catch(function(){ return ''; });
@@ -1849,7 +1849,7 @@ function routingPage() {
         if (r.ok) {
           d.aliases = d.aliases.filter(function(a){ return (a.id || a.name) !== id; });
           d.addToast('success', 'Alias deleted.');
-          window.fetchStats();
+          window.rsFetchStats();
         } else {
           d.addToast('error', 'Delete failed.');
         }
