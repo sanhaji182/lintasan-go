@@ -1522,390 +1522,132 @@ function routingPage() {
     aliases: null,
     connections: [],
     stats: { combos: 0, strategy: '—', aliases: 0 },
-    // Load balancer
     lbStrategy: 'priority',
     lbSaving: false,
     lbSaved: false,
-    // Combo modal
     comboModal: false,
     comboEditMode: false,
     comboEditId: null,
     comboSaving: false,
     comboForm: { name: '', description: '', strategy: 'priority', sticky_limit: '3', is_active: true, models: [] },
-    // Alias modal
     aliasModal: false,
     aliasEditMode: false,
     aliasEditId: null,
     aliasSaving: false,
     aliasForm: { name: '', target: '', provider: '' },
     toasts: [],
-
-    addToast: function(type, message) {
-      this.toasts.push({ type: type, message: message });
+    init: function() {
+      this.fetchCombos();
+      this.fetchAliases();
+      this.fetchLoadBalancer();
+      this.fetchConnections();
     },
-
-    addModelEntry: function() {
-      this.comboForm.models.push({ model: '', account: '' });
+    addToast: function(type, message) { this.toasts.push({ type: type, message: message }); },
+    updateStats: function() {
+      this.stats = { combos: (this.combos || []).length, strategy: this.lbStrategy || 'priority', aliases: (this.aliases || []).length };
     },
-
-    setStrategy: function(strat) { this.lbStrategy = strat; },
-
-    saveLoadBalancer: async function() {
-      this.lbSaving = true;
-      this.lbSaved = false;
+    fetchConnections: async function() {
+      try { var r = await fetch('/api/connections'); if (r.ok) { var data = await r.json(); this.connections = Array.isArray(data) ? data : (data.data || []); } } catch(e) {}
+    },
+    fetchCombos: async function() {
+      try { var r = await fetch('/api/combos'); if (r.ok) { var data = await r.json(); this.combos = Array.isArray(data) ? data : (data.data || []); this.updateStats(); } } catch(e) {}
+    },
+    fetchLoadBalancer: async function() {
+      try { var r = await fetch('/api/load-balancer'); if (r.ok) { var data = await r.json(); var lb = data.data || data; this.lbStrategy = lb.strategy || 'priority'; this.updateStats(); } } catch(e) {}
+    },
+    fetchAliases: async function() {
       try {
-        var r = await fetch('/api/load-balancer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ strategy: this.lbStrategy }),
-        });
+        var r = await fetch('/api/aliases');
         if (r.ok) {
-          this.lbSaved = true;
-          window.rsFetchStats();
-          var self = this;
-          setTimeout(function() { self.lbSaved = false; }, 3000);
-        } else {
-          this.addToast('error', 'Failed to save strategy.');
+          var data = await r.json(); var raw = data.data || data;
+          if (Array.isArray(raw)) { this.aliases = raw; }
+          else if (raw && typeof raw === 'object') {
+            var arr = []; Object.keys(raw).forEach(function(k) { var v = raw[k]; if (v && typeof v === 'object') arr.push({ name: k, target: v.model || v.target || '', provider: v.provider || '' }); else if (typeof v === 'string') arr.push({ name: k, target: v, provider: '' }); }); this.aliases = arr;
+          } else { this.aliases = []; }
+          this.updateStats();
         }
-      } catch(e) {
-        this.addToast('error', 'Network error.');
-      } finally {
-        this.lbSaving = false;
-      }
+      } catch(e) {}
     },
-  };
-}
-
-(function() {
-  function getData() {
-    var el = document.querySelector('[x-data]');
-    return el ? Alpine.$data(el) : null;
-  }
-
-  window.rsFetchStats = async function() {
-    var d = getData(); if (!d) { setTimeout(rsFetchStats, 100); return; }
-    var combos = (d.combos || []).length;
-    var aliases = (d.aliases || []).length;
-    d.stats = { combos: combos, strategy: d.lbStrategy || 'priority', aliases: aliases };
-  };
-
-  window.rsFetchConnections = async function() {
-    var d = getData(); if (!d) { setTimeout(rsFetchConnections, 100); return; }
-    try {
-      var r = await fetch('/api/connections');
-      if (r.ok) {
-        var data = await r.json();
-        d.connections = Array.isArray(data) ? data : (data.data || []);
-      }
-    } catch(e) { console.error('Fetch connections failed', e); }
-  };
-
-  window.rsFetchCombos = async function() {
-    var d = getData(); if (!d) { setTimeout(rsFetchCombos, 100); return; }
-    try {
-      var r = await fetch('/api/combos');
-      if (r.ok) {
-        var data = await r.json();
-        d.combos = Array.isArray(data) ? data : (data.data || []);
-        window.rsFetchStats();
-      }
-    } catch(e) { console.error('Fetch combos failed', e); }
-  };
-
-  window.rsFetchLoadBalancer = async function() {
-    var d = getData(); if (!d) { setTimeout(rsFetchLoadBalancer, 100); return; }
-    try {
-      var r = await fetch('/api/load-balancer');
-      if (r.ok) {
-        var data = await r.json();
-        var lb = data.data || data;
-        d.lbStrategy = lb.strategy || lb.default || 'priority';
-        window.rsFetchStats();
-      }
-    } catch(e) { console.error('Fetch load balancer failed', e); }
-  };
-
-  window.rsFetchAliases = async function() {
-    var d = getData(); if (!d) { setTimeout(rsFetchAliases, 100); return; }
-    try {
-      var r = await fetch('/api/aliases');
-      if (r.ok) {
-        var data = await r.json();
-        var raw = data.data || data;
-        if (Array.isArray(raw)) {
-          d.aliases = raw;
-        } else if (raw && typeof raw === 'object') {
-          // Transform map {alias: {model: "..."}} → array [{name, target, provider}]
-          var arr = [];
-          Object.keys(raw).forEach(function(k) {
-            var v = raw[k];
-            if (v && typeof v === 'object') {
-              arr.push({ name: k, target: v.model || v.target || '', provider: v.provider || '' });
-            } else if (typeof v === 'string') {
-              arr.push({ name: k, target: v, provider: '' });
-            }
-          });
-          d.aliases = arr;
-        } else {
-          d.aliases = [];
-        }
-        window.rsFetchStats();
-      }
-    } catch(e) { console.error('Fetch aliases failed', e); }
-  };
-
-  window.rs = {
-    // ── combo modal ──
     openNewCombo: function() {
-      var d = getData(); if (!d) return;
-      d.comboModal = true;
-      d.comboEditMode = false;
-      d.comboEditId = null;
-      d.comboForm = { name: '', description: '', strategy: 'priority', sticky_limit: '3', is_active: true, models: [] };
-      window.rsFetchConnections();
+      this.comboModal = true; this.comboEditMode = false; this.comboEditId = null;
+      this.comboForm = { name: '', description: '', strategy: 'priority', sticky_limit: '3', is_active: true, models: [] };
+      this.fetchConnections();
     },
-
-    editCombo: function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var rows = Array.from(row.parentNode.querySelectorAll('tr'));
-      var idx = rows.indexOf(row);
-      var combo = d.combos[idx];
-      if (!combo) return;
-      d.comboModal = true;
-      d.comboEditMode = true;
-      d.comboEditId = combo.id;
-      // Convert models array to entry objects with account
-      var models = Array.isArray(combo.models)
-        ? combo.models.map(function(m) {
-            if (typeof m === 'string') return { model: m, account: '' };
-            return { model: m.model || m.name || '', account: m.account || m.provider_id || '' };
-          })
-        : [];
-      d.comboForm = {
-        name: combo.name || '',
-        description: combo.description || '',
-        strategy: combo.strategy || 'priority',
-        sticky_limit: combo.sticky_limit != null ? String(combo.sticky_limit) : '3',
-        is_active: combo.is_active !== false,
-        models: models,
-      };
-      window.rsFetchConnections();
+    editCombo: function(idx) {
+      var combo = this.combos[idx]; if (!combo) return;
+      this.comboModal = true; this.comboEditMode = true; this.comboEditId = combo.id;
+      var models = Array.isArray(combo.models) ? combo.models.map(function(m) { if (typeof m === 'string') return { model: m, account: '' }; return { model: m.model || m.name || '', account: m.account || m.provider_id || '' }; }) : [];
+      this.comboForm = { name: combo.name || '', description: combo.description || '', strategy: combo.strategy || 'priority', sticky_limit: combo.sticky_limit != null ? String(combo.sticky_limit) : '3', is_active: combo.is_active !== false, models: models };
+      this.fetchConnections();
     },
-
-    closeComboModal: function() {
-      var d = getData(); if (!d) return;
-      d.comboModal = false;
-      d.comboEditMode = false;
-      d.comboEditId = null;
-    },
-
+    closeComboModal: function() { this.comboModal = false; this.comboEditMode = false; this.comboEditId = null; },
+    addModelEntry: function() { this.comboForm.models.push({ model: '', account: '' }); },
+    removeModelEntry: function(idx) { this.comboForm.models.splice(idx, 1); },
     saveCombo: async function() {
-      var d = getData(); if (!d) return;
-      if (!d.comboForm.name.trim()) return;
-      d.comboSaving = true;
+      if (!this.comboForm.name.trim()) return; this.comboSaving = true;
+      var wasEdit = this.comboEditMode;
       try {
-        var modelsPayload = d.comboForm.models.map(function(e) {
-          return { model: e.model, account: e.account || null };
-        });
-        var payload = {
-          name: d.comboForm.name.trim(),
-          description: d.comboForm.description.trim(),
-          strategy: d.comboForm.strategy,
-          sticky_limit: parseInt(d.comboForm.sticky_limit) || 3,
-          is_active: d.comboForm.is_active,
-          models: modelsPayload,
-        };
-
-        var method = d.comboEditMode ? 'PUT' : 'POST';
-        var url = '/api/combos';
-        if (d.comboEditMode && d.comboEditId) {
-          url += '?id=' + encodeURIComponent(d.comboEditId);
-        }
-
-        var r = await fetch(url, {
-          method: method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (r.ok) {
-          rs.closeComboModal();
-          await rsFetchCombos();
-          d.addToast('success', d.comboEditMode ? 'Combo updated.' : 'Combo created.');
-        } else {
-          var err = await r.text().catch(function(){ return ''; });
-          d.addToast('error', 'Save failed: ' + (err || 'HTTP ' + r.status));
-        }
-      } catch(e) {
-        console.error('Save combo failed', e);
-        d.addToast('error', 'Network error.');
-      } finally {
-        d.comboSaving = false;
-      }
+        var modelsPayload = this.comboForm.models.map(function(e) { return { model: e.model, account: e.account || null }; });
+        var payload = { name: this.comboForm.name.trim(), description: this.comboForm.description.trim(), strategy: this.comboForm.strategy, sticky_limit: parseInt(this.comboForm.sticky_limit) || 3, is_active: this.comboForm.is_active, models: modelsPayload };
+        var method = this.comboEditMode ? 'PUT' : 'POST'; var url = '/api/combos';
+        if (this.comboEditMode && this.comboEditId) url += '?id=' + encodeURIComponent(this.comboEditId);
+        var r = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (r.ok) {          this.closeComboModal(); await this.fetchCombos(); this.addToast('success', wasEdit ? 'Combo updated.' : 'Combo created.'); }
+        else { var err = await r.text().catch(function(){ return ''; }); this.addToast('error', 'Save failed: ' + (err || 'HTTP ' + r.status)); }
+      } catch(e) { this.addToast('error', 'Network error.'); } finally { this.comboSaving = false; }
     },
-
-    deleteCombo: async function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var rows = Array.from(row.parentNode.querySelectorAll('tr'));
-      var idx = rows.indexOf(row);
-      var combo = d.combos[idx];
-      if (!combo || !combo.id) return;
-      if (!confirm('Delete combo "' + combo.name + '"? This cannot be undone.')) return;
+    deleteCombo: async function(idx) {
+      var combo = this.combos[idx]; if (!combo || !combo.id) return;
+      if (!confirm('Delete combo "' + combo.name + '"?')) return;
       try {
         var r = await fetch('/api/combos?id=' + encodeURIComponent(combo.id), { method: 'DELETE' });
-        if (r.ok) {
-          d.combos = d.combos.filter(function(c){ return c.id !== combo.id; });
-          d.addToast('success', 'Combo deleted.');
-          window.rsFetchStats();
-        } else {
-          d.addToast('error', 'Delete failed.');
-        }
-      } catch(e) {
-        d.addToast('error', 'Network error.');
-      }
+        if (r.ok) { this.combos = this.combos.filter(function(c){ return c.id !== combo.id; }); this.addToast('success', 'Combo deleted.'); this.updateStats(); }
+        else { this.addToast('error', 'Delete failed.'); }
+      } catch(e) { this.addToast('error', 'Network error.'); }
     },
-
-    // ── load balancer ──
-    setStrategy: function(strat) {
-      var d = getData(); if (!d) return;
-      d.lbStrategy = strat;
-    },
-
-    removeModelEntry: function(btn) {
-      var d = getData(); if (!d) return;
-      var entryDiv = btn.closest('div[style*="flex"]');
-      if (!entryDiv) return;
-      var container = entryDiv.parentElement;
-      if (!container) return;
-      var allEntries = container.querySelectorAll(':scope > div[style*="flex"]');
-      var idx = Array.from(allEntries).indexOf(entryDiv);
-      if (idx >= 0) d.comboForm.models.splice(idx, 1);
-    },
-
+    setStrategy: function(strat) { this.lbStrategy = strat; },
     saveLoadBalancer: async function() {
-      var d = getData(); if (!d) return;
-      d.lbSaving = true;
-      d.lbSaved = false;
+      this.lbSaving = true; this.lbSaved = false;
       try {
-        var r = await fetch('/api/load-balancer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ strategy: d.lbStrategy }),
-        });
-        if (r.ok) {
-          d.lbSaved = true;
-          window.rsFetchStats();
-          setTimeout(function() { d.lbSaved = false; }, 3000);
-        } else {
-          d.addToast('error', 'Failed to save strategy.');
-        }
-      } catch(e) {
-        d.addToast('error', 'Network error.');
-      } finally {
-        d.lbSaving = false;
-      }
+        var r = await fetch('/api/load-balancer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ strategy: this.lbStrategy }) });
+        if (r.ok) { this.lbSaved = true; this.updateStats(); var me = this; setTimeout(function() { me.lbSaved = false; }, 3000); }
+        else { this.addToast('error', 'Failed to save strategy.'); }
+      } catch(e) { this.addToast('error', 'Network error.'); } finally { this.lbSaving = false; }
     },
-
-    // ── alias modal ──
     openNewAlias: function() {
-      var d = getData(); if (!d) return;
-      d.aliasModal = true;
-      d.aliasEditMode = false;
-      d.aliasEditId = null;
-      d.aliasForm = { name: '', target: '', provider: '' };
-      window.rsFetchConnections();
+      this.aliasModal = true; this.aliasEditMode = false; this.aliasEditId = null;
+      this.aliasForm = { name: '', target: '', provider: '' }; this.fetchConnections();
     },
-
-    editAlias: function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var rows = Array.from(row.parentNode.querySelectorAll('tr'));
-      var idx = rows.indexOf(row);
-      var alias = d.aliases[idx];
-      if (!alias) return;
-      d.aliasModal = true;
-      d.aliasEditMode = true;
-      d.aliasEditId = alias.id || alias.name;
-      d.aliasForm = {
-        name: alias.name || alias.alias || '',
-        target: alias.target || alias.model || '',
-        provider: alias.provider || alias.provider_id || '',
-      };
-      window.rsFetchConnections();
+    editAlias: function(idx) {
+      var alias = this.aliases[idx]; if (!alias) return;
+      this.aliasModal = true; this.aliasEditMode = true; this.aliasEditId = alias.id || alias.name;
+      this.aliasForm = { name: alias.name || alias.alias || '', target: alias.target || alias.model || '', provider: alias.provider || alias.provider_id || '' };
+      this.fetchConnections();
     },
-
-    closeAliasModal: function() {
-      var d = getData(); if (!d) return;
-      d.aliasModal = false;
-      d.aliasEditMode = false;
-      d.aliasEditId = null;
-    },
-
+    closeAliasModal: function() { this.aliasModal = false; this.aliasEditMode = false; this.aliasEditId = null; },
     saveAlias: async function() {
-      var d = getData(); if (!d) return;
-      if (!d.aliasForm.name.trim() || !d.aliasForm.target.trim()) return;
-      d.aliasSaving = true;
+      if (!this.aliasForm.name.trim() || !this.aliasForm.target.trim()) return; this.aliasSaving = true;
+      var wasEdit = this.aliasEditMode;
       try {
-        var payload = {
-          name: d.aliasForm.name.trim(),
-          target: d.aliasForm.target.trim(),
-          provider: d.aliasForm.provider || null,
-        };
-
+        var payload = { name: this.aliasForm.name.trim(), target: this.aliasForm.target.trim(), provider: this.aliasForm.provider || null };
         var url = '/api/aliases';
-        if (d.aliasEditMode && d.aliasEditId) {
-          url += '?id=' + encodeURIComponent(d.aliasEditId);
-        }
-
-        var r = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (r.ok) {
-          rs.closeAliasModal();
-          await rsFetchAliases();
-          d.addToast('success', d.aliasEditMode ? 'Alias updated.' : 'Alias created.');
-        } else {
-          var err = await r.text().catch(function(){ return ''; });
-          d.addToast('error', 'Save failed: ' + (err || 'HTTP ' + r.status));
-        }
-      } catch(e) {
-        console.error('Save alias failed', e);
-        d.addToast('error', 'Network error.');
-      } finally {
-        d.aliasSaving = false;
-      }
+        if (this.aliasEditMode && this.aliasEditId) url += '?id=' + encodeURIComponent(this.aliasEditId);
+        var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (r.ok) {          this.closeAliasModal(); await this.fetchAliases(); this.addToast('success', wasEdit ? 'Alias updated.' : 'Alias created.'); }
+        else { var err = await r.text().catch(function(){ return ''; }); this.addToast('error', 'Save failed: ' + (err || 'HTTP ' + r.status)); }
+      } catch(e) { this.addToast('error', 'Network error.'); } finally { this.aliasSaving = false; }
     },
-
-    deleteAlias: async function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var rows = Array.from(row.parentNode.querySelectorAll('tr'));
-      var idx = rows.indexOf(row);
-      var alias = d.aliases[idx];
-      if (!alias) return;
-      var id = alias.id || alias.name;
-      if (!id) return;
+    deleteAlias: async function(idx) {
+      var alias = this.aliases[idx]; if (!alias) return; var id = alias.id || alias.name; if (!id) return;
       if (!confirm('Delete alias "' + (alias.name || alias.alias) + '"?')) return;
       try {
         var r = await fetch('/api/aliases?id=' + encodeURIComponent(id), { method: 'DELETE' });
-        if (r.ok) {
-          d.aliases = d.aliases.filter(function(a){ return (a.id || a.name) !== id; });
-          d.addToast('success', 'Alias deleted.');
-          window.rsFetchStats();
-        } else {
-          d.addToast('error', 'Delete failed.');
-        }
-      } catch(e) {
-        d.addToast('error', 'Network error.');
-      }
+        if (r.ok) { this.aliases = this.aliases.filter(function(a){ return (a.id || a.name) !== id; }); this.addToast('success', 'Alias deleted.'); this.updateStats(); }
+        else { this.addToast('error', 'Delete failed.'); }
+      } catch(e) { this.addToast('error', 'Network error.'); }
     },
   };
-})();
+}
 
 (function() {
     function getData() {

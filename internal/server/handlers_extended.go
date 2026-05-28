@@ -111,7 +111,7 @@ func (s *Server) handleAliasesDelete(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	data := s.getJSONSetting("aliases", []any{})
-	fmt.Println("[aliases.delete] incoming id=", id, "type=", fmt.Sprintf("%T", data), "value=", data)
+
 	switch v := data.(type) {
 	case []any:
 		out := make([]any, 0, len(v))
@@ -124,7 +124,7 @@ func (s *Server) handleAliasesDelete(w http.ResponseWriter, r *http.Request){
 			out = append(out, item)
 		}
 		s.setJSONSetting("aliases", out)
-		fmt.Println("[aliases.delete] wrote []any len=", len(out))
+
 	case map[string]any:
 		// support alias-as-key and alias-as-name
 		if _, ok := v[id]; ok {
@@ -137,10 +137,7 @@ func (s *Server) handleAliasesDelete(w http.ResponseWriter, r *http.Request){
 				}
 			}
 		}
-		b, _ := json.Marshal(v)
-		fmt.Println("[aliases.delete] json=", string(b))
 		s.setJSONSetting("aliases", v)
-		fmt.Println("[aliases.delete] wrote map keys=", len(v))
 	default:
 		http.Error(w, `{"error":"aliases unsupported shape"}`, http.StatusBadRequest)
 		return

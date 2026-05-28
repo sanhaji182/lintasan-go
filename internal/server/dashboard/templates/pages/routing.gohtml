@@ -1,6 +1,6 @@
 <div
   x-data="routingPage()"
-  x-init="rsFetchStats(); rsFetchCombos(); rsFetchLoadBalancer(); rsFetchAliases()"
+  
   x-cloak
   class="fade-in"
 >
@@ -33,7 +33,7 @@
       </h1>
       <p style="font-size:13px;color:var(--fg-2);margin:0">Configure model routing, load balancing, and aliases.</p>
     </div>
-    <button class="btn-primary" @click="rs.openNewCombo()">
+    <button class="btn-primary" @click="openNewCombo()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       New Combo
     </button>
@@ -79,7 +79,7 @@
             </td>
           </tr>
         </template>
-        <template x-for="combo in combos" :key="combo.id">
+        <template x-for="(combo, cIdx) in combos" :key="combo.id">
           <tr>
             <td style="font-size:13px;font-weight:500" x-text="combo.name"></td>
             <td style="font-size:12px;color:var(--fg-2);max-width:200px">
@@ -104,8 +104,8 @@
             </td>
             <td>
               <div style="display:flex;gap:4px">
-                <button class="btn-small" @click="rs.editCombo($el)">Edit</button>
-                <button class="btn-small" style="color:var(--error)" @click="rs.deleteCombo($el)">Delete</button>
+                <button class="btn-small" @click="editCombo(cIdx)">Edit</button>
+                <button class="btn-small" style="color:var(--error)" @click="deleteCombo(cIdx)">Delete</button>
               </div>
             </td>
           </tr>
@@ -199,7 +199,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         Model Aliases
       </h2>
-      <button class="btn-small" @click="rs.openNewAlias()">
+      <button class="btn-small" @click="openNewAlias()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         Add Alias
       </button>
@@ -234,7 +234,7 @@
             </td>
           </tr>
         </template>
-        <template x-for="alias in aliases" :key="alias.id || alias.name">
+        <template x-for="(alias, aIdx) in aliases" :key="alias.id || alias.name">
           <tr>
             <td>
               <span class="mono" style="font-size:12px" x-text="alias.name || alias.alias"></span>
@@ -245,8 +245,8 @@
             <td style="font-size:12px;color:var(--fg-2)" x-text="alias.provider || '—'"></td>
             <td>
               <div style="display:flex;gap:4px">
-                <button class="btn-small" @click="rs.editAlias($el)">Edit</button>
-                <button class="btn-small" style="color:var(--error)" @click="rs.deleteAlias($el)">Delete</button>
+                <button class="btn-small" @click="editAlias(aIdx)">Edit</button>
+                <button class="btn-small" style="color:var(--error)" @click="deleteAlias(aIdx)">Delete</button>
               </div>
             </td>
           </tr>
@@ -260,19 +260,19 @@
   <!-- ════════════════════════════════════════════ -->
   <div x-show="comboModal" style="display:none" x-cloak>
     <div>
-      <div class="modal-backdrop" @click="rs.closeComboModal()"></div>
+      <div class="modal-backdrop" @click="closeComboModal()"></div>
       <div class="modal-panel" style="max-width:700px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0" x-text="comboEditMode ? 'Edit Combo' : 'New Combo'"></h2>
           <button
             style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
-            @click="rs.closeComboModal()"
+            @click="closeComboModal()"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
-        <form onsubmit="event.preventDefault(); rs.saveCombo()">
+        <form @submit.prevent="saveCombo()">
           <input type="hidden" x-show="comboEditMode" x-model="comboEditId" />
 
           <!-- Combo Name -->
@@ -308,7 +308,7 @@
           <div style="margin-bottom:12px">
             <label class="label-st" style="display:flex;align-items:center;justify-content:space-between">
               <span>Model Entries</span>
-              <button type="button" class="btn-small" @click="rs.addModelEntry()" style="font-size:11px;padding:3px 8px">
+              <button type="button" class="btn-small" @click="addModelEntry()" style="font-size:11px;padding:3px 8px">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                 Add
               </button>
@@ -333,7 +333,7 @@
                     </template>
                   </select>
                   <!-- Remove button -->
-                  <button type="button" class="btn-small" style="color:var(--error);flex-shrink:0;padding:5px 8px" @click="rs.removeModelEntry($el)">
+                  <button type="button" class="btn-small" style="color:var(--error);flex-shrink:0;padding:5px 8px" @click="removeModelEntry(idx)">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
@@ -351,7 +351,7 @@
 
           <!-- Actions -->
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-            <button type="button" class="btn-secondary" @click="rs.closeComboModal()">Cancel</button>
+            <button type="button" class="btn-secondary" @click="closeComboModal()">Cancel</button>
             <button type="submit" class="btn-primary" :disabled="!comboForm.name.trim() || comboSaving">
               <span x-show="!comboSaving" x-text="comboEditMode ? 'Update' : 'Create'"></span>
               <span x-show="comboSaving" x-cloak style="display:flex;align-items:center;gap:6px">
@@ -370,19 +370,19 @@
   <!-- ════════════════════════════════════════════ -->
   <div x-show="aliasModal" style="display:none" x-cloak>
     <div>
-      <div class="modal-backdrop" @click="rs.closeAliasModal()"></div>
+      <div class="modal-backdrop" @click="closeAliasModal()"></div>
       <div class="modal-panel" style="max-width:500px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0" x-text="aliasEditMode ? 'Edit Alias' : 'New Alias'"></h2>
           <button
             style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
-            @click="rs.closeAliasModal()"
+            @click="closeAliasModal()"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
-        <form onsubmit="event.preventDefault(); rs.saveAlias()">
+        <form @submit.prevent="saveAlias()">
           <input type="hidden" x-show="aliasEditMode" x-model="aliasEditId" />
 
           <!-- Alias Name -->
@@ -410,7 +410,7 @@
 
           <!-- Actions -->
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-            <button type="button" class="btn-secondary" @click="rs.closeAliasModal()">Cancel</button>
+            <button type="button" class="btn-secondary" @click="closeAliasModal()">Cancel</button>
             <button type="submit" class="btn-primary" :disabled="!aliasForm.name.trim() || !aliasForm.target.trim() || aliasSaving">
               <span x-show="!aliasSaving" x-text="aliasEditMode ? 'Update' : 'Create'"></span>
               <span x-show="aliasSaving" x-cloak style="display:flex;align-items:center;gap:6px">
