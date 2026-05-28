@@ -22,7 +22,7 @@ func (s *Server) registerDashboardRoutes() {
 
 	// Page routes — Go native HTMX dashboard
 	pages := []string{
-		"overview", "connections", "routing", "fallback",
+		"overview", "accounts", "connections", "routing", "fallback",
 		"logs", "usage", "analytics", "metrics", "keys", "teams", "users",
 		"webhooks", "backup", "settings", "plugins", "playground",
 		"docs",

@@ -28,9 +28,10 @@ var navGroups = []NavGroup{
 		Title: "MENU",
 		Items: []NavItem{
 			{Path: "/dashboard", Label: "Overview", SVG: iconOverview},
-			{Path: "/dashboard/connections", Label: "Accounts", SVG: iconConnections},
+			{Path: "/dashboard/connections", Label: "Connections", SVG: iconConnections},
 			{Path: "/dashboard/routing", Label: "Routing", SVG: iconRouting},
 			{Path: "/dashboard/fallback", Label: "Fallback", SVG: iconFallback},
+			{Path: "/dashboard/accounts", Label: "Accounts", SVG: iconConnections},
 			{Path: "/dashboard/logs", Label: "Logs", SVG: iconLogs},
 			{Path: "/dashboard/usage", Label: "Usage", SVG: iconUsage},
 			{Path: "/dashboard/analytics", Label: "Analytics", SVG: iconAnalytics},
