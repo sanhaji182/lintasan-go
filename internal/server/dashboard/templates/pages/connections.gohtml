@@ -202,9 +202,9 @@
   <template x-if="connections && connections.length > 0">
     <div style="display:flex;flex-direction:column;gap:12px">
       <template x-for="conn in connections" :key="conn.id">
-        <div class="card" style="margin-bottom:0">
+        <div class="card" style="margin-bottom:0" :data-conn-id="conn.id">
           <div style="display:flex;align-items:center;justify-content:space-between">
-            <div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="cs.toggleExpand(this)">
+            <div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-conn-id="" onclick="cs.toggleExpand(this)" :data-conn-id="conn.id">
               <div :style="dotStyle(conn.is_active)"></div>
               <div>
                 <div style="display:flex;align-items:center;gap:8px">
@@ -220,21 +220,78 @@
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:12px;color:var(--fg-2);font-family:var(--mono)" x-text="(conn.models_count || 0)"></span>
               <span style="font-size:12px;color:var(--fg-2);margin-left:2px">models</span>
-              <button onclick="cs.testSingle(this)" class="icon-btn" title="Test connection">
+              <button data-conn-id="" onclick="cs.testSingle(this)" class="icon-btn" title="Test connection" :data-conn-id="conn.id">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
               </button>
-              <button onclick="cs.syncSingle(this)" class="icon-btn" title="Sync models">
+              <button data-conn-id="" onclick="cs.syncSingle(this)" class="icon-btn" title="Sync models" :data-conn-id="conn.id">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
               </button>
-              <button onclick="cs.toggleStatus(this)" class="icon-btn" title="Toggle active">
+              <button data-conn-id="" onclick="cs.toggleStatus(this)" class="icon-btn" title="Toggle active" :data-conn-id="conn.id">
                 <svg x-show="conn.is_active" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                 <svg x-show="!conn.is_active" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               </button>
-              <button onclick="cs.confirmDelete(this)" class="icon-btn" style="color:var(--error)" title="Delete">
+              <button data-conn-id="" onclick="cs.confirmDelete(this)" class="icon-btn" style="color:var(--error)" title="Delete" :data-conn-id="conn.id">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               </button>
             </div>
           </div>
+
+          <!-- Test result inline -->
+          <template x-if="connTestResults[conn.id]">
+            <div style="margin-top:8px;padding:6px 10px;border-radius:4px;font-size:12px" 
+              :style="{background:(connTestResults[conn.id].success ? 'var(--success)' : 'var(--error)') + '12', border:'1px solid ' + (connTestResults[conn.id].success ? 'var(--success)' : 'var(--error)'), color: connTestResults[conn.id].success ? 'var(--success)' : 'var(--error)'}">
+              <span x-text="(connTestResults[conn.id].success ? '✓' : '✗') + ' ' + connTestResults[conn.id].msg"></span>
+              <span x-show="connTestResults[conn.id].ms > 0" style="margin-left:6px;opacity:0.7" x-text="'(' + connTestResults[conn.id].ms + 'ms)'"></span>
+            </div>
+          </template>
+
+          <!-- Expanded: discovered models -->
+          <template x-if="expandedRows[conn.id]">
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+              <!-- Loading skeleton -->
+              <template x-if="!connModels[conn.id]">
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <div class="skel-pill"></div><div class="skel-pill"></div><div class="skel-pill"></div>
+                </div>
+              </template>
+              <!-- Models loaded -->
+              <template x-if="connModels[conn.id]">
+                <div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                    <p style="font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.5px;text-transform:uppercase" x-text="'Models (' + (connModels[conn.id]||[]).length + ')'"></p>
+                    <!-- Add Model inline -->
+                    <template x-if="!addShow[conn.id]">
+                      <button onclick="cs.addModelShow(event)" :data-conn-id="conn.id" style="font-size:11px;padding:4px 10px;background:var(--primary-light);color:var(--primary);border:1px solid rgba(60,80,224,0.2);border-radius:6px;cursor:pointer;font-weight:500">+ Add Model</button>
+                    </template>
+                    <template x-if="addShow[conn.id]">
+                      <div style="display:flex;gap:6px;align-items:center">
+                        <input :id="'add-model-'+conn.id" placeholder="model-id, another-model" style="padding:4px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);color:var(--fg-0);width:240px;outline:none;font-family:var(--mono)" onkeydown="if(event.key==='Enter')cs.addModelSubmit(event,this)" :value="addValue[conn.id]||''">
+                        </input>
+                        <button onclick="cs.addModelSubmit(event,this)" :data-conn-id="conn.id" style="font-size:11px;padding:4px 10px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500" x-text="addSaving[conn.id] ? '...' : 'Add'"></button>
+                        <button onclick="cs.addModelCancel(event)" :data-conn-id="conn.id" style="font-size:11px;padding:4px 8px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--fg-3)">✕</button>
+                      </div>
+                    </template>
+                  </div>
+                  <template x-if="(connModels[conn.id]||[]).length === 0">
+                    <p style="font-size:12px;color:var(--fg-3)">No models yet. Use "Add Model" or click sync.</p>
+                  </template>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <template x-for="m in connModels[conn.id]" :key="m.model_id">
+                      <span style="font-size:12px;padding:4px 8px 4px 10px;background:var(--bg-body);border-radius:6px;font-family:var(--mono);display:inline-flex;align-items:center;gap:6px;transition:all 0.2s" :style="{border: (m.is_active===0?'1px dashed var(--border)':'1px solid var(--border)'), color: (m.is_active===0?'var(--fg-3)':'var(--fg-1)'), opacity: (m.is_active===0?'0.5':'1')}">
+                        <button onclick="cs.toggleModelActive(event, this)" :data-conn-id="conn.id" :data-model-id="m.model_id" :data-is-active="m.is_active" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center" :title="m.is_active ? 'Disable model' : 'Enable model'">
+                          <div style="width:8px;height:8px;border-radius:50%;transition:background 0.2s" :style="{background: m.is_active===0 ? 'var(--fg-3)' : 'var(--success)'}"></div>
+                        </button>
+                        <span x-text="m.model_id"></span>
+                        <button onclick="cs.removeModel(event, this)" :data-conn-id="conn.id" :data-model-id="m.model_id" style="background:none;border:none;cursor:pointer;padding:0;display:flex;opacity:0.5" title="Remove model">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      </span>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
         </div>
       </template>
     </div>
@@ -271,6 +328,8 @@
 .toast{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.3);animation:slidein 0.25s ease-out}
 .toast-ok{background:var(--success);color:#fff}
 @keyframes slidein{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.skel-pill{width:140px;height:28px;border-radius:6px;background:var(--bg-body);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:0.5}50%{opacity:1}}
 </style>
 
 <script>
@@ -303,6 +362,11 @@
       testMessage: '',
       deleteTarget: null,
       expandedRows: {},
+      connModels: {},
+      connTestResults: {},
+      addShow: {},
+      addValue: {},
+      addSaving: {},
       toasts: [],
 
       faviconURL: function(url){
@@ -332,6 +396,23 @@
       }
     };
   };
+
+  // helper: get connection by data-conn-id
+  function getConnById(connId){
+    var dd = getConnData(); if(!dd || !dd.connections) return null;
+    return dd.connections.find(function(c){ return String(c.id) === String(connId); });
+  }
+  function getConnId(el){
+    // Walk up to find data-conn-id attribute
+    while(el && !el.getAttribute('data-conn-id')){
+      el = el.parentElement;
+    }
+    return el ? el.getAttribute('data-conn-id') : null;
+  }
+
+  // Expose helpers for debugging
+  window.__getConnId = getConnId;
+  window.__getConnById = getConnById;
 
   window.cs = {
     openAdd: function(){
@@ -406,20 +487,19 @@
     },
     testSingle: async function(btn){
       var dd = getConnData(); if(!dd) return;
-      var row = btn.closest('.card'); if(!row) return;
-      var idx = Array.from(row.parentElement.children).indexOf(row);
-      var conn = (dd.connections || [])[idx]; if(!conn) return;
+      var connId = getConnId(btn);
+      var conn = getConnById(connId); if(!conn) return;
+      dd.connTestResults[conn.id] = null;
       try {
         var r = await fetch('/api/connections/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:conn.base_url,api_key:conn.api_key})});
         var j = await r.json();
-        dd.toasts.push((j.success ? 'OK: ' : 'FAIL: ') + conn.name + ' (' + (j.latency_ms||'?') + 'ms)');
-      } catch(e) { dd.toasts.push('Error: ' + e.message); }
+        dd.connTestResults[conn.id] = { success: j.success || false, msg: (j.message || j.error || 'Done'), ms: j.latency_ms || 0 };
+      } catch(e) { dd.connTestResults[conn.id] = { success: false, msg: e.message, ms: 0 }; }
     },
     syncSingle: async function(btn){
       var dd = getConnData(); if(!dd) return;
-      var row = btn.closest('.card'); if(!row) return;
-      var idx = Array.from(row.parentElement.children).indexOf(row);
-      var conn = (dd.connections || [])[idx]; if(!conn) return;
+      var connId = getConnId(btn);
+      var conn = getConnById(connId); if(!conn) return;
       try {
         var r = await fetch('/api/models/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({connection_id:conn.id})});
         if(r.ok){ await fetchConnections(); await fetchStats(); dd.toasts.push('Synced ' + conn.name); }
@@ -428,9 +508,8 @@
     },
     toggleStatus: async function(btn){
       var dd = getConnData(); if(!dd) return;
-      var row = btn.closest('.card'); if(!row) return;
-      var idx = Array.from(row.parentElement.children).indexOf(row);
-      var conn = (dd.connections || [])[idx]; if(!conn) return;
+      var connId = getConnId(btn);
+      var conn = getConnById(connId); if(!conn) return;
       try {
         var r = await fetch('/api/connections?id=' + encodeURIComponent(conn.id), { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ is_active: conn.is_active ? 0 : 1 }) });
         if(r.ok){ conn.is_active = !conn.is_active; fetchStats(); dd.toasts.push(conn.is_active ? conn.name + ' enabled' : conn.name + ' disabled'); }
@@ -438,16 +517,73 @@
     },
     toggleExpand: function(el){
       var dd = getConnData(); if(!dd) return;
-      var row = el.closest('.card'); if(!row) return;
-      var idx = Array.from(row.parentElement.children).indexOf(row);
-      var conn = (dd.connections || [])[idx]; if(!conn) return;
+      var connId = getConnId(el);
+      var conn = getConnById(connId); if(!conn) return;
       dd.expandedRows[conn.id] = !dd.expandedRows[conn.id];
+      if (dd.expandedRows[conn.id] && !dd.connModels[conn.id]) {
+        cs.loadModels(conn.id);
+      }
+    },
+    loadModels: async function(connId){
+      var dd = getConnData(); if(!dd) return;
+      try {
+        var r = await fetch('/api/models/manual?connectionId=' + encodeURIComponent(connId));
+        if(r.ok) { var j = await r.json(); dd.connModels[connId] = j.models || j.data || []; }
+      } catch(e){ dd.connModels[connId] = []; }
+    },
+    addModelShow: function(ev){
+      var dd = getConnData(); if(!dd) return;
+      var connId = ev.target.getAttribute('data-conn-id') || getConnId(ev.target);
+      dd.addShow[connId] = true; dd.addValue[connId] = '';
+      setTimeout(function(){
+        var el = document.getElementById('add-model-' + connId);
+        if(el) el.focus();
+      }, 50);
+    },
+    addModelSubmit: async function(ev, el){
+      var dd = getConnData(); if(!dd) return;
+      var connId = el.getAttribute('data-conn-id') || getConnId(el);
+      var input = document.getElementById('add-model-' + connId);
+      var value = input ? input.value : (dd.addValue[connId] || '');
+      if(!value.trim()) return;
+      dd.addSaving[connId] = true;
+      var models = value.split(',').map(function(m){ return m.trim(); }).filter(Boolean);
+      try {
+        var r = await fetch('/api/models/manual', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ connectionId: connId, models: models }) });
+        if(r.ok){ dd.addShow[connId] = false; dd.addValue[connId] = ''; cs.loadModels(connId); fetchConnections(); }
+      } catch(e){}
+      dd.addSaving[connId] = false;
+    },
+    addModelCancel: function(ev){
+      var dd = getConnData(); if(!dd) return;
+      var connId = ev.target.getAttribute('data-conn-id') || getConnId(ev.target);
+      dd.addShow[connId] = false; dd.addValue[connId] = '';
+    },
+    toggleModelActive: async function(ev, btn){
+      ev.stopPropagation();
+      var dd = getConnData(); if(!dd) return;
+      var connId = btn.getAttribute('data-conn-id');
+      var modelId = btn.getAttribute('data-model-id');
+      var curActive = parseInt(btn.getAttribute('data-is-active')) || 0;
+      try {
+        var r = await fetch('/api/models/manual', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ action: 'toggle', connectionId: connId, modelId: modelId, active: curActive ? false : true }) });
+        if(r.ok){ cs.loadModels(connId); fetchConnections(); }
+      } catch(e){}
+    },
+    removeModel: async function(ev, btn){
+      ev.stopPropagation();
+      var dd = getConnData(); if(!dd) return;
+      var connId = btn.getAttribute('data-conn-id');
+      var modelId = btn.getAttribute('data-model-id');
+      try {
+        var r = await fetch('/api/models/manual?connectionId=' + encodeURIComponent(connId) + '&modelId=' + encodeURIComponent(modelId), { method: 'DELETE' });
+        if(r.ok){ cs.loadModels(connId); fetchConnections(); }
+      } catch(e){}
     },
     confirmDelete: function(btn){
       var dd = getConnData(); if(!dd) return;
-      var row = btn.closest('.card'); if(!row) return;
-      var idx = Array.from(row.parentElement.children).indexOf(row);
-      var conn = (dd.connections || [])[idx]; if(!conn) return;
+      var connId = getConnId(btn);
+      var conn = getConnById(connId); if(!conn) return;
       dd.deleteTarget = { id: conn.id, name: conn.name };
     },
     cancelDelete: function(){ var dd = getConnData(); if(dd) dd.deleteTarget = null; },

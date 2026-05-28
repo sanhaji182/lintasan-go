@@ -75,6 +75,7 @@
   --shadow-lg:0 16px 48px rgba(0,0,0,0.1);
 }
 body{font-family:var(--font);background:var(--bg-body);color:var(--fg-0);-webkit-font-smoothing:antialiased;line-height:1.6;overflow-x:hidden}
+[x-cloak]{display:none!important}
 input,select,textarea,button{font-family:var(--font)}
 ::selection{background:var(--primary);color:#fff}
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -245,6 +246,11 @@ function closeSidebar() {
 
 // Mark active nav item
 document.addEventListener('htmx:afterSettle', function() {
+  // Re-init Alpine on swapped content (HTMX swaps #page-content)
+  var page = document.getElementById('page-content');
+  if (page && window.Alpine) {
+    Alpine.initTree(page);
+  }
   var path = window.location.pathname;
   document.querySelectorAll('#sidebar a').forEach(function(a) {
     a.classList.remove('active');

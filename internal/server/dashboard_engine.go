@@ -146,6 +146,12 @@ func NewDashboardEngine() (*DashboardEngine, error) {
 
 // RenderPage renders a page template within the base layout.
 func (d *DashboardEngine) RenderPage(w http.ResponseWriter, pageName string, data any) {
+	d.renderPage(w, pageName, data, false)
+}
+
+// renderPage is the internal implementation. htmxOnly=true means render just the page partial
+// (no base layout) for HTMX swaps.
+func (d *DashboardEngine) renderPage(w http.ResponseWriter, pageName string, data any, htmxOnly bool) {
 	fullName := "pages/" + pageName + ".gohtml"
 
 	// Render page content
@@ -153,6 +159,13 @@ func (d *DashboardEngine) RenderPage(w http.ResponseWriter, pageName string, dat
 	err := d.templates.ExecuteTemplate(&buf, fullName, data)
 	if err != nil {
 		http.Error(w, "Template error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// HTMX request — render only the partial, no base layout
+	if htmxOnly {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write([]byte(buf.String()))
 		return
 	}
 

@@ -31,7 +31,9 @@ func (s *Server) registerDashboardRoutes() {
 		page := p
 		mux.HandleFunc("GET /dashboard/"+page, func(w http.ResponseWriter, r *http.Request) {
 			if s.dashboardEngine != nil {
-				s.dashboardEngine.RenderPage(w, page, nil)
+				// Check if HTMX request — render only partial (no base layout)
+				htmxOnly := r.Header.Get("HX-Request") == "true"
+				s.dashboardEngine.renderPage(w, page, nil, htmxOnly)
 				return
 			}
 			if s.nodeProxy != nil {
@@ -43,7 +45,8 @@ func (s *Server) registerDashboardRoutes() {
 	// Dashboard index → overview
 	mux.HandleFunc("GET /dashboard", func(w http.ResponseWriter, r *http.Request) {
 		if s.dashboardEngine != nil {
-			s.dashboardEngine.RenderPage(w, "overview", nil)
+			htmxOnly := r.Header.Get("HX-Request") == "true"
+			s.dashboardEngine.renderPage(w, "overview", nil, htmxOnly)
 			return
 		}
 		if s.nodeProxy != nil {

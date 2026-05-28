@@ -242,7 +242,10 @@ func (s *Server) handleDeleteConnection(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) handlePatchConnection(w http.ResponseWriter, r *http.Request) {
 	var input struct { ID string `json:"id"`; IsActive *int `json:"is_active"` }
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil || input.ID == "" {
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil { /* body may be empty */ }
+	// Accept id from query param if not in body (frontend sends as query)
+	if input.ID == "" { input.ID = r.URL.Query().Get("id") }
+	if input.ID == "" {
 		http.Error(w, `{"error":{"message":"id is required"}}`, http.StatusBadRequest); return
 	}
 	if input.IsActive != nil { s.db.Conn().Exec("UPDATE connections SET is_active=?, updated_at=datetime('now') WHERE id=?", *input.IsActive, input.ID) }
