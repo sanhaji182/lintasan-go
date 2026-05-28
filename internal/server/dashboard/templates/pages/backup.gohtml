@@ -1,17 +1,18 @@
 <div x-data="backupData()" x-init="fetchBackup.call($data); window.backupscope = $data" x-cloak>
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-    .pg-title{font-size:20px;font-weight:700;color:var(--color-fg-0);display:flex;align-items:center;gap:8px}
-    .pg-title svg{width:20px;height:20px;color:var(--color-primary);flex-shrink:0}
-    .pg-sub{font-size:13px;color:var(--color-fg-2);margin-top:2px}
+    .pg-title{font-size:20px;font-weight:700;color:var(--fg-0);display:flex;align-items:center;gap:8px}
+    .pg-title svg{width:20px;height:20px;color:var(--primary);flex-shrink:0}
+    .pg-sub{font-size:13px;color:var(--fg-2);margin-top:2px}
     .card-mb{margin-bottom:16px}
-    .section-title{font-size:13px;font-weight:600;color:var(--color-fg-1);margin-bottom:12px}
+    .section-title{font-size:13px;font-weight:600;color:var(--fg-1);margin-bottom:12px}
     .skeleton-row{height:60px}
     .status-row{display:flex;align-items:center;justify-content:space-between}
-    .status-label{font-size:13px;color:var(--color-fg-2)}
-    .status-value{font-size:13px;font-weight:500;color:var(--color-fg-0)}
-    .card-desc{font-size:13px;color:var(--color-fg-2);margin-bottom:16px}
+    .status-label{font-size:13px;color:var(--fg-2)}
+    .status-value{font-size:13px;font-weight:500;color:var(--fg-0)}
+    .card-desc{font-size:13px;color:var(--fg-2);margin-bottom:16px}
     .spinner-inline{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:middle}
+    .badge{font-size:11px;padding:4px 10px;border-radius:9999px;font-weight:600}
   </style>
 
   <div class="pg-hdr">
