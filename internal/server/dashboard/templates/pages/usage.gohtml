@@ -1,4 +1,4 @@
-<div x-data="{ providers: [], models: [], daily: [], loading: true }" x-init="fetchData(); window.usageScope = $data" class="fade-in" x-cloak>
+<div x-data="{ providers: [], models: [], daily: [], loading: true }" x-init="fetchData.call($data)" class="fade-in" x-cloak>
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
     <div>
