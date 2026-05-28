@@ -1,6 +1,7 @@
 <div
   x-data="{ users: null, stats: { total: 0, admins: 0, active: 0, inactive: 0 }, form: { username: '', password: '', email: '', role: 'viewer' }, toasts: [] }"
   x-init="fetchUsers()"
+  x-cloak
 >
   <style>
     .pg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
