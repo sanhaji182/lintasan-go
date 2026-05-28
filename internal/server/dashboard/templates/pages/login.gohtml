@@ -12,31 +12,6 @@
       </button>
       <div class="htmx-indicator mt-2 text-center text-sm text-red-500" id="login-error"></div>
     </form>
-    <script>
-      document.body.addEventListener('htmx:afterRequest', function(evt) {
-        if (evt.detail.target && evt.detail.target.closest('form[hx-post="/api/auth/login"]')) {
-          if (evt.detail.xhr.status === 200) {
-            window.location.href = '/dashboard';
-          }
-        }
-      });
-    
-<!-- SCOPE BRIDGE: exposes Alpine data to window.loginScope for onclick handlers -->
-<script>
-(function() {
-  var el = document.querySelector('[x-data]');
-  if (!el) return;
-  var check = setInterval(function() {
-    try {
-      var data = Alpine.$data ? Alpine.$data(el) : null;
-      if (data && Object.keys(data).length > 0) {
-        window.loginScope = data;
-        clearInterval(check);
-      }
-    } catch(e) {}
-  }, 100);
-})();
-</script>
-</script>
+    </script>
   </div>
 </div>
