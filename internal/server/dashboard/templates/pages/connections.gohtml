@@ -4,925 +4,483 @@
   x-cloak
   class="fade-in"
 >
-  <!-- ════════════════════════════════════════════ -->
-  <!--  Stats Bar                                      -->
-  <!-- ════════════════════════════════════════════ -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
     <div class="stat-card fade-in" style="animation-delay:0s">
-      <div class="stat-label">Providers</div>
-      <div class="stat-value" x-text="stats.providers ?? '—'">—</div>
+      <div class="stat-label">PROVIDERS</div>
+      <div class="stat-value" x-text="val(stats.providers)" style="color:var(--primary)">0</div>
     </div>
     <div class="stat-card fade-in" style="animation-delay:0.06s">
-      <div class="stat-label">Active</div>
-      <div class="stat-value" x-text="stats.active ?? '—'" style="color:var(--success)">—</div>
+      <div class="stat-label">ACTIVE</div>
+      <div class="stat-value" x-text="val(stats.active)" style="color:var(--success)">0</div>
     </div>
     <div class="stat-card fade-in" style="animation-delay:0.12s">
-      <div class="stat-label">Models</div>
-      <div class="stat-value" x-text="stats.totalModels ?? '—'">—</div>
+      <div class="stat-label">MODELS</div>
+      <div class="stat-value" x-text="val(stats.totalModels)" style="color:var(--info)">0</div>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!--  Top Bar                                       -->
-  <!-- ════════════════════════════════════════════ -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
     <div>
       <h1 style="font-size:18px;font-weight:600;color:var(--fg-0);margin:0 0 4px">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:6px;display:inline"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         Provider Accounts
       </h1>
-      <p style="font-size:13px;color:var(--fg-2);margin:0">Manage connections to AI model providers.</p>
+      <p style="font-size:13px;color:var(--fg-3);margin:0">Connect LLM providers and auto-discover available models</p>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn-secondary" onclick="cs.syncAll()" :disabled="syncLoading">
-        <span x-show="!syncLoading" style="display:flex;align-items:center;gap:6px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Sync All
-        </span>
-        <span x-show="syncLoading" x-cloak style="display:flex;align-items:center;gap:6px">
-          <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
-          Syncing…
-        </span>
+      <button class="btn-secondary" onclick="cs.syncAll()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:4px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Sync All
       </button>
       <button class="btn-primary" onclick="cs.openAdd()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Provider
       </button>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!--  Connections List                              -->
-  <!-- ════════════════════════════════════════════ -->
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:32px"></th>
-          <th>Name</th>
-          <th>Provider</th>
-          <th>Base URL</th>
-          <th>Format</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-if="connections === null">
-          <tr>
-            <td colspan="7" style="text-align:center;padding:32px 12px">
-              <div class="spinner" style="margin:0 auto"></div>
-            </td>
-          </tr>
-        </template>
-        <template x-if="connections !== null && connections.length === 0">
-          <tr>
-            <td colspan="7" style="text-align:center;padding:0">
-              <div class="empty-state">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px;opacity:0.4"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                <p>No provider connections yet.</p>
-                <p style="font-size:12px;color:var(--fg-3);margin-top:4px">Click "Add Provider" to get started.</p>
-              </div>
-            </td>
-          </tr>
-        </template>
-        <template x-for="conn in connections" :key="conn.id">
-          <tr>
-            <!-- Expand toggle -->
-            <td style="width:32px;padding:14px 8px">
-              <button
-                style="background:none;border:none;cursor:pointer;color:var(--fg-3);padding:2px 4px;transition:transform 0.2s"
-                :style="expandedRows[conn.id] ? 'transform:rotate(90deg)' : ''"
-                onclick="cs.toggleExpand(this)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </td>
-            <td style="font-size:13px;font-weight:500" x-text="conn.name"></td>
-            <td style="font-size:12px;color:var(--fg-2)">
-              <span style="display:flex;align-items:center;gap:6px">
-                <span x-text="cs.providerFavicon(conn.provider || conn.format)" style="font-size:16px"></span>
-                <span x-text="conn.provider || conn.format || '—'"></span>
-              </span>
-            </td>
-            <td style="font-size:12px;color:var(--fg-2)">
-              <span x-text="conn.base_url || '—'" style="font-family:var(--mono);font-size:11px"></span>
-            </td>
-            <td style="font-size:12px">
-              <span class="status-badge badge-primary" x-text="conn.format || 'openai'" style="text-transform:uppercase"></span>
-            </td>
-            <td>
-              <span
-                class="status-badge"
-                :class="conn.is_active ? 'badge-success' : 'badge-error'"
-                x-text="conn.is_active ? 'Active' : 'Inactive'"
-              ></span>
-            </td>
-            <td>
-              <div style="display:flex;gap:4px">
-                <button class="btn-small" style="color:var(--info)" onclick="cs.testSingle(this)" title="Test">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  Test
-                </button>
-                <button class="btn-small" style="color:var(--warning)" onclick="cs.syncSingle(this)" title="Sync models">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                  Sync
-                </button>
-                <button class="btn-small" style="color:var(--fg-2)" onclick="cs.toggleStatus(this)" :title="conn.is_active ? 'Disable' : 'Enable'">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x-show="conn.is_active" x="2" y="2" width="20" height="20" rx="5"/>
-                    <circle x-show="!conn.is_active" cx="12" cy="12" r="10"/>
-                  </svg>
-                  <span x-text="conn.is_active ? 'Disable' : 'Enable'"></span>
-                </button>
-                <button class="btn-small" style="color:var(--error)" onclick="cs.confirmDelete(this)" title="Delete">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  Delete
-                </button>
-              </div>
-            </td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
-  </div>
+  <!-- Add Provider Flow -->
+  <template x-if="showModal">
+    <div class="card" style="margin-bottom:16px">
 
-  <!-- ════════════════════════════════════════════ -->
-  <!--  Expandable Models List (per connection)      -->
-  <!-- ════════════════════════════════════════════ -->
-  <template x-for="conn in connections" :key="'models-'+conn.id">
-    <div
-      x-show="expandedRows[conn.id]"
-      x-cloak
-      class="card"
-      style="margin-top:8px;padding:16px;border-left:3px solid var(--primary)"
-    >
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <h3 style="font-size:14px;font-weight:600;color:var(--fg-0);margin:0" x-text="'Models — ' + conn.name"></h3>
-        <span class="status-badge badge-primary" x-text="(conn.models_count || 0) + ' models'"></span>
-      </div>
-      <!-- Loading models -->
-      <template x-if="!conn._modelsLoaded && !conn._modelsLoading">
-        <div style="text-align:center;padding:12px 0">
-          <button class="btn-small" onclick="cs.loadModels(this)" :data-conn-id="conn.id">Load Models</button>
-        </div>
-      </template>
-      <template x-if="conn._modelsLoading">
-        <div style="text-align:center;padding:12px 0">
-          <div class="spinner" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px"></div>
-          <span style="font-size:12px;color:var(--fg-3)">Loading models…</span>
-        </div>
-      </template>
-      <template x-if="conn._modelsLoaded && conn._models">
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          <template x-for="m in conn._models" :key="m">
-            <span class="mono" style="padding:4px 10px;border-radius:4px;font-size:11px" x-text="m"></span>
+      <!-- STEP 1: Pick preset -->
+      <template x-if="step1">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:36px;height:36px;border-radius:8px;background:var(--bg-body);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <div>
+              <h2 style="font-size:14px;font-weight:600;color:var(--fg-0);margin:0">Choose a Provider</h2>
+              <p style="font-size:12px;color:var(--fg-3);margin:0;margin-top:2px">Select a preset or add a custom endpoint</p>
+            </div>
+          </div>
+
+          <template x-if="presets === null">
+            <div style="text-align:center;padding:24px 0"><div class="spinner"></div></div>
+          </template>
+
+          <template x-if="presets && presets.length">
+            <div>
+              <template x-for="cat in presetCategories" :key="cat.id">
+                <div style="margin-bottom:16px">
+                  <template x-if="catPresets(cat.id).length">
+                    <div>
+                      <p style="font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px" x-text="cat.name"></p>
+                      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px">
+                        <template x-for="p in catPresets(cat.id)" :key="p.id">
+                          <button type="button" class="preset-card" onclick="cs.selectPreset(this)" :data-id="p.id">
+                            <div style="display:flex;align-items:center;gap:8px">
+                              <img :src="faviconURL(p.website)" alt="" style="width:16px;height:16px;border-radius:3px;flex-shrink:0" onerror="this.style.display='none'" />
+                              <span style="font-size:13px;font-weight:500;color:var(--fg-0)" x-text="p.name"></span>
+                            </div>
+                            <p style="font-size:11px;color:var(--fg-3);margin:4px 0 0" x-text="p.description"></p>
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <button class="btn-secondary" style="margin-top:12px;width:100%" onclick="cs.selectCustom()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Custom Configuration
+              </button>
+            </div>
           </template>
         </div>
       </template>
-      <template x-if="conn._modelsLoaded && (!conn._models || conn._models.length === 0)">
-        <p style="font-size:12px;color:var(--fg-3);margin:0">No models synced. Click "Sync" above to fetch models.</p>
+
+      <!-- STEP 2: Configure -->
+      <template x-if="!step1">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <button class="icon-btn" onclick="cs.backToPresets()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div>
+              <h2 style="font-size:14px;font-weight:600;color:var(--fg-0);margin:0" x-text="'Configure ' + form.name"></h2>
+              <p style="font-size:12px;color:var(--fg-3);margin:0;margin-top:2px">Enter connection details</p>
+            </div>
+          </div>
+
+          <template x-if="error">
+            <div style="padding:8px 12px;background:rgba(248,113,113,0.15);color:var(--error);border-radius:6px;font-size:13px;margin-bottom:12px;border:1px solid var(--error)" x-text="error"></div>
+          </template>
+
+          <form onsubmit="event.preventDefault(); cs.saveConnection()">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div>
+                <label class="label-st">Name</label>
+                <input class="input-field" placeholder="e.g., OpenAI Production" x-model="form.name" />
+              </div>
+              <div>
+                <label class="label-st">Format</label>
+                <select class="input-field" x-model="form.format">
+                  <option value="openai">OpenAI Compatible</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="commandcode">CommandCode</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom:12px">
+              <label class="label-st">Base URL</label>
+              <input class="input-field" placeholder="https://api.example.com/v1" x-model="form.base_url" />
+            </div>
+
+            <div style="margin-bottom:12px" x-show="!selectedPreset || !selectedPreset.noAuth">
+              <label class="label-st">API Key</label>
+              <input class="input-field" type="password" placeholder="sk-..." x-model="form.api_key" autocomplete="off" />
+            </div>
+
+            <details style="margin-bottom:12px">
+              <summary style="font-size:12px;color:var(--fg-3);cursor:pointer;margin-bottom:8px">Advanced Settings</summary>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;background:var(--bg-body);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div>
+                  <label class="label-st">Chat Path</label>
+                  <input class="input-field" placeholder="/v1/chat/completions" x-model="form.chat_path" />
+                </div>
+                <div>
+                  <label class="label-st">Models Path</label>
+                  <input class="input-field" placeholder="/v1/models" x-model="form.models_path" />
+                </div>
+                <div>
+                  <label class="label-st">Auth Header</label>
+                  <input class="input-field" placeholder="Authorization" x-model="form.auth_header" />
+                </div>
+                <div>
+                  <label class="label-st">Auth Prefix</label>
+                  <input class="input-field" placeholder="Bearer " x-model="form.auth_prefix" />
+                </div>
+              </div>
+            </details>
+
+            <template x-if="resultOk">
+              <div style="padding:10px 14px;background:rgba(16,185,129,0.12);border:1px solid var(--success);border-radius:var(--radius-sm);margin-bottom:12px">
+                <p style="font-size:13px;color:var(--success);margin:0;font-weight:500" x-text="'OK: ' + testMessage"></p>
+              </div>
+            </template>
+            <template x-if="resultFail">
+              <div style="padding:10px 14px;background:rgba(248,113,113,0.12);border:1px solid var(--error);border-radius:var(--radius-sm);margin-bottom:12px">
+                <p style="font-size:13px;color:var(--error);margin:0;font-weight:500" x-text="'FAIL: ' + testMessage"></p>
+              </div>
+            </template>
+
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button type="button" class="btn-secondary" onclick="cs.hideModal()">Cancel</button>
+              <button type="button" class="btn-secondary" style="color:var(--info);border-color:var(--info)" onclick="cs.testConnection()">
+                <span x-show="!testing">Test Connection</span>
+                <span x-show="testing" x-cloak>Testing&hellip;</span>
+              </button>
+              <button type="submit" class="btn-primary" :disabled="!resultOk" :style="!resultOk ? 'opacity:0.5;cursor:not-allowed;pointer-events:none' : ''">
+                Connect &amp; Sync Models
+              </button>
+            </div>
+          </form>
+        </div>
       </template>
     </div>
   </template>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!--  Add / Edit Provider Modal                    -->
-  <!-- ════════════════════════════════════════════ -->
-  <template x-if="showModal">
-    <div>
-      <div class="modal-backdrop" onclick="cs.hideModal()"></div>
-      <div class="modal-panel" style="max-width:680px">
-        <!-- header -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0" x-text="modalTitle"></h2>
-          <button
-            style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
-            onclick="cs.hideModal()"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
+  <!-- Connections List -->
+  <template x-if="connections === null">
+    <div style="text-align:center;padding:48px 0"><div class="spinner" style="margin:0 auto"></div></div>
+  </template>
 
-        <!-- STEP 1: Provider presets grid with favicons & categories -->
-        <template x-if="!editMode && !selectedPreset">
-          <div>
-            <p style="font-size:13px;color:var(--fg-2);margin:0 0 12px">Choose a provider preset to get started:</p>
-
-            <!-- Category tabs -->
-            <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
-              <template x-for="cat in presetCategories" :key="cat.key">
-                <button
-                  class="btn-small"
-                  style="font-size:11px;padding:4px 10px"
-                  :style="activeCategory === cat.id ? 'background:var(--primary);color:#fff;border-color:var(--primary)' : ''"
-                  @click="activeCategory = cat.id"
-                  x-text="cat.name"
-                ></button>
-              </template>
-            </div>
-
-            <!-- loading -->
-            <template x-if="presets === null">
-              <div style="text-align:center;padding:24px 0">
-                <div class="spinner" style="margin:0 auto 8px"></div>
-                <p style="font-size:12px;color:var(--fg-3);margin:0">Loading presets…</p>
-              </div>
-            </template>
-
-            <!-- error -->
-            <template x-if="presets && presets._error">
-              <div style="text-align:center;padding:16px 0">
-                <p style="font-size:13px;color:var(--error);margin:0" x-text="presets._error"></p>
-                <button class="btn-small" style="margin-top:8px" onclick="cs.loadPresets()">Retry</button>
-              </div>
-            </template>
-
-            <!-- preset cards grid with favicons -->
-            <template x-if="presets && !presets._error && presets.length">
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;max-height:360px;overflow-y:auto;padding-right:4px">
-                <template x-for="p in presets" :key="p.provider || p.name">
-                  <button
-                    type="button"
-                    class="btn-secondary"
-                    x-show="!activeCategory || activeCategory === 'all' || (p.category || 'other') === activeCategory"
-                    style="justify-content:flex-start;padding:10px;text-align:left;flex-direction:column;align-items:flex-start;gap:4px"
-                    onclick="cs.selectPreset(this)"
-                    :data-preset-idx="$el.closest('[x-for]') ? Array.from($el.parentElement.children).indexOf($el) : 0"
-                  >
-                    <span style="font-size:20px" x-text="cs.providerFavicon(p.provider || p.name)"></span>
-                    <span style="font-size:12px;font-weight:500" x-text="p.label || p.name || p.provider"></span>
-                    <span style="font-size:10px;color:var(--fg-3)" x-text="p.provider || ''"></span>
-                  </button>
-                </template>
-              </div>
-            </template>
-
-            <!-- fallback: no presets -->
-            <template x-if="presets && !presets._error && presets.length === 0">
-              <div style="text-align:center;padding:16px 0">
-                <p style="font-size:12px;color:var(--fg-3);margin:0">No presets available.</p>
-              </div>
-            </template>
-
-            <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="cs.selectCustom()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              Manual Configuration
-            </button>
-          </div>
-        </template>
-
-        <!-- STEP 2: Configure form (preset chosen OR edit mode) -->
-        <template x-if="selectedPreset || editMode">
-          <form onsubmit="event.preventDefault(); cs.saveConnection()">
-            <template x-if="editMode">
-              <input type="hidden" name="id" :value="editId" />
-            </template>
-
-            <!-- Display Name -->
-            <div style="margin-bottom:12px">
-              <label class="label-st">Display Name</label>
-              <input type="text" class="input-field" placeholder="e.g., OpenAI Production" x-model="form.name" />
-            </div>
-
-            <!-- Provider -->
-            <div style="margin-bottom:12px">
-              <label class="label-st">Provider</label>
-              <input type="text" class="input-field" placeholder="openai" x-model="form.provider" />
-            </div>
-
-            <!-- Base URL -->
-            <div style="margin-bottom:12px">
-              <label class="label-st">Base URL <span style="color:var(--fg-3);font-weight:400">(optional)</span></label>
-              <input type="text" class="input-field" placeholder="https://api.openai.com/v1" x-model="form.base_url" />
-            </div>
-
-            <!-- API Key -->
-            <div style="margin-bottom:12px">
-              <label class="label-st">API Key</label>
-              <input type="password" class="input-field" placeholder="sk-..." x-model="form.api_key" autocomplete="off" />
-            </div>
-
-            <!-- Format -->
-            <div style="margin-bottom:12px">
-              <label class="label-st">Format <span style="color:var(--fg-3);font-weight:400">(API compatibility)</span></label>
-              <select class="input-field" x-model="form.format">
-                <option value="">Auto-detect</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="google">Google (Gemini)</option>
-                <option value="azure">Azure OpenAI</option>
-                <option value="bedrock">AWS Bedrock</option>
-                <option value="groq">Groq</option>
-                <option value="together">Together AI</option>
-                <option value="deepseek">DeepSeek</option>
-                <option value="mistral">Mistral</option>
-                <option value="cohere">Cohere</option>
-                <option value="openrouter">OpenRouter</option>
-                <option value="custom">Custom (OpenAI-compatible)</option>
-              </select>
-            </div>
-
-            <!-- Models (comma-separated) -->
-            <div style="margin-bottom:12px">
-              <label class="label-st">Models <span style="color:var(--fg-3);font-weight:400">(comma-separated, optional)</span></label>
-              <input type="text" class="input-field" placeholder="gpt-4o, gpt-4o-mini" x-model="form.models" />
-            </div>
-
-            <!-- Advanced Settings (collapsible) -->
-            <div style="margin-top:12px">
-              <button
-                type="button"
-                style="background:none;border:none;cursor:pointer;color:var(--fg-2);font-size:12px;font-weight:600;padding:0;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.5px"
-                @click="showAdvanced = !showAdvanced"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :style="showAdvanced ? 'transform:rotate(90deg)' : ''" style="transition:transform 0.2s"><polyline points="9 18 15 12 9 6"/></svg>
-                Advanced Settings
-              </button>
-              <div x-show="showAdvanced" x-cloak style="margin-top:12px;padding:12px;background:var(--bg-body);border-radius:var(--radius-sm);border:1px solid var(--border)">
-                <!-- Priority -->
-                <div style="margin-bottom:10px">
-                  <label class="label-st">Priority <span style="color:var(--fg-3);font-weight:400">(higher = tried first)</span></label>
-                  <input type="number" class="input-field" placeholder="0" x-model="form.priority" min="0" max="999" />
-                </div>
-                <!-- Max Retries -->
-                <div style="margin-bottom:10px">
-                  <label class="label-st">Max Retries</label>
-                  <input type="number" class="input-field" placeholder="3" x-model="form.max_retries" min="0" max="10" />
-                </div>
-                <!-- Timeout -->
-                <div style="margin-bottom:10px">
-                  <label class="label-st">Timeout (seconds)</label>
-                  <input type="number" class="input-field" placeholder="30" x-model="form.timeout" min="1" max="300" />
-                </div>
-                <!-- Rate Limit RPM -->
-                <div>
-                  <label class="label-st">Rate Limit (RPM)</label>
-                  <input type="number" class="input-field" placeholder="Unlimited" x-model="form.rate_limit_rpm" min="0" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Test Connection row -->
-            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
-              <button type="button" class="btn-secondary" onclick="cs.testConnection()" :disabled="testLoading">
-                <span x-show="!testLoading" style="display:flex;align-items:center;gap:6px">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  Test Connection
-                </span>
-                <span x-show="testLoading" x-cloak style="display:flex;align-items:center;gap:6px">
-                  <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
-                  Testing…
-                </span>
-              </button>
-              <span x-show="testResult === true" style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:var(--success)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                Connection successful
-              </span>
-              <span x-show="testResult === false" style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:var(--error)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                Connection failed
-              </span>
-            </div>
-
-            <!-- Actions -->
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-              <button type="button" class="btn-secondary" onclick="cs.backToPresets()" x-show="!editMode">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                Back
-              </button>
-              <button type="button" class="btn-secondary" onclick="cs.hideModal()">Cancel</button>
-              <button type="submit" class="btn-primary" :disabled="!form.name.trim() || !form.provider.trim() || saving">
-                <span x-show="!saving" x-text="editMode ? 'Update' : 'Save'"></span>
-                <span x-show="saving" x-cloak style="display:flex;align-items:center;gap:6px">
-                  <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
-                  Saving…
-                </span>
-              </button>
-            </div>
-          </form>
-        </template>
+  <template x-if="connections !== null && connections.length === 0">
+    <div class="card" style="text-align:center;padding:48px">
+      <div style="width:56px;height:56px;border-radius:12px;background:var(--bg-body);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       </div>
+      <p style="font-size:14px;font-weight:500;color:var(--fg-1);margin-bottom:4px">No connections</p>
+      <p style="font-size:13px;color:var(--fg-3)">No providers connected yet. Click Add Provider to get started.</p>
     </div>
   </template>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!--  Delete Confirmation Modal                   -->
-  <!-- ════════════════════════════════════════════ -->
+  <template x-if="connections && connections.length > 0">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <template x-for="conn in connections" :key="conn.id">
+        <div class="card" style="margin-bottom:0">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="cs.toggleExpand(this)">
+              <div :style="dotStyle(conn.is_active)"></div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:14px;font-weight:600;color:var(--fg-0)" x-text="conn.name"></span>
+                  <span class="status-badge" :style="fmtBadgeStyle(conn.format)" style="font-size:11px;padding:2px 8px;border-radius:9999px;text-transform:uppercase" x-text="conn.format || 'openai'"></span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.5" :style="chevronStyle(conn.id)">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </div>
+                <p style="font-size:12px;color:var(--fg-3);margin:2px 0 0;font-family:var(--mono)" x-text="conn.base_url || '-'"></p>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--fg-2);font-family:var(--mono)" x-text="(conn.models_count || 0)"></span>
+              <span style="font-size:12px;color:var(--fg-2);margin-left:2px">models</span>
+              <button onclick="cs.testSingle(this)" class="icon-btn" title="Test connection">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </button>
+              <button onclick="cs.syncSingle(this)" class="icon-btn" title="Sync models">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              </button>
+              <button onclick="cs.toggleStatus(this)" class="icon-btn" title="Toggle active">
+                <svg x-show="conn.is_active" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                <svg x-show="!conn.is_active" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
+              <button onclick="cs.confirmDelete(this)" class="icon-btn" style="color:var(--error)" title="Delete">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Delete confirm -->
   <template x-if="deleteTarget">
     <div>
       <div class="modal-backdrop" onclick="cs.cancelDelete()"></div>
-      <div class="modal-panel">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <h2 style="font-size:16px;font-weight:600;color:var(--fg-0);margin:0">Delete Provider</h2>
-          <button
-            style="background:transparent;border:none;cursor:pointer;color:var(--fg-2);padding:4px;border-radius:var(--radius-sm);display:flex;align-items:center;line-height:1"
-            onclick="cs.cancelDelete()"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <p style="font-size:13px;color:var(--fg-2);margin:0 0 8px">
-          Are you sure you want to delete
-          <strong style="color:var(--fg-0)" x-text="deleteTarget.name"></strong>?
-        </p>
-        <p style="font-size:12px;color:var(--fg-3);margin:0 0 20px">
-          This will remove the connection and all associated data. This action cannot be undone.
-        </p>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
+      <div class="modal-panel" style="max-width:420px;text-align:center">
+        <h3 style="font-size:15px;font-weight:600;color:var(--fg-0);margin:0 0 8px">Delete Provider</h3>
+        <p style="font-size:13px;color:var(--fg-2);margin:0 0 16px" x-text="'Delete ' + deleteTarget.name + '?'"></p>
+        <div style="display:flex;gap:8px;justify-content:center">
           <button class="btn-secondary" onclick="cs.cancelDelete()">Cancel</button>
-          <button class="btn-danger" onclick="cs.doDelete()" :disabled="deleting" style="width:auto;padding:8px 16px">
-            <span x-show="!deleting">Delete</span>
-            <span x-show="deleting" x-cloak style="display:flex;align-items:center;gap:6px">
-              <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
-              Deleting…
-            </span>
-          </button>
+          <button class="btn-danger" onclick="cs.doDelete()">Delete</button>
         </div>
       </div>
     </div>
   </template>
 
-  <!-- Toasts -->
-  <div style="position:fixed;bottom:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px">
-    <template x-for="(t, idx) in toasts" :key="idx">
-      <div
-        style="border-radius:var(--radius);padding:12px 20px;font-size:13px;font-weight:500;color:#fff;box-shadow:var(--shadow-md);animation:fadeInScale .3s ease-out;max-width:360px"
-        :style="t.type === 'success' ? 'background:#166534' : 'background:#991b1b'"
-        x-text="t.message"
-        x-init="setTimeout(() => toasts.splice(idx, 1), 3500)"
-      ></div>
+  <!-- Toast -->
+  <div style="position:fixed;top:16px;right:16px;z-index:1000;display:flex;flex-direction:column;gap:8px">
+    <template x-for="(t, i) in toasts" :key="i">
+      <div class="toast toast-ok" x-text="t"></div>
     </template>
   </div>
 </div>
 
+<style>
+.icon-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--fg-2);flex-shrink:0;transition:all 0.15s}
+.icon-btn:hover{border-color:var(--primary);color:var(--fg-0)}
+.preset-card{padding:12px 14px;background:var(--bg-body);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;text-align:left;transition:all 0.15s}
+.preset-card:hover{border-color:var(--primary);background:var(--bg-card)}
+.toast{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.3);animation:slidein 0.25s ease-out}
+.toast-ok{background:var(--success);color:#fff}
+@keyframes slidein{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+</style>
+
 <script>
-function connectionsPage() {
-  return {
-    // ── state ──
-    connections: null,
-    stats: { providers: 0, active: 0, totalModels: 0 },
-    presets: null,
-    showModal: false,
-    modalTitle: 'Add Provider',
-    editMode: false,
-    editId: '',
-    selectedPreset: null,
-    activeCategory: 'all',
-    showAdvanced: false,
-    expandedRows: {},
-    presetCategories: [
-      { key: 'all', label: 'All' },
-      { key: 'cloud', label: '☁️ Cloud' },
-      { key: 'open-source', label: '🔓 Open Source' },
-      { key: 'enterprise', label: '🏢 Enterprise' },
-      { key: 'other', label: '📦 Other' },
-    ],
-    form: { name: '', provider: '', api_key: '', base_url: '', format: '', models: '', priority: '0', max_retries: '3', timeout: '30', rate_limit_rpm: '' },
-    saving: false,
-    testLoading: false,
-    testResult: null,
-    syncLoading: false,
-    deleteTarget: null,
-    deleting: false,
-    toasts: [],
+(function(){
+  window.val = function(v){ return v != null ? v : 0; };
+  window.val2 = function(alt){ return function(v){ return v != null ? v : alt; }; };
 
-    // ── helpers ──
-    addToast: function(type, message) {
-      this.toasts.push({ type: type, message: message });
-    },
-  };
-}
-
-  // ── global functions ──
-(function() {
-  function getData() {
-    var el = document.querySelector('[x-data^="connectionsPage"]');
-    if (!el) { el = document.querySelector('[x-data]'); }
-    return el ? Alpine.$data(el) : null;
+  // Shared data getter
+  function getConnData(){
+    var e = document.querySelector('[x-data^="connectionsPage"]');
+    if(!e) e = document.querySelector('*[x-data*="connectionsPage"]');
+    if(!e) e = document.querySelector('[x-data]');
+    return e ? Alpine.$data(e) : null;
   }
 
-  window.fetchStats = async function() {
-    var d = getData(); if (!d) { setTimeout(fetchStats, 100); return; }
-    try {
-      var r = await fetch('/api/connections');
-      if (r.ok) {
-        var data = await r.json();
-        var conns = Array.isArray(data) ? data : (data.data || []);
-        var active = conns.filter(function(c){ return c.is_active; }).length;
-        var totalModels = 0;
-        conns.forEach(function(c){ totalModels += (c.models_count || 0); });
-        d.stats = { providers: conns.length, active: active, totalModels: totalModels };
-      }
-    } catch(e) { console.error('Fetch stats failed', e); }
-  };
+  window.connectionsPage = function(){
+    return {
+      connections: null,
+      stats: { providers: 0, active: 0, totalModels: 0 },
+      showModal: false,
+      step1: true,
+      selectedPreset: null,
+      presets: null,
+      presetCategories: [],
+      form: { name: '', provider: '', api_key: '', base_url: '', format: 'openai', chat_path: '/v1/chat/completions', models_path: '/v1/models', auth_header: 'Authorization', auth_prefix: 'Bearer ' },
+      error: '',
+      testing: false,
+      resultOk: false,
+      resultFail: false,
+      testMessage: '',
+      deleteTarget: null,
+      expandedRows: {},
+      toasts: [],
 
-  window.fetchConnections = async function() {
-    var d = getData();
-    if (!d) { setTimeout(fetchConnections, 100); return; }
-    try {
-      var r = await fetch('/api/connections');
-      if (r.ok) {
-        var data = await r.json();
-        var conns = Array.isArray(data) ? data : (data.data || []);
-        conns.forEach(function(c) {
-          c._modelsLoaded = false;
-          c._modelsLoading = false;
-          c._models = null;
-        });
-        d.connections = conns;
-        window.fetchStats();
-      } else {
-        d.connections = [];
+      faviconURL: function(url){
+        if (!url) return '/api/favicon?domain=example.com';
+        try { return '/api/favicon?domain=' + encodeURIComponent(new URL(url).hostname); }
+        catch(e) { return '/api/favicon?domain=example.com'; }
+      },
+
+      catPresets: function(catId){
+        var p = this.presets || [];
+        return p.filter(function(x){ return (x.category || 'other') === catId; });
+      },
+
+      dotStyle: function(active){
+        return 'width:10px;height:10px;border-radius:50%;background:' + (active ? 'var(--success)' : 'var(--fg-3)') + ';box-shadow:' + (active ? '0 0 6px rgba(16,185,129,0.4)' : 'none');
+      },
+
+      fmtBadgeStyle: function(fmt){
+        var bg = 'rgba(16,185,129,0.12)', c = 'var(--success)';
+        if (fmt === 'anthropic') { bg = 'rgba(139,92,246,0.12)'; c = 'var(--purple)'; }
+        else if (fmt === 'commandcode') { bg = 'rgba(59,130,246,0.12)'; c = 'var(--info)'; }
+        return 'background:' + bg + ';color:' + c;
+      },
+
+      chevronStyle: function(id){
+        return this.expandedRows[id] ? 'transform:rotate(90deg)' : 'transform:rotate(0deg)';
       }
-    } catch (e) {
-      console.error('Fetch connections failed', e);
-      d.connections = d.connections || [];
-    }
+    };
   };
 
   window.cs = {
-    // ── favicon lookup ──
-    providerFavicon: function(name) {
-      if (!name) return '🔌';
-      var n = name.toLowerCase();
-      if (n.indexOf('openai') !== -1 || n.indexOf('gpt') !== -1) return '🧠';
-      if (n.indexOf('anthropic') !== -1 || n.indexOf('claude') !== -1) return '🔶';
-      if (n.indexOf('google') !== -1 || n.indexOf('gemini') !== -1) return '🔷';
-      if (n.indexOf('azure') !== -1) return '☁️';
-      if (n.indexOf('bedrock') !== -1 || n.indexOf('aws') !== -1) return '🟧';
-      if (n.indexOf('groq') !== -1) return '⚡';
-      if (n.indexOf('together') !== -1) return '🤝';
-      if (n.indexOf('deepseek') !== -1) return '🐋';
-      if (n.indexOf('mistral') !== -1) return '🌬️';
-      if (n.indexOf('cohere') !== -1) return '🟣';
-      if (n.indexOf('openrouter') !== -1) return '🔀';
-      if (n.indexOf('meta') !== -1 || n.indexOf('llama') !== -1) return '🦙';
-      if (n.indexOf('perplexity') !== -1) return '🔍';
-      if (n.indexOf('replicate') !== -1) return '🔄';
-      if (n.indexOf('hugging') !== -1) return '🤗';
-      if (n.indexOf('xai') !== -1 || n.indexOf('grok') !== -1) return '❌';
-      return '🔌';
-    },
-
-    // ── modal ──
-    hideModal: function() {
-      var d = getData(); if (!d) return;
-      d.showModal = false;
-      d.selectedPreset = null;
-      d.editMode = false;
-      d.testResult = null;
-      d.showAdvanced = false;
-    },
-
-    openAdd: function() {
-      var d = getData(); if (!d) return;
-      d.showModal = true;
-      d.modalTitle = 'Add Provider';
-      d.editMode = false;
-      d.editId = '';
-      d.selectedPreset = null;
-      d.activeCategory = 'all';
-      d.showAdvanced = false;
-      d.form = { name: '', provider: '', api_key: '', base_url: '', format: '', models: '', priority: '0', max_retries: '3', timeout: '30', rate_limit_rpm: '' };
-      d.testResult = null;
+    openAdd: function(){
+      var dd = getConnData(); if(!dd) return;
+      dd.showModal = true; dd.step1 = true; dd.selectedPreset = null;
+      dd.error = ''; dd.resultOk = false; dd.resultFail = false; dd.testing = false;
+      dd.form = { name: '', provider: '', api_key: '', base_url: '', format: 'openai', chat_path: '/v1/chat/completions', models_path: '/v1/models', auth_header: 'Authorization', auth_prefix: 'Bearer ' };
       cs.loadPresets();
     },
-
-    // ── presets ──
-    loadPresets: async function() {
-      var d = getData(); if (!d) return;
-      d.presets = null;
+    hideModal: function(){ var dd = getConnData(); if(dd){ dd.showModal = false; dd.error = ''; } },
+    loadPresets: async function(){
+      var dd = getConnData(); if(!dd) return;
       try {
         var r = await fetch('/api/providers/presets');
-        if (r.ok) {
-          var data = await r.json();
-          var extracted = Array.isArray(data) ? data : (data.data || data.presets || []);
-          d.presets = Array.isArray(extracted) ? extracted : [];
-        } else {
-          d.presets = { _error: 'Failed to load presets (HTTP ' + r.status + ')' };
-        }
-      } catch (e) {
-        console.error('Load presets failed', e);
-        d.presets = { _error: 'Network error loading presets' };
-      }
+        if(r.ok){ var j = await r.json(); dd.presets = Array.isArray(j.data) ? j.data : []; dd.presetCategories = j.categories || []; }
+        else { dd.presets = []; dd.presetCategories = []; }
+      } catch(e) { dd.presets = []; dd.presetCategories = []; }
     },
-
-    selectPreset: function(btn) {
-      var d = getData(); if (!d) return;
-      var presetBtn = btn.closest('button');
-      var grid = presetBtn ? presetBtn.closest('div[style*="grid"]') : null;
-      if (!grid) return;
-      var buttons = grid.querySelectorAll(':scope > button');
-      var visibleButtons = [];
-      for (var i = 0; i < buttons.length; i++) {
-        if (buttons[i].style.display !== 'none' && buttons[i].offsetParent !== null) {
-          visibleButtons.push(buttons[i]);
-        }
-      }
-      var idx = Array.prototype.indexOf.call(visibleButtons, presetBtn);
-      if (idx < 0) {
-        idx = Array.prototype.indexOf.call(buttons, presetBtn);
-      }
-      var p = d.presets[idx];
-      if (!p) return;
-      d.selectedPreset = p;
-      d.form = {
-        name: p.name || p.label || p.provider || '',
-        provider: p.provider || 'custom',
-        api_key: '',
-        base_url: p.base_url || '',
-        format: p.format || '',
-        models: (p.models || []).join(', '),
-        priority: p.priority != null ? String(p.priority) : '0',
-        max_retries: p.max_retries != null ? String(p.max_retries) : '3',
-        timeout: p.timeout != null ? String(p.timeout) : '30',
-        rate_limit_rpm: p.rate_limit_rpm != null ? String(p.rate_limit_rpm) : '',
+    selectPreset: function(btn){
+      var dd = getConnData(); if(!dd) return;
+      var id = btn.getAttribute('data-id');
+      var p = (dd.presets||[]).find(function(x){ return x.id === id; });
+      if(!p) return;
+      dd.selectedPreset = p; dd.step1 = false;
+      dd.form = {
+        name: p.name || '', provider: p.id || '',
+        api_key: '', base_url: p.base_url || p.baseUrl || '',
+        format: p.format || 'openai',
+        chat_path: p.chat_path || p.chatPath || '/v1/chat/completions',
+        models_path: p.models_path || p.modelsPath || '/v1/models',
+        auth_header: p.auth_header || p.authHeader || 'Authorization',
+        auth_prefix: p.auth_prefix || p.authPrefix || 'Bearer '
       };
-      d.testResult = null;
+      dd.error = ''; dd.resultOk = false; dd.resultFail = false;
     },
-
-    selectCustom: function() {
-      var d = getData(); if (!d) return;
-      d.selectedPreset = { provider: 'custom', name: '', label: 'Custom' };
-      d.form = { name: '', provider: 'custom', api_key: '', base_url: '', format: '', models: '', priority: '0', max_retries: '3', timeout: '30', rate_limit_rpm: '' };
-      d.testResult = null;
+    selectCustom: function(){
+      var dd = getConnData(); if(!dd) return;
+      dd.selectedPreset = { id: 'custom', name: 'Custom' }; dd.step1 = false;
+      dd.form = { name: '', provider: 'custom', api_key: '', base_url: '', format: 'openai', chat_path: '/v1/chat/completions', models_path: '/v1/models', auth_header: 'Authorization', auth_prefix: 'Bearer ' };
     },
-
-    backToPresets: function() {
-      var d = getData(); if (!d) return;
-      d.selectedPreset = null;
-      d.form = { name: '', provider: '', api_key: '', base_url: '', format: '', models: '', priority: '0', max_retries: '3', timeout: '30', rate_limit_rpm: '' };
-      d.testResult = null;
-      d.showAdvanced = false;
-      cs.loadPresets();
+    backToPresets: function(){
+      var dd = getConnData(); if(!dd) return;
+      dd.step1 = true; dd.selectedPreset = null; dd.error = '';
+      dd.resultOk = false; dd.resultFail = false;
     },
-
-    // ── edit ──
-    editItem: function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var idx = Array.from(row.parentNode.children).indexOf(row);
-      var conn = d.connections[idx];
-      if (!conn) return;
-      d.showModal = true;
-      d.modalTitle = 'Edit Provider';
-      d.editMode = true;
-      d.editId = conn.id;
-      d.selectedPreset = { provider: conn.provider || conn.format, name: conn.name };
-      d.form = {
-        name: conn.name || '',
-        provider: conn.provider || conn.format || '',
-        api_key: '',
-        base_url: conn.base_url || '',
-        format: conn.format || '',
-        models: Array.isArray(conn.models) ? conn.models.join(', ') : (conn.models || ''),
-        priority: conn.priority != null ? String(conn.priority) : '0',
-        max_retries: conn.max_retries != null ? String(conn.max_retries) : '3',
-        timeout: conn.timeout != null ? String(conn.timeout) : '30',
-        rate_limit_rpm: conn.rate_limit_rpm != null ? String(conn.rate_limit_rpm) : '',
-      };
-      d.testResult = null;
-    },
-
-    // ── save ──
-    saveConnection: async function() {
-      var d = getData(); if (!d) return;
-      if (!d.form.name.trim() || !d.form.provider.trim()) return;
-      d.saving = true;
+    testConnection: async function(){
+      var dd = getConnData(); if(!dd) return;
+      if(dd.testing) return;
+      dd.testing = true; dd.resultOk = false; dd.resultFail = false;
       try {
-        var payload = {
-          name: d.form.name.trim(),
-          provider: d.form.provider.trim(),
-          api_key: d.form.api_key,
-          base_url: d.form.base_url.trim(),
-          format: d.form.format,
-          models: d.form.models.split(',').map(function(s){ return s.trim(); }).filter(Boolean),
-          priority: parseInt(d.form.priority) || 0,
-          max_retries: parseInt(d.form.max_retries) || 3,
-          timeout: parseInt(d.form.timeout) || 30,
-          rate_limit_rpm: d.form.rate_limit_rpm ? parseInt(d.form.rate_limit_rpm) : 0,
-        };
-        if (d.editMode && d.editId) {
-          payload.id = d.editId;
-        }
-
-        var method = d.editMode ? 'PUT' : 'POST';
-        var r = await fetch('/api/connections', {
-          method: method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (r.ok) {
-          cs.hideModal();
-          await fetchConnections();
-          d.addToast('success', d.editMode ? 'Connection updated.' : 'Connection created.');
-        } else {
-          var err = await r.text().catch(function(){ return ''; });
-          d.addToast('error', 'Save failed: ' + (err || 'HTTP ' + r.status));
-        }
-      } catch (e) {
-        console.error('Save connection failed', e);
-        d.addToast('error', 'Network error while saving.');
-      } finally {
-        d.saving = false;
-      }
+        var r = await fetch('/api/connections/test', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ base_url: dd.form.base_url, api_key: dd.form.api_key, models_path: dd.form.models_path }) });
+        var j = await r.json();
+        if(j.success){ dd.resultOk = true; dd.testMessage = j.message || 'Connected'; }
+        else { dd.resultFail = true; dd.testMessage = j.message || j.error || 'Failed'; }
+      } catch(e) { dd.resultFail = true; dd.testMessage = e.message; }
+      dd.testing = false;
     },
-
-    // ── test ──
-    testConnection: async function() {
-      var d = getData(); if (!d) return;
-      d.testLoading = true;
-      d.testResult = null;
+    saveConnection: async function(){
+      var dd = getConnData(); if(!dd) return;
+      if(!dd.form.name.trim()){ dd.error = 'Name required'; return; }
+      if(!dd.resultOk){ dd.error = 'Test connection first'; return; }
       try {
-        var r = await fetch('/api/connections/test', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: d.form.name,
-            provider: d.form.provider,
-            api_key: d.form.api_key,
-            base_url: d.form.base_url,
-            format: d.form.format,
-            models: d.form.models.split(',').map(function(s){ return s.trim(); }).filter(Boolean),
-          }),
-        });
-        d.testResult = r.ok;
-      } catch (e) {
-        console.error('Test connection failed', e);
-        d.testResult = false;
-      } finally {
-        d.testLoading = false;
-      }
+        var r = await fetch('/api/connections', { method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ name: dd.form.name, provider: dd.form.provider, base_url: dd.form.base_url, api_key: dd.form.api_key, format: dd.form.format, chat_path: dd.form.chat_path, models_path: dd.form.models_path, auth_header: dd.form.auth_header, auth_prefix: dd.form.auth_prefix, is_active: 1 }) });
+        var j = await r.json();
+        if(j.error){ dd.error = j.error.message || 'Failed'; return; }
+        dd.showModal = false; dd.toasts.push('Provider connected');
+        fetchConnections(); fetchStats();
+        var connId = (j.data && j.data.id) || j.id;
+        if(connId){ try{ await fetch('/api/models/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({connection_id:connId})}); fetchConnections(); fetchStats(); }catch(e){} }
+      } catch(e) { dd.error = 'Network error'; }
     },
-
-    // ── per-row test ──
-    testSingle: async function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var idx = Array.from(row.parentNode.children).indexOf(row);
-      var conn = d.connections[idx];
-      if (!conn || !conn.id) return;
+    testSingle: async function(btn){
+      var dd = getConnData(); if(!dd) return;
+      var row = btn.closest('.card'); if(!row) return;
+      var idx = Array.from(row.parentElement.children).indexOf(row);
+      var conn = (dd.connections || [])[idx]; if(!conn) return;
       try {
-        var r = await fetch('/api/connections/test', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: conn.id }),
-        });
-        if (r.ok) {
-          d.addToast('success', 'Connection "' + conn.name + '" test passed.');
-        } else {
-          d.addToast('error', 'Connection "' + conn.name + '" test failed.');
-        }
-      } catch(e) {
-        d.addToast('error', 'Test failed for "' + conn.name + '".');
-      }
+        var r = await fetch('/api/connections/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:conn.base_url,api_key:conn.api_key})});
+        var j = await r.json();
+        dd.toasts.push((j.success ? 'OK: ' : 'FAIL: ') + conn.name + ' (' + (j.latency_ms||'?') + 'ms)');
+      } catch(e) { dd.toasts.push('Error: ' + e.message); }
     },
-
-    // ── per-row sync ──
-    syncSingle: async function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var idx = Array.from(row.parentNode.children).indexOf(row);
-      var conn = d.connections[idx];
-      if (!conn || !conn.id) return;
-      conn._modelsLoading = true;
+    syncSingle: async function(btn){
+      var dd = getConnData(); if(!dd) return;
+      var row = btn.closest('.card'); if(!row) return;
+      var idx = Array.from(row.parentElement.children).indexOf(row);
+      var conn = (dd.connections || [])[idx]; if(!conn) return;
       try {
-        var r = await fetch('/api/connections/sync?id=' + encodeURIComponent(conn.id), { method: 'POST' });
-        if (r.ok) {
-          conn._modelsLoading = false;
-          conn._modelsLoaded = true;
-          var data = await r.json();
-          conn._models = data.models || data.data || [];
-          conn.models_count = conn._models.length;
-          d.addToast('success', 'Models synced for "' + conn.name + '".');
-          window.fetchStats();
-        } else {
-          conn._modelsLoading = false;
-          d.addToast('error', 'Sync failed for "' + conn.name + '".');
-        }
-      } catch(e) {
-        conn._modelsLoading = false;
-        d.addToast('error', 'Sync error for "' + conn.name + '".');
-      }
+        var r = await fetch('/api/models/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({connection_id:conn.id})});
+        if(r.ok){ await fetchConnections(); await fetchStats(); dd.toasts.push('Synced ' + conn.name); }
+        else dd.toasts.push('Sync failed');
+      } catch(e) { dd.toasts.push('Sync error'); }
     },
-
-    // ── toggle status ──
-    toggleStatus: async function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var idx = Array.from(row.parentNode.children).indexOf(row);
-      var conn = d.connections[idx];
-      if (!conn || !conn.id) return;
+    toggleStatus: async function(btn){
+      var dd = getConnData(); if(!dd) return;
+      var row = btn.closest('.card'); if(!row) return;
+      var idx = Array.from(row.parentElement.children).indexOf(row);
+      var conn = (dd.connections || [])[idx]; if(!conn) return;
       try {
-        var r = await fetch('/api/connections?id=' + encodeURIComponent(conn.id), {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ is_active: !conn.is_active }),
-        });
-        if (r.ok) {
-          conn.is_active = !conn.is_active;
-          d.addToast('success', conn.is_active ? '"' + conn.name + '" enabled.' : '"' + conn.name + '" disabled.');
-          window.fetchStats();
-        } else {
-          d.addToast('error', 'Toggle failed.');
-        }
-      } catch(e) {
-        d.addToast('error', 'Network error.');
-      }
+        var r = await fetch('/api/connections?id=' + encodeURIComponent(conn.id), { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ is_active: conn.is_active ? 0 : 1 }) });
+        if(r.ok){ conn.is_active = !conn.is_active; fetchStats(); dd.toasts.push(conn.is_active ? conn.name + ' enabled' : conn.name + ' disabled'); }
+      } catch(e){}
     },
-
-    // ── expand models ──
-    toggleExpand: function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var idx = Array.from(row.parentNode.children).indexOf(row);
-      var conn = d.connections[idx];
-      if (!conn) return;
-      if (d.expandedRows[conn.id]) {
-        d.expandedRows[conn.id] = false;
-      } else {
-        d.expandedRows[conn.id] = true;
-      }
+    toggleExpand: function(el){
+      var dd = getConnData(); if(!dd) return;
+      var row = el.closest('.card'); if(!row) return;
+      var idx = Array.from(row.parentElement.children).indexOf(row);
+      var conn = (dd.connections || [])[idx]; if(!conn) return;
+      dd.expandedRows[conn.id] = !dd.expandedRows[conn.id];
     },
-
-    loadModels: function(btn) {
-      var d = getData(); if (!d) return;
-      var connId = btn.getAttribute('data-conn-id');
-      var conn = (d.connections || []).find(function(c){ return c.id === connId; });
-      if (!conn) return;
-      conn._modelsLoading = true;
-      fetch('/api/connections/models?id=' + encodeURIComponent(conn.id))
-        .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
-        .then(function(data) {
-          conn._modelsLoading = false;
-          conn._modelsLoaded = true;
-          conn._models = data.models || data || [];
-        })
-        .catch(function() {
-          conn._modelsLoading = false;
-          conn._modelsLoaded = true;
-          conn._models = [];
-        });
+    confirmDelete: function(btn){
+      var dd = getConnData(); if(!dd) return;
+      var row = btn.closest('.card'); if(!row) return;
+      var idx = Array.from(row.parentElement.children).indexOf(row);
+      var conn = (dd.connections || [])[idx]; if(!conn) return;
+      dd.deleteTarget = { id: conn.id, name: conn.name };
     },
-
-    // ── delete ──
-    confirmDelete: function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var idx = Array.from(row.parentNode.children).indexOf(row);
-      var conn = d.connections[idx];
-      if (!conn) return;
-      d.deleteTarget = { id: conn.id, name: conn.name };
-    },
-
-    cancelDelete: function() {
-      var d = getData(); if (!d) return;
-      d.deleteTarget = null;
-    },
-
-    doDelete: async function() {
-      var d = getData(); if (!d) return;
-      if (!d.deleteTarget) return;
-      d.deleting = true;
+    cancelDelete: function(){ var dd = getConnData(); if(dd) dd.deleteTarget = null; },
+    doDelete: async function(){
+      var dd = getConnData(); if(!dd || !dd.deleteTarget) return;
       try {
-        var r = await fetch('/api/connections?id=' + encodeURIComponent(d.deleteTarget.id), {
-          method: 'DELETE',
-        });
-        if (r.ok) {
-          d.deleteTarget = null;
-          await fetchConnections();
-          d.addToast('success', 'Connection deleted.');
-        } else {
-          d.addToast('error', 'Delete failed (HTTP ' + r.status + ')');
-        }
-      } catch (e) {
-        console.error('Delete connection failed', e);
-        d.addToast('error', 'Network error while deleting.');
-      } finally {
-        d.deleting = false;
-      }
+        var r = await fetch('/api/connections/' + encodeURIComponent(dd.deleteTarget.id), { method: 'DELETE' });
+        if(r.ok){ dd.deleteTarget = null; await fetchConnections(); await fetchStats(); dd.toasts.push('Deleted'); }
+        else dd.toasts.push('Delete failed');
+      } catch(e){ dd.toasts.push('Delete error'); }
     },
-
-    // ── sync all ──
-    syncAll: async function() {
-      var d = getData(); if (!d) return;
-      d.syncLoading = true;
+    syncAll: async function(){
+      var dd = getConnData(); if(!dd) return;
       try {
-        var r = await fetch('/api/connections/sync', { method: 'POST' });
-        if (r.ok) {
-          await fetchConnections();
-          d.addToast('success', 'All connections synced.');
-        } else {
-          d.addToast('error', 'Sync failed (HTTP ' + r.status + ')');
-        }
-      } catch (e) {
-        console.error('Sync all failed', e);
-        d.addToast('error', 'Network error during sync.');
-      } finally {
-        d.syncLoading = false;
-      }
+        var r = await fetch('/api/models/sync', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
+        if(r.ok){ await fetchConnections(); await fetchStats(); dd.toasts.push('All synced'); }
+      } catch(e){}
     }
+  };
+
+  window.fetchStats = async function(){
+    var dd = getConnData(); if(!dd){ setTimeout(fetchStats,100); return; }
+    try {
+      var r = await fetch('/api/connections');
+      if(r.ok){ var data = await r.json(); var conns = Array.isArray(data) ? data : (data.data||[]); dd.stats = { providers: conns.length, active: conns.filter(function(c){return c.is_active;}).length, totalModels: conns.reduce(function(s,c){return s+(c.models_count||0);},0) }; }
+    } catch(e){}
+  };
+  window.fetchConnections = async function(){
+    var dd = getConnData(); if(!dd){ setTimeout(fetchConnections,100); return; }
+    try {
+      var r = await fetch('/api/connections');
+      if(r.ok){ var data = await r.json(); var conns = Array.isArray(data) ? data : (data.data||[]); dd.connections = conns; fetchStats(); }
+    } catch(e){}
   };
 })();
 </script>
