@@ -1,7 +1,7 @@
 <div
   x-data="{
     settings: {
-      token_optimization: { rtk_enabled: true, caveman_mode: 'auto' },
+      token_optimization: { rtk_enabled: true, caveman_mode: 'off' },
       api_security: { master_key: '', dashboard_password: '', rate_limit: 60 },
       caching: { exact: true, semantic: false, stream: true },
       embedding_cache: { enabled: true, ttl: 3600 },
@@ -93,19 +93,19 @@
     <div class="form-row">
       <div class="form-row-left">
         <span class="form-label">Caveman Mode</span>
-        <span class="form-hint">Strip unnecessary tokens from prompts for maximum efficiency. "Auto" applies heuristics, "On" is aggressive, "Off" disables.</span>
+        <span class="form-hint">Strip unnecessary tokens from prompts for maximum efficiency. "Off" disables, "Lite" ~20%, "Full" ~40%, "Ultra" ~65% savings.</span>
       </div>
       <div class="form-row-right">
         <span class="saved-indicator" :class="{ visible: savedFields['token_optimization.caveman_mode'] }" x-init="savedFields['token_optimization.caveman_mode'] = false">✓ Saved</span>
         <div class="mode-selector">
           <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'off' }"
             onclick="settings.token_optimization.caveman_mode = 'off'; autoSave('token_optimization.caveman_mode', 'off')">Off</button>
-          <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'auto' }"
-            onclick="settings.token_optimization.caveman_mode = 'auto'; autoSave('token_optimization.caveman_mode', 'auto')">Auto</button>
-          <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'on' }"
-            onclick="settings.token_optimization.caveman_mode = 'on'; autoSave('token_optimization.caveman_mode', 'on')">On</button>
-          <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'aggressive' }"
-            onclick="settings.token_optimization.caveman_mode = 'aggressive'; autoSave('token_optimization.caveman_mode', 'aggressive')">Aggressive</button>
+          <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'lite' }"
+            onclick="settings.token_optimization.caveman_mode = 'lite'; autoSave('token_optimization.caveman_mode', 'lite')">Lite</button>
+          <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'full' }"
+            onclick="settings.token_optimization.caveman_mode = 'full'; autoSave('token_optimization.caveman_mode', 'full')">Full</button>
+          <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'ultra' }"
+            onclick="settings.token_optimization.caveman_mode = 'ultra'; autoSave('token_optimization.caveman_mode', 'ultra')">Ultra</button>
         </div>
       </div>
     </div>

@@ -1,207 +1,334 @@
-<div x-data="{
-  showModal: false,
-  editMode: false,
-  editId: '',
-  chainName: '',
-  chains: null,
-  providers: [''],
-  providerOptions: [],
-  toasts: []
-}" x-init="fetchChains()" x-cloak>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+<div
+  x-data="fallbackPage()"
+  x-init="fetchChains()"
+  x-cloak
+  class="fade-in"
+>
+  <!-- ════════════════════════════════════════════ -->
+  <!--  Header                                         -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
     <div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--fg-0);margin:0 0 4px;display:flex;align-items:center;gap:8px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      <h1 style="font-size:18px;font-weight:600;color:var(--fg-0);margin:0 0 4px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:6px;display:inline"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         Fallback Chains
       </h1>
-      <p style="font-size:13px;color:var(--fg-2);margin:0">Define provider fallback sequences when a provider fails.</p>
+      <p style="font-size:13px;color:var(--fg-2);margin:0">Configure model and connection fallback strategies.</p>
     </div>
-    <button class="btn-primary" onclick="fs.showModal()">Add Chain</button>
+    <button class="btn-primary" onclick="fs.showCreateForm()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Add Chain
+    </button>
   </div>
 
-  <!-- Fallback Chains Table -->
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th>Chain Name</th>
-          <th>Provider Sequence</th>
-          <th>Created</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-if="!chains">
-          <tr><td colspan="4" style="text-align:center;padding:24px"><div class="spinner" style="margin:0 auto"></div></td></tr>
-        </template>
-        <template x-if="chains && chains.length === 0">
-          <tr><td colspan="4" style="text-align:center;padding:24px"><div class="empty-state"><p>No fallback chains configured</p></div></td></tr>
-        </template>
-        <template x-for="chain in chains" :key="chain.id">
-          <tr>
-            <td style="font-size:13px;font-weight:500" x-text="chain.name"></td>
-            <td style="font-size:12px;color:var(--fg-2)" x-text="chain.providers ? chain.providers.join(' → ') : '—'"></td>
-            <td style="font-size:12px;color:var(--fg-3)" x-text="chain.created_at || '—'"></td>
-            <td>
-              <button class="btn-small" onclick="fs.editItem(this)">Edit</button>
-              <button class="btn-small" style="color:var(--error)" onclick="fs.deleteItem(this)">Delete</button>
-            </td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
+  <!-- ════════════════════════════════════════════ -->
+  <!--  Stats Grid (4 cards)                         -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+    <div class="stat-card fade-in" style="animation-delay:0s">
+      <div class="stat-label">Model Chains</div>
+      <div class="stat-value" x-text="modelChains.length">0</div>
+    </div>
+    <div class="stat-card fade-in" style="animation-delay:0.06s">
+      <div class="stat-label">Connection Chains</div>
+      <div class="stat-value" x-text="connectionChains.length">0</div>
+    </div>
+    <div class="stat-card fade-in" style="animation-delay:0.12s">
+      <div class="stat-label">Total Fallbacks Used</div>
+      <div class="stat-value" x-text="stats.total_used ?? 0">0</div>
+    </div>
+    <div class="stat-card fade-in" style="animation-delay:0.18s">
+      <div class="stat-label">Success Rate</div>
+      <div class="stat-value" x-text="(stats.success_rate ?? '—') + '%'">—%</div>
+    </div>
   </div>
 
-  <!-- Add/Edit Chain Modal -->
-  <template x-if="showModal">
-    <div>
-      <div class="modal-backdrop" onclick="fs.hideModal()"></div>
-      <div class="modal-panel" style="max-width:540px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <h2 style="font-size:15px;font-weight:600;color:var(--fg-0)" x-text="editMode ? 'Edit Chain' : 'Add Fallback Chain'"></h2>
-          <button class="btn-small" style="font-size:18px;padding:4px 8px" onclick="fs.hideModal()">&times;</button>
+  <!-- ════════════════════════════════════════════ -->
+  <!--  Create Form (toggle)                         -->
+  <!-- ════════════════════════════════════════════ -->
+  <template x-if="showForm">
+    <div class="card fade-in" style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="width:36px;height:36px;border-radius:8px;background:var(--primary-light);display:flex;align-items:center;justify-content:center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         </div>
-
-        <form onsubmit="event.preventDefault(); fs.saveItem()">
-          <template x-if="editMode">
-            <input type="hidden" name="id" :value="editId">
-          </template>
-
-          <label>Chain Name</label>
-          <input type="text" name="name" x-model="chainName" placeholder="e.g., Primary Fallback">
-
-          <label>Providers (in fallback order)</label>
-          <div id="provider-sequence">
-            <template x-for="(provider, index) in providers" :key="index">
-              <div style="display:flex;gap:8px;margin-bottom:8px">
-                <select :name="'providers[]'" style="flex:1">
-                  <option value="">-- Select Provider --</option>
-                  <template x-for="opt in providerOptions" :key="opt.id">
-                    <option :value="opt.name || opt.id" x-text="opt.name || opt.id" :selected="provider === (opt.name || opt.id)"></option>
-                  </template>
-                </select>
-                <button type="button" class="btn-small" style="color:var(--error)" onclick="fs.removeProvider(this)"
-                        x-show="providers.length > 1" style="font-size:16px">&times;</button>
-              </div>
-            </template>
-          </div>
-          <button type="button" class="btn-small" style="margin-top:8px"
-                  onclick="fs.addProvider()">Add Provider</button>
-
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-            <button type="button" class="btn-secondary" onclick="fs.hideModal()">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="!chainName.trim() || providers.filter(function(p){return p.trim()}).length < 2">
-              Save Chain
-            </button>
-          </div>
-        </form>
+        <div>
+          <p style="font-size:14px;font-weight:600;color:var(--fg-0);margin:0">New Fallback Chain</p>
+          <p style="font-size:12px;color:var(--fg-3);margin:0">Define ordered fallback sequence</p>
+        </div>
       </div>
+
+      <form onsubmit="event.preventDefault(); fs.handleCreate()">
+        <div style="display:grid;grid-template-columns:1fr 2fr 2fr;gap:14px">
+          <div>
+            <label class="label-st">Type</label>
+            <select class="input-field" x-model="formType">
+              <option value="model">Model</option>
+              <option value="connection">Connection</option>
+            </select>
+          </div>
+          <div>
+            <label class="label-st">Chain Name</label>
+            <input type="text" class="input-field" x-model="form.name" placeholder="e.g. gpt4-fallback" />
+          </div>
+          <div>
+            <label class="label-st">Models (comma-separated)</label>
+            <input type="text" class="input-field" x-model="form.models" placeholder="gpt-4, gpt-3.5-turbo, claude-3" />
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button type="submit" class="btn-primary" :disabled="!form.name.trim() || !form.models.trim()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline"><polyline points="20 6 9 17 4 12"/></svg>
+            Create Chain
+          </button>
+          <button type="button" class="btn-secondary" onclick="fs.hideCreateForm()">Cancel</button>
+        </div>
+      </form>
     </div>
   </template>
 
-  <!-- Toast container -->
+  <!-- ════════════════════════════════════════════ -->
+  <!--  Model Fallback Chains Table                  -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="margin-bottom:24px">
+    <h2 style="font-size:14px;font-weight:600;color:var(--fg-1);margin-bottom:12px">Model Fallback Chains</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+      <template x-if="loading">
+        <div style="text-align:center;padding:32px 12px"><div class="spinner" style="margin:0 auto"></div></div>
+      </template>
+
+      <template x-if="!loading && modelChains.length === 0">
+        <div class="empty-state">
+          <div style="width:56px;height:56px;border-radius:12px;background:var(--bg-body);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <p>No model fallback chains configured</p>
+        </div>
+      </template>
+
+      <template x-if="!loading && modelChains.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Chain</th>
+              <th>Used</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="chain in modelChains" :key="chain.id || chain.name">
+              <tr>
+                <td style="font-size:13px;font-weight:500;color:var(--fg-0)" x-text="chain.name || chain.id"></td>
+                <td>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <template x-for="(m, i) in (chain.models || chain.fallbacks || [])" :key="i">
+                      <span class="mono" style="font-size:12px;padding:4px 10px">
+                        <span x-show="i > 0" style="color:var(--fg-3);margin-right:4px">→</span>
+                        <span x-text="m"></span>
+                      </span>
+                    </template>
+                  </div>
+                </td>
+                <td><code class="mono" x-text="chain.used_count || chain.usage_count || 0"></code></td>
+                <td style="text-align:right">
+                  <button class="btn-danger" onclick="fs.deleteChain(this, 'model')" :title="'Delete ' + (chain.name || chain.id)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </template>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!--  Connection Fallback Chains Table             -->
+  <!-- ════════════════════════════════════════════ -->
   <div>
-    <template x-for="(t, i) in toasts" :key="i">
-      <div class="toast" :class="'toast-' + t.type" x-init="setTimeout(() => toasts.splice(i, 1), 3000)" x-text="t.message"></div>
+    <h2 style="font-size:14px;font-weight:600;color:var(--fg-1);margin-bottom:12px">Connection Fallback Chains</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+      <template x-if="loading">
+        <div style="text-align:center;padding:32px 12px"><div class="spinner" style="margin:0 auto"></div></div>
+      </template>
+
+      <template x-if="!loading && connectionChains.length === 0">
+        <div class="empty-state">
+          <div style="width:56px;height:56px;border-radius:12px;background:var(--bg-body);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <p>No connection fallback chains configured</p>
+        </div>
+      </template>
+
+      <template x-if="!loading && connectionChains.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Chain</th>
+              <th>Used</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="chain in connectionChains" :key="chain.id || chain.name">
+              <tr>
+                <td style="font-size:13px;font-weight:500;color:var(--fg-0)" x-text="chain.name || chain.id"></td>
+                <td>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <template x-for="(m, i) in (chain.models || chain.fallbacks || chain.connections || [])" :key="i">
+                      <span class="mono" style="font-size:12px;padding:4px 10px">
+                        <span x-show="i > 0" style="color:var(--fg-3);margin-right:4px">→</span>
+                        <span x-text="m"></span>
+                      </span>
+                    </template>
+                  </div>
+                </td>
+                <td><code class="mono" x-text="chain.used_count || chain.usage_count || 0"></code></td>
+                <td style="text-align:right">
+                  <button class="btn-danger" onclick="fs.deleteChain(this, 'connection')" :title="'Delete ' + (chain.name || chain.id)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </template>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!--  Toasts                                        -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="position:fixed;bottom:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px">
+    <template x-for="(t, idx) in toasts" :key="idx">
+      <div
+        class="toast" :class="'toast-' + t.type"
+        x-text="t.message"
+        x-init="setTimeout(() => toasts.splice(idx, 1), 3000)"
+      ></div>
     </template>
   </div>
 </div>
 
 <script>
+function fallbackPage() {
+  return {
+    modelChains: [],
+    connectionChains: [],
+    stats: { total_used: 0, success_rate: 100 },
+    loading: true,
+    showForm: false,
+    formType: 'model',
+    form: { name: '', models: '' },
+    toasts: [],
+
+    addToast: function(type, message) {
+      this.toasts.push({ type: type, message: message });
+    },
+  };
+}
+
 (function() {
   function getData() {
     var el = document.querySelector('[x-data]');
     return el ? Alpine.$data(el) : null;
   }
 
-  window.fs = {
-    showModal: function() {
-      var d = getData(); if (!d) return;
-      d.editMode = false;
-      d.editId = '';
-      d.chainName = '';
-      d.providers = [''];
-      d.toasts = d.toasts || [];
-      fetch('/api/connections').then(function(r){return r.json()}).then(function(data){d.providerOptions = data || [];}).catch(function(){});
-      d.showModal = true;
-    },
-    hideModal: function() {
-      var d = getData(); if (!d) return;
-      d.showModal = false;
-    },
-    addProvider: function() {
-      var d = getData(); if (!d) return;
-      d.providers.push('');
-    },
-    removeProvider: function(btn) {
-      var d = getData(); if (!d) return;
-      var div = btn.closest('div[style]');
-      var parent = div ? div.parentNode : null;
-      if (!parent) return;
-      var allDivs = parent.querySelectorAll(':scope > div');
-      var idx = Array.prototype.indexOf.call(allDivs, div);
-      if (idx >= 0) {
-        d.providers.splice(idx, 1);
-      }
-    },
-    editItem: function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
-      var chain = d.chains[idx];
-      if (!chain) return;
-      d.editMode = true;
-      d.editId = chain.id;
-      d.chainName = chain.name;
-      d.providers = chain.providers ? chain.providers.slice() : [''];
-      fetch('/api/connections').then(function(r){return r.json()}).then(function(data){d.providerOptions = data || [];}).catch(function(){});
-      d.showModal = true;
-    },
-    saveItem: async function() {
-      var d = getData(); if (!d) return;
-      try {
-        var method = d.editMode ? 'PUT' : 'POST';
-        var r = await fetch('/api/fallback', {
-          method: method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: d.chainName,
-            providers: d.providers.filter(function(p){ return p.trim(); })
-          })
-        });
-        if (r.ok) {
-          d.showModal = false;
-          await fetchChains();
-          d.toasts.push({ type: 'success', message: 'Chain saved successfully' });
-        }
-      } catch(e) { console.error('Save chain failed', e); }
-    },
-    deleteItem: async function(btn) {
-      var d = getData(); if (!d) return;
-      var row = btn.closest('tr');
-      var idx = Array.from(row.parentNode.children).indexOf(row) - 1;
-      var chain = d.chains[idx];
-      if (!chain || !chain.id) return;
-      if (!confirm('Delete fallback chain "' + chain.name + '"?')) return;
-      try {
-        var r = await fetch('/api/fallback?id=' + chain.id, { method: 'DELETE' });
-        if (r.ok) {
-          d.chains = d.chains.filter(function(c){return c.id !== chain.id;});
-          d.toasts.push({ type: 'success', message: 'Chain deleted' });
-        }
-      } catch(e) { console.error('Delete chain failed', e); }
-    }
-  };
-
   window.fetchChains = async function() {
     var d = getData();
     if (!d) { setTimeout(fetchChains, 100); return; }
     try {
-      var r = await fetch('/api/fallback');
+      var r = await fetch('/api/fallback', { credentials: 'include' });
       if (r.ok) {
-        d.chains = await r.json();
+        var json = await r.json();
+        var raw = json.data || json;
+        // Handle both array and object formats
+        var mc = raw.model_chains || [];
+        var cc = raw.connection_chains || [];
+        d.modelChains = Array.isArray(mc) ? mc : Object.entries(mc).map(function(e) { return { name: e[0], models: Array.isArray(e[1]) ? e[1] : [] }; });
+        d.connectionChains = Array.isArray(cc) ? cc : Object.entries(cc).map(function(e) { return { name: e[0], models: Array.isArray(e[1]) ? e[1] : [] }; });
+        d.stats = raw.stats || { total_used: 0, success_rate: 100 };
       }
     } catch(e) { console.error('Fallback fetch failed', e); }
+    d.loading = false;
+  };
+
+  window.fs = {
+    showCreateForm: function() {
+      var d = getData(); if (!d) return;
+      d.formType = 'model';
+      d.form = { name: '', models: '' };
+      d.showForm = true;
+    },
+
+    hideCreateForm: function() {
+      var d = getData(); if (!d) return;
+      d.showForm = false;
+    },
+
+    handleCreate: async function() {
+      var d = getData(); if (!d) return;
+      var name = (d.form.name || '').trim();
+      var modelsRaw = (d.form.models || '').trim();
+      if (!name || !modelsRaw) return;
+
+      var models = modelsRaw.split(',').map(function(m) { return m.trim(); }).filter(Boolean);
+      try {
+        var r = await fetch('/api/fallback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ type: d.formType, id: name, fallbacks: models })
+        });
+        if (r.ok) {
+          d.showForm = false;
+          d.form = { name: '', models: '' };
+          d.addToast('success', 'Fallback chain created');
+          await fetchChains();
+        } else {
+          d.addToast('error', 'Failed to create chain');
+        }
+      } catch(e) {
+        console.error('Create chain failed', e);
+        d.addToast('error', 'Failed to create chain');
+      }
+    },
+
+    deleteChain: async function(btn, type) {
+      var d = getData(); if (!d) return;
+      var row = btn.closest('tr');
+      var tbody = row.parentNode;
+      var rows = tbody.querySelectorAll(':scope > tr');
+      var idx = Array.prototype.indexOf.call(rows, row);
+      var chains = type === 'model' ? d.modelChains : d.connectionChains;
+      var chain = chains[idx];
+      if (!chain) return;
+      var chainName = chain.name || chain.id || 'this chain';
+      if (!confirm('Remove fallback chain "' + chainName + '"?')) return;
+
+      try {
+        var url = '/api/fallback?type=' + encodeURIComponent(type) + '&id=' + encodeURIComponent(chain.id || chain.name || '');
+        var r = await fetch(url, { method: 'DELETE', credentials: 'include' });
+        if (r.ok) {
+          if (type === 'model') {
+            d.modelChains = d.modelChains.filter(function(c) { return c !== chain; });
+          } else {
+            d.connectionChains = d.connectionChains.filter(function(c) { return c !== chain; });
+          }
+          d.addToast('success', 'Chain deleted');
+        } else {
+          d.addToast('error', 'Failed to delete chain');
+        }
+      } catch(e) {
+        console.error('Delete chain failed', e);
+        d.addToast('error', 'Failed to delete chain');
+      }
+    },
   };
 })();
 </script>

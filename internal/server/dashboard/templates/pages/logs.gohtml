@@ -1,108 +1,287 @@
-<div x-data="{
-  level: 'all',
-  paused: false,
-  autoScroll: true,
-  logCount: 0,
-  logs: [],
-  toggleLevel(l) { this.level = l; },
-  clearLogs() { this.logs = []; this.logCount = 0; }
-}" x-init="
-  // Fetch logs via SSE or polling
-  $watch('autoScroll', function(v) {
-    if (v) {
-      var el = document.getElementById('log-container');
-      if (el) el.scrollTop = el.scrollHeight;
-    }
-  });" x-cloak>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--fg-0);margin:0 0 4px;display:flex;align-items:center;gap:8px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Logs
-      </h1>
-      <p style="font-size:13px;color:var(--fg-2);margin:0">Real-time server logs.</p>
+<div x-data="logsApp()" x-init="init.call($data)" x-cloak class="fade-in">
+  <!-- Page Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      <h1 style="font-size:18px;font-weight:600;color:var(--fg-0)">Request Logs</h1>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button class="btn-small" :class="level === 'all' ? 'btn-primary' : 'btn-secondary'" onclick="window.logsScope.toggleLevel('all')">All</button>
-      <button class="btn-small" :class="level === 'info' ? 'btn-primary' : 'btn-secondary'" onclick="window.logsScope.toggleLevel('info')">Info</button>
-      <button class="btn-small" :class="level === 'warn' ? 'btn-primary' : 'btn-secondary'" onclick="window.logsScope.toggleLevel('warn')">Warn</button>
-      <button class="btn-small" :class="level === 'error' ? 'btn-primary' : 'btn-secondary'" onclick="window.logsScope.toggleLevel('error')">Error</button>
-      <span style="margin:0 8px"></span>
-      <button class="btn-small" onclick="window.logsScope.paused = !paused" x-text="paused ? 'Resume' : 'Pause'"></button>
-      <button class="btn-small" onclick="window.logsScope.clearLogs()">Clear</button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <!-- Search Input -->
+        <div style="position:relative">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%)">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            x-model="filter"
+            placeholder="Filter logs..."
+            style="padding:8px 12px 8px 32px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);color:var(--fg-0);font-size:13px;width:220px;outline:none"
+          />
+        </div>
+        <!-- Refresh Button -->
+        <button @click="refresh()" :disabled="loading" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--fg-2);cursor:pointer;transition:all 0.15s ease" title="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" :style="loading ? 'animation:spin 1s linear infinite' : ''">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 
-  <div class="card" style="max-height:calc(100vh - 200px);overflow-y:auto" id="log-container"
-       x-init="
-         var obs = new MutationObserver(function() {
-           if (autoScroll) { $el.scrollTop = $el.scrollHeight; }
-         });
-         obs.observe($el, { childList: true, subtree: true });
-       ">
-    <table>
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Level</th>
-          <th>Message</th>
-        </tr>
-      </thead>
-      <tbody id="log-entries">
-        <template x-if="logs.length === 0">
-          <tr>
-            <td colspan="3" style="text-align:center;padding:24px;color:var(--fg-3)">
-              Waiting for log events...
-            </td>
-          </tr>
-        </template>
-        <template x-for="(log, i) in logs" :key="i">
-          <tr>
-            <td style="font-size:12px;color:var(--fg-3)" x-text="log.timestamp || log.time || ''"></td>
-            <td>
-              <span class="badge" 
-                    :class="log.level === 'error' ? 'badge-error' : (log.level === 'warn' ? 'badge-warning' : 'badge-info')"
-                    x-text="log.level || 'info'"></span>
-            </td>
-            <td style="font-size:13px;color:var(--fg-2)" x-text="log.message || log.msg || ''"></td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
+  <!-- Stat Cards -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+    <!-- Total Requests -->
+    <div class="card" style="padding:16px 18px">
+      <div class="stat-label">Total Requests</div>
+      <div x-show="loading && !allLogs.length" class="skeleton" style="width:64px;height:28px;border-radius:6px;margin-top:4px"></div>
+      <div x-show="!loading || allLogs.length" x-cloak class="stat-value" x-text="allLogs.length.toLocaleString()"></div>
+    </div>
+    <!-- Success -->
+    <div class="card" style="padding:16px 18px">
+      <div class="stat-label">Success</div>
+      <div x-show="loading && !allLogs.length" class="skeleton" style="width:64px;height:28px;border-radius:6px;margin-top:4px"></div>
+      <div x-show="!loading || allLogs.length" x-cloak class="stat-value" style="color:var(--success)" x-text="successCount.toLocaleString()"></div>
+    </div>
+    <!-- Errors -->
+    <div class="card" style="padding:16px 18px">
+      <div class="stat-label">Errors</div>
+      <div x-show="loading && !allLogs.length" class="skeleton" style="width:64px;height:28px;border-radius:6px;margin-top:4px"></div>
+      <div x-show="!loading || allLogs.length" x-cloak class="stat-value" style="color:var(--error)" x-text="errorCount.toLocaleString()"></div>
+    </div>
+    <!-- Avg Latency -->
+    <div class="card" style="padding:16px 18px">
+      <div class="stat-label">Avg Latency</div>
+      <div x-show="loading && !allLogs.length" class="skeleton" style="width:64px;height:28px;border-radius:6px;margin-top:4px"></div>
+      <div x-show="!loading || allLogs.length" x-cloak class="stat-value" x-text="avgLatency.toLocaleString() + 'ms'"></div>
+    </div>
   </div>
 
-  <div style="display:flex;align-items:center;gap:16px;margin-top:8px;font-size:12px;color:var(--fg-3)">
-    <span x-text="logCount + ' entries'">0 entries</span>
-    <span x-show="paused">(Paused)</span>
+  <!-- Level Filter Buttons -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+    <span style="font-size:11px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.5px">Level:</span>
+    <button @click="level='all'" class="btn-small" :class="level==='all' ? 'btn-primary' : 'btn-secondary'">All</button>
+    <button @click="level='info'" class="btn-small" :class="level==='info' ? 'btn-primary' : 'btn-secondary'">Info</button>
+    <button @click="level='warn'" class="btn-small" :class="level==='warn' ? 'btn-primary' : 'btn-secondary'">Warn</button>
+    <button @click="level='error'" class="btn-small" :class="level==='error' ? 'btn-primary' : 'btn-secondary'">Error</button>
+    <span style="margin-left:auto;font-size:12px;color:var(--fg-3)">Auto-refreshes every 30s</span>
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--success);animation:dotPulse 2s infinite" title="Live"></div>
   </div>
 
-  <script src="https://unpkg.com/htmx-ext-sse@2.2.3/sse.js"></script>
-  <script>
-    // Connect to SSE for real-time logs
-    document.addEventListener('DOMContentLoaded', function() {
-      var es = new EventSource('/api/logs/stream');
-      var alpineData = document.querySelector('[x-data]')._x_dataStack[0];
-      
-      es.addEventListener('message', function(e) {
-        if (alpineData.paused) return;
-        try {
-          var log = JSON.parse(e.data);
-          if (alpineData.level === 'all' || alpineData.level === log.level) {
-            alpineData.logs.unshift(log);
-            alpineData.logCount++;
-            // Keep only last 500 entries
-            if (alpineData.logs.length > 500) {
-              alpineData.logs.pop();
-            }
-          }
-        } catch(err) {}
-      });
-      
-      es.addEventListener('error', function() {
-        console.log('SSE connection closed');
-      });
-    });
-  
+  <!-- Table -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <!-- Loading State -->
+    <div x-show="loading && !allLogs.length" style="display:flex;align-items:center;justify-content:center;padding:48px">
+      <div class="spinner"></div>
+    </div>
 
-</script>
+    <!-- Empty State -->
+    <div x-show="!loading && filteredLogs.length === 0" style="padding:48px;text-align:center">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 12px;opacity:0.4">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      <p style="font-size:13px;color:var(--fg-3)" x-text="filter ? 'No logs match your filter' : 'No requests logged yet'"></p>
+    </div>
+
+    <!-- Table Content -->
+    <div x-show="!loading || allLogs.length" x-cloak style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr style="background:var(--bg-body)">
+            <th style="text-align:left;padding:12px 16px;font-weight:500;color:var(--fg-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px;width:120px">Time</th>
+            <th style="text-align:left;padding:12px 16px;font-weight:500;color:var(--fg-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px">Provider</th>
+            <th style="text-align:left;padding:12px 16px;font-weight:500;color:var(--fg-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px">Model</th>
+            <th style="text-align:left;padding:12px 16px;font-weight:500;color:var(--fg-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px;width:80px">Status</th>
+            <th style="text-align:left;padding:12px 16px;font-weight:500;color:var(--fg-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px;width:90px">Latency</th>
+            <th style="text-align:left;padding:12px 16px;font-weight:500;color:var(--fg-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px;width:80px">Input</th>
+            <th style="text-align:left;padding:12px 16px;font-weight:500;color:var(--fg-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px;width:80px">Output</th>
+            <th style="text-align:left;padding:12px 16px;font-weight:500;color:var(--fg-3);font-size:11px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px">Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-if="paginatedLogs.length === 0 && !loading">
+            <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--fg-3)">No logs on this page</td></tr>
+          </template>
+          <template x-for="(log, i) in paginatedLogs" :key="i">
+            <tr :style="'border-bottom:1px solid var(--border);transition:background 0.1s ease;background:' + (i % 2 === 0 ? 'transparent' : 'var(--bg-body)')">
+              <td style="padding:12px 16px;vertical-align:middle">
+                <span style="font-size:12px;color:var(--fg-3)" x-text="timeAgo(log.created_at)"></span>
+              </td>
+              <td style="padding:12px 16px;vertical-align:middle">
+                <span style="font-size:12px;font-weight:500;padding:3px 10px;border-radius:9999px;background:var(--primary-light);color:var(--primary)" x-text="log.provider || '—'"></span>
+              </td>
+              <td style="padding:12px 16px;vertical-align:middle">
+                <code style="font-family:var(--mono);font-size:12px;color:var(--fg-2);background:var(--bg-body);padding:3px 8px;border-radius:4px" x-text="modelName(log.model)"></code>
+              </td>
+              <td style="padding:12px 16px;vertical-align:middle">
+                <span :style="'font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:' + (log.status < 400 ? 'var(--success-light)' : 'var(--error-light)') + ';color:' + (log.status < 400 ? 'var(--success)' : 'var(--error)')" x-text="log.status || '—'"></span>
+              </td>
+              <td style="padding:12px 16px;vertical-align:middle">
+                <code :style="'font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:4px;color:' + (log.latency_ms > 5000 ? 'var(--error)' : log.latency_ms > 2000 ? 'var(--warning)' : 'var(--fg-2)') + ';background:var(--bg-body)'" x-text="log.latency_ms < 10 ? '<10ms' : (log.latency_ms || 0) + 'ms'"></code>
+              </td>
+              <td style="padding:12px 16px;vertical-align:middle">
+                <code style="font-family:var(--mono);font-size:12px;color:var(--fg-2);background:var(--bg-body);padding:3px 8px;border-radius:4px" x-text="log.input_tokens ? fmtNum(log.input_tokens) : '—'"></code>
+              </td>
+              <td style="padding:12px 16px;vertical-align:middle">
+                <code style="font-family:var(--mono);font-size:12px;color:var(--fg-2);background:var(--bg-body);padding:3px 8px;border-radius:4px" x-text="log.output_tokens ? fmtNum(log.output_tokens) : '—'"></code>
+              </td>
+              <td style="padding:12px 16px;vertical-align:middle;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                <span style="font-size:12px;color:var(--error)" x-show="log.error" x-text="log.error"></span>
+                <span x-show="!log.error" style="font-size:12px;color:var(--fg-3)">—</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination Footer -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:0 4px">
+    <span style="font-size:12px;color:var(--fg-3)" x-text="filteredLogs.length === 0 ? 'No entries' : 'Showing ' + paginatedLogs.length + ' of ' + filteredLogs.length + ' entries'"></span>
+    <div x-show="totalPages > 1" style="display:flex;align-items:center;gap:6px">
+      <button @click="page = Math.max(1, page - 1)" :disabled="page === 1" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--fg-2);cursor:pointer">&#8592;</button>
+      <span style="font-size:12px;color:var(--fg-2);padding:0 8px" x-text="'Page ' + page + ' of ' + totalPages"></span>
+      <button @click="page = Math.min(totalPages, page + 1)" :disabled="page === totalPages" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--fg-2);cursor:pointer">&#8594;</button>
+    </div>
+    <span x-show="totalPages <= 1" style="font-size:12px;color:var(--fg-3)">&nbsp;</span>
+  </div>
 </div>
+
+<script>
+function logsApp() {
+  return {
+    allLogs: [],
+    loading: true,
+    filter: '',
+    level: 'all',
+    page: 1,
+    perPage: 25,
+    sseConnected: false,
+    es: null,
+
+    get filteredLogs() {
+      let logs = this.allLogs;
+      if (this.level !== 'all') {
+        logs = logs.filter(l => l.level === this.level);
+      }
+      if (this.filter) {
+        const q = this.filter.toLowerCase();
+        logs = logs.filter(l => {
+          return (l.provider || '').toLowerCase().includes(q) ||
+                 (l.model || '').toLowerCase().includes(q) ||
+                 (String(l.status) || '').toLowerCase().includes(q) ||
+                 (l.error || '').toLowerCase().includes(q) ||
+                 (l.message || '').toLowerCase().includes(q);
+        });
+      }
+      return logs;
+    },
+
+    get totalPages() {
+      return Math.max(1, Math.ceil(this.filteredLogs.length / this.perPage));
+    },
+
+    get paginatedLogs() {
+      const p = Math.min(this.page, this.totalPages);
+      return this.filteredLogs.slice((p - 1) * this.perPage, p * this.perPage);
+    },
+
+    get successCount() {
+      return this.allLogs.filter(l => (l.status || 0) < 400).length;
+    },
+
+    get errorCount() {
+      return this.allLogs.filter(l => (l.status || 0) >= 400).length;
+    },
+
+    get avgLatency() {
+      const logs = this.allLogs.filter(l => l.latency_ms > 0);
+      if (!logs.length) return 0;
+      return Math.round(logs.reduce((s, l) => s + l.latency_ms, 0) / logs.length);
+    },
+
+    init() {
+      window.logsScope = this;
+      this.fetchLogs();
+      this.connectSSE();
+      setTimeout(() => this.init(), 30000);
+    },
+
+    async fetchLogs() {
+      try {
+        const r = await fetch('/api/logs?limit=100', { credentials: 'include' });
+        if (r.ok) {
+          const d = await r.json();
+          this.allLogs = d.data || d || [];
+          this.loading = false;
+        }
+      } catch(e) {
+        console.error('Logs fetch failed', e);
+        this.loading = false;
+      }
+    },
+
+    refresh() {
+      this.loading = true;
+      this.fetchLogs();
+    },
+
+    connectSSE() {
+      if (this.es) {
+        this.es.close();
+      }
+      try {
+        this.es = new EventSource('/api/logs/stream');
+        this.es.addEventListener('message', (e) => {
+          try {
+            const log = JSON.parse(e.data);
+            this.allLogs.unshift(log);
+            if (this.allLogs.length > 500) {
+              this.allLogs.pop();
+            }
+          } catch(err) {}
+        });
+        this.es.addEventListener('error', () => {
+          this.sseConnected = false;
+          setTimeout(() => this.connectSSE(), 5000);
+        });
+        this.es.onopen = () => { this.sseConnected = true; };
+      } catch(e) {
+        console.error('SSE connect failed', e);
+      }
+    },
+
+    modelName(model) {
+      if (!model) return '—';
+      const parts = model.split('/');
+      return parts[parts.length - 1];
+    },
+
+    fmtNum(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return Math.round(n / 1000) + 'K';
+      return String(n);
+    },
+
+    timeAgo(ts) {
+      if (!ts) return '—';
+      const d = Date.now() - new Date(ts).getTime();
+      if (d < 60000) return 'just now';
+      if (d < 3600000) return Math.floor(d / 60000) + 'm ago';
+      if (d < 86400000) return Math.floor(d / 3600000) + 'h ago';
+      return Math.floor(d / 86400000) + 'd ago';
+    }
+  };
+}
+
+// Reset page on navigation
+document.addEventListener('alpine:init', () => {});
+</script>
+
+<style>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes dotPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.7} }
+</style>

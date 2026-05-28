@@ -1,75 +1,724 @@
-<div>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--fg-0);margin:0 0 4px;display:flex;align-items:center;gap:8px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        Documentation
-      </h1>
-      <p style="font-size:13px;color:var(--fg-2);margin:0">Learn how to use Lintasan for AI model routing and management.</p>
-    </div>
-  </div>
+<div x-data="{ activeSection: 'getting-started', lang: 'en' }" x-cloak>
+  <style>
+    /* Docs page custom styles */
+    .docs-container{display:flex;gap:24px;min-height:calc(100vh - 140px)}
+    .docs-sidebar{width:220px;flex-shrink:0;overflow-y:auto;padding:16px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);position:sticky;top:84px;max-height:calc(100vh - 110px)}
+    .docs-sidebar-label{font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px}
+    .lang-switcher{display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);margin-left:auto}
+    .lang-btn{padding:4px 10px;font-size:11px;font-weight:600;border:none;cursor:pointer;outline:none}
+    .lang-btn.en{background:var(--primary);color:#fff}
+    .lang-btn.en.inactive{background:var(--bg-body);color:var(--fg-3)}
+    .lang-btn.id.inactive{background:var(--bg-body);color:var(--fg-3)}
+    .lang-btn.id{background:var(--primary);color:#fff}
+    .nav-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:8px 12px;margin-bottom:2px;background:transparent;color:var(--fg-2);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:400;cursor:pointer;transition:all var(--transition)}
+    .nav-item:hover{background:var(--bg-body)}
+    .nav-item.active{background:var(--primary-light);color:var(--primary);font-weight:600}
+    .nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border);transition:background var(--transition)}
+    .nav-item.active .nav-dot{background:currentColor}
+    .docs-content{flex:1;overflow-y:auto;padding:0 8px;min-width:0}
+    .doc-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden}
+    .doc-card-hdr{display:flex;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid var(--border)}
+    .doc-icon-badge{width:36px;height:36px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .doc-card-title{font-size:16px;font-weight:700;color:var(--fg-0);margin:0}
+    .doc-card-subtitle{font-size:12px;color:var(--fg-3);margin:2px 0 0}
+    .doc-card-body{padding:20px 24px}
+    .doc-p{font-size:13px;color:var(--fg-1);line-height:1.7;margin-bottom:10px}
+    .doc-h3{font-size:14px;font-weight:600;color:var(--fg-0);margin-top:20px;margin-bottom:8px}
+    .doc-pre{background:var(--bg-body);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;font-size:12px;font-family:var(--mono);color:var(--fg-1);overflow-x:auto;margin-bottom:16px;line-height:1.6;white-space:pre-wrap}
+    .doc-tip{border-left:3px solid var(--primary);background:var(--primary-light);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:12px 16px;margin-bottom:16px}
+    .doc-tip strong{color:var(--primary);font-size:11px;text-transform:uppercase;letter-spacing:0.3px}
+    .doc-tip p{margin:4px 0 0;font-size:13px;color:var(--fg-1);line-height:1.6}
+    .doc-warning{border-left:3px solid var(--warning);background:var(--warning-light);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:12px 16px;margin-bottom:16px}
+    .doc-warning strong{color:var(--warning);font-size:11px;text-transform:uppercase;letter-spacing:0.3px}
+    .doc-warning p{margin:4px 0 0;font-size:13px;color:var(--fg-1);line-height:1.6}
+    .doc-step{display:flex;gap:12px;margin-bottom:14px}
+    .doc-step-num{width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+    .doc-step-title{font-size:13px;font-weight:600;color:var(--fg-0);margin:0}
+    .doc-step-desc{font-size:12px;color:var(--fg-2);line-height:1.6;margin:2px 0 0}
+    .doc-feature{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:var(--bg-body);border-radius:var(--radius-sm);margin-bottom:6px;border:1px solid var(--border)}
+    .doc-feature-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);margin-top:6px;flex-shrink:0}
+    .doc-feature-label{font-size:13px;font-weight:600;color:var(--fg-0);margin:0}
+    .doc-feature-desc{font-size:12px;color:var(--fg-3);margin:2px 0 0}
+    .doc-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:9999px;font-weight:500;margin-right:6px}
+    .doc-badge-primary{background:var(--primary-light);color:var(--primary)}
+    .doc-badge-success{background:var(--success-light);color:var(--success)}
+    .doc-badge-warning{background:var(--warning-light);color:var(--warning)}
+    .doc-badge-error{background:var(--error-light);color:var(--error)}
+    .doc-badge-info{background:var(--info-light);color:var(--info)}
+    .doc-badge-purple{background:var(--purple-light);color:var(--purple)}
+    .doc-badge-fg{background:var(--bg-body);color:var(--fg-3)}
 
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
-    <!-- Sidebar nav -->
-    <div style="grid-column:span 1">
-      <nav class="card" style="padding:12px">
-        <a href="#getting-started" style="display:block;padding:4px 0;font-size:13px;color:var(--fg-2);text-decoration:none">Getting Started</a>
-        <a href="#configuration" style="display:block;padding:4px 0;font-size:13px;color:var(--fg-2);text-decoration:none">Configuration</a>
-        <a href="#api-reference" style="display:block;padding:4px 0;font-size:13px;color:var(--fg-2);text-decoration:none">API Reference</a>
-        <a href="#routing" style="display:block;padding:4px 0;font-size:13px;color:var(--fg-2);text-decoration:none">Routing</a>
-        <a href="#fallback" style="display:block;padding:4px 0;font-size:13px;color:var(--fg-2);text-decoration:none">Fallback Chains</a>
-        <a href="#caching" style="display:block;padding:4px 0;font-size:13px;color:var(--fg-2);text-decoration:none">Caching</a>
-      </nav>
+    @media(max-width:768px){
+      .docs-container{flex-direction:column}
+      .docs-sidebar{width:100%;position:static;max-height:none;margin-bottom:16px}
+    }
+  </style>
+
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <div class="docs-sidebar">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <p class="docs-sidebar-label">Documentation</p>
+        <div class="lang-switcher">
+          <button class="lang-btn en" :class="lang === 'en' ? 'en' : 'en inactive'" @click="lang = 'en'">EN</button>
+          <button class="lang-btn" :class="lang === 'id' ? 'id' : 'id inactive'" @click="lang = 'id'" style="border-left:1px solid var(--border)">ID</button>
+        </div>
+      </div>
+
+      <!-- 19 nav items -->
+      <button class="nav-item" :class="{ active: activeSection === 'getting-started' }" @click="activeSection = 'getting-started'">
+        <span class="nav-dot" :style="activeSection === 'getting-started' ? 'background: var(--primary)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Getting Started' : 'Memulai'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'models' }" @click="activeSection = 'models'">
+        <span class="nav-dot" :style="activeSection === 'models' ? 'background: var(--purple)' : ''"></span>
+        <span>Models</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'routing' }" @click="activeSection = 'routing'">
+        <span class="nav-dot" :style="activeSection === 'routing' ? 'background: var(--info)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Routing' : 'Routing'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'api-keys' }" @click="activeSection = 'api-keys'">
+        <span class="nav-dot" :style="activeSection === 'api-keys' ? 'background: var(--primary)' : ''"></span>
+        <span x-text="lang === 'en' ? 'API Keys' : 'Kunci API'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'teams' }" @click="activeSection = 'teams'">
+        <span class="nav-dot" :style="activeSection === 'teams' ? 'background: var(--info)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Teams' : 'Tim'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'users' }" @click="activeSection = 'users'">
+        <span class="nav-dot" :style="activeSection === 'users' ? 'background: var(--info)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Users' : 'Pengguna'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'webhooks' }" @click="activeSection = 'webhooks'">
+        <span class="nav-dot" :style="activeSection === 'webhooks' ? 'background: var(--warning)' : ''"></span>
+        <span>Webhooks</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'settings' }" @click="activeSection = 'settings'">
+        <span class="nav-dot" :style="activeSection === 'settings' ? 'background: var(--primary)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Settings' : 'Pengaturan'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'playground' }" @click="activeSection = 'playground'">
+        <span class="nav-dot" :style="activeSection === 'playground' ? 'background: var(--success)' : ''"></span>
+        <span>Playground</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'backup' }" @click="activeSection = 'backup'">
+        <span class="nav-dot" :style="activeSection === 'backup' ? 'background: var(--success)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Backup' : 'Cadangan'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'plugins' }" @click="activeSection = 'plugins'">
+        <span class="nav-dot" :style="activeSection === 'plugins' ? 'background: var(--purple)' : ''"></span>
+        <span>Plugins</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'logs' }" @click="activeSection = 'logs'">
+        <span class="nav-dot" :style="activeSection === 'logs' ? 'background: var(--fg-2)' : ''"></span>
+        <span>Logs</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'fallback' }" @click="activeSection = 'fallback'">
+        <span class="nav-dot" :style="activeSection === 'fallback' ? 'background: var(--error)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Fallback' : 'Fallback'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'usage' }" @click="activeSection = 'usage'">
+        <span class="nav-dot" :style="activeSection === 'usage' ? 'background: var(--info)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Usage' : 'Pemakaian'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'analytics' }" @click="activeSection = 'analytics'">
+        <span class="nav-dot" :style="activeSection === 'analytics' ? 'background: var(--info)' : ''"></span>
+        <span>Analytics</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'caching' }" @click="activeSection = 'caching'">
+        <span class="nav-dot" :style="activeSection === 'caching' ? 'background: var(--success)' : ''"></span>
+        <span>Caching</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'caveman' }" @click="activeSection = 'caveman'">
+        <span class="nav-dot" :style="activeSection === 'caveman' ? 'background: var(--error)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Caveman' : 'Caveman'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'errors' }" @click="activeSection = 'errors'">
+        <span class="nav-dot" :style="activeSection === 'errors' ? 'background: var(--error)' : ''"></span>
+        <span x-text="lang === 'en' ? 'Errors' : 'Error'"></span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'faq' }" @click="activeSection = 'faq'">
+        <span class="nav-dot" :style="activeSection === 'faq' ? 'background: var(--fg-3)' : ''"></span>
+        <span>FAQ</span>
+      </button>
     </div>
 
     <!-- Content -->
-    <div style="grid-column:span 3">
-      <section id="getting-started" class="card" style="margin-bottom:16px">
-        <h2 style="font-size:13px;font-weight:600;color:var(--fg-1);margin-bottom:12px">Getting Started</h2>
-        <p style="font-size:13px;color:var(--fg-2);margin-bottom:12px">Lintasan is a lightweight AI model gateway that routes requests across multiple providers. It supports OpenAI, Anthropic, Google, Groq, Ollama, and any OpenAI-compatible endpoint.</p>
-        <h3 style="font-size:12px;font-weight:600;color:var(--fg-1);margin-bottom:8px">Quick Start</h3>
-        <pre style="background:var(--color-bg-input);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto"><code># Set your master key
-export LINTASAN_MASTER_KEY="your-secret-key"
+    <div class="docs-content">
+      <!-- ====== 1. GETTING STARTED ====== -->
+      <div x-show="activeSection === 'getting-started'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(60,80,224,0.04);">
+            <div class="doc-icon-badge" style="background:var(--primary-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Getting Started' : 'Memulai'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Overview of every page in Lintasan' : 'Gambaran semua halaman di Lintasan'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <p class="doc-p" x-text="lang === 'en' ? 'Everything is manageable from the UI. No terminal needed.' : 'Semua bisa dikelola dari UI. Tidak perlu terminal.'"></p>
+          </div>
+        </div>
 
-# Run the server
-./lintasan-go
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Overview</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Real-time stats: requests today, active connections, cache hit rate, token usage.' : 'Statistik real-time: request hari ini, koneksi aktif, cache hit rate, pemakaian token.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Connections</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Add LLM providers. 26 presets available. Click to expand and see discovered models.' : 'Tambah provider LLM. 26 preset tersedia. Klik untuk expand dan lihat model yang ditemukan.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Routing</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Combos (model sequences), load balancer strategy, and model aliases.' : 'Combo (urutan model), strategi load balancer, dan alias model.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Playground</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Test any model from the browser. Pick model, type message, see response.' : 'Test model apapun dari browser. Pilih model, ketik pesan, lihat respons.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Logs</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Every request logged: model, provider, latency, tokens, cache status. Paginated.' : 'Semua request tercatat: model, provider, latensi, token, status cache. Berpaginasi.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Usage</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Token breakdown by provider/model. Daily and monthly charts.' : 'Rincian token per provider/model. Grafik harian dan bulanan.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">API Keys</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Create keys for different tools/users. Per-key usage tracking. Revoke anytime.' : 'Buat key untuk tool/user berbeda. Tracking pemakaian per key. Cabut kapan saja.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Settings</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Toggle all features: RTK, Caveman, cache, rate limits, master key.' : 'Toggle semua fitur: RTK, Caveman, cache, rate limit, master key.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Docs</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'You are here. Reference for all features and API endpoints.' : 'Kamu di sini. Referensi semua fitur dan endpoint API.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Webhooks</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Get notified when budgets run low, providers go down, or anomalies occur.' : 'Dapat notifikasi saat budget menipis, provider down, atau terjadi anomali.'"></p></div></div>
+        <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Teams &amp; Users</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Role-based access control. Group users into teams with shared API keys.' : 'Kontrol akses berbasis role. Kelompokkan user ke tim dengan API key bersama.'"></p></div></div>
+      </div>
 
-# Access dashboard at http://localhost:8080/dashboard</code></pre>
-      </section>
+      <!-- ====== 2. MODELS ====== -->
+      <div x-show="activeSection === 'models'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(139,92,246,0.04);">
+            <div class="doc-icon-badge" style="background:var(--purple-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title">Models</h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Auto-discovered from connected providers' : 'Otomatis ditemukan dari provider yang terhubung'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'How it works' : 'Cara kerja'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'When you add a provider, Lintasan calls its /models endpoint and imports all available models. They appear as chips on the connection card and in the Playground dropdown.' : 'Saat kamu tambah provider, Lintasan memanggil endpoint /models dan mengimpor semua model yang tersedia. Muncul sebagai chip di kartu koneksi dan dropdown Playground.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Re-sync models' : 'Sync ulang model'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Click the refresh icon on any connection card, or use Sync All to refresh everything at once.' : 'Klik ikon refresh di kartu koneksi manapun, atau gunakan Sync All untuk refresh semuanya sekaligus.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Same model, multiple providers' : 'Model sama, banyak provider'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'If the same model exists on multiple connections, Lintasan picks the highest-priority connection first. If it fails, falls back to the other.' : 'Jika model yang sama ada di beberapa koneksi, Lintasan pilih koneksi prioritas tertinggi dulu. Kalau gagal, otomatis fallback ke yang lain.'"></p>
+            <div class="doc-tip"><strong>Tip</strong><p x-text="lang === 'en' ? 'Control priority by reordering connections. Higher in the list = higher priority.' : 'Atur prioritas dengan mengurutkan ulang koneksi. Lebih atas = prioritas lebih tinggi.'"></p></div>
+            <div class="doc-warning"><strong>Note</strong><p x-text="lang === 'en' ? 'Some providers (CommandCode, Anthropic) have no /models endpoint. Lintasan uses built-in known model lists for these.' : 'Beberapa provider (CommandCode, Anthropic) tidak punya endpoint /models. Lintasan pakai daftar model bawaan untuk ini.'"></p></div>
+          </div>
+        </div>
+      </div>
 
-      <section id="configuration" class="card" style="margin-bottom:16px">
-        <h2 style="font-size:13px;font-weight:600;color:var(--fg-1);margin-bottom:12px">Configuration</h2>
-        <p style="font-size:13px;color:var(--fg-2);margin-bottom:12px">All configuration is done through the dashboard UI. No config files needed. Settings are stored in SQLite and persist across restarts.</p>
-        <ul style="font-size:13px;color:var(--fg-2);list-style:disc;padding-left:20px;display:flex;flex-direction:column;gap:4px">
-          <li><strong>Master Key:</strong> Protects your dashboard and API.</li>
-          <li><strong>Cache TTL:</strong> How long responses are cached.</li>
-          <li><strong>Rate Limits:</strong> Per-key and per-model limits.</li>
-        </ul>
-      </section>
+      <!-- ====== 3. ROUTING ====== -->
+      <div x-show="activeSection === 'routing'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(59,130,246,0.04);">
+            <div class="doc-icon-badge" style="background:var(--info-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Smart Routing' : 'Smart Routing'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Automatic provider selection with fallback and load balancing' : 'Pemilihan provider otomatis dengan fallback dan load balancing'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Routing Flow' : 'Alur Routing'"></h3>
+            <pre class="doc-pre" x-text="lang === 'en' ? 'Request -> Check aliases -> Check combos -> Find connections\n  -> Filter (quota OK, circuit closed)\n  -> Load balance (strategy)\n  -> Execute with retry\n  -> On failure: next connection\n  -> On success: cache + track quota' : 'Request masuk -> Cek alias -> Cek combo -> Cari koneksi\n  -> Filter (kuota OK, circuit tertutup)\n  -> Load balance (strategi)\n  -> Eksekusi dengan retry\n  -> Kalau gagal: koneksi berikutnya\n  -> Kalau berhasil: cache + catat kuota'"></pre>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Load Balance Strategies' : 'Strategi Load Balance'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Priority (default)' : 'Prioritas (default)'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Always uses highest-priority connection first' : 'Selalu pakai koneksi prioritas tertinggi dulu'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Round-robin</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Rotates evenly across all connections' : 'Rotasi merata ke semua koneksi'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Least-connections</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Picks connection with fewest active requests' : 'Pilih koneksi dengan request aktif paling sedikit'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Random</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Random selection' : 'Pilihan acak'"></p></div></div>
+            <h3 class="doc-h3">Circuit Breaker</h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'After 3 consecutive failures, connection is skipped for 30 seconds. Auto-recovers after cooldown.' : 'Setelah 3 kegagalan berturut-turut, koneksi dilewati selama 30 detik. Otomatis pulih setelah cooldown.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Model Aliases (set from Routing page)' : 'Alias Model (atur dari halaman Routing)'"></h3>
+            <pre class="doc-pre">"gpt4"   -> gpt-4o
+"claude" -> claude-sonnet-4-20250514
+"ds"     -> deepseek/deepseek-v4-pro</pre>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Combo Mode' : 'Mode Combo'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Create a sequence of models. If one fails or hits quota, it automatically tries the next. Zero downtime.' : 'Buat urutan model. Kalau satu gagal atau kena kuota, otomatis coba yang berikutnya. Zero downtime.'"></p>
+            <pre class="doc-pre" x-show="lang === 'en'">"coding"     -> deepseek-v4-pro -> kimi-k2.6 -> qwen3-coder
+"cheap"      -> minimax-m2.7 -> glm-4.7 -> qwen3-coder
+"always-on"  -> deepseek -> kimi -> glm -> minimax -> qwen</pre>
+            <pre class="doc-pre" x-show="lang !== 'en'">"coding"     -> deepseek-v4-pro -> kimi-k2.6 -> qwen3-coder
+"cheap"      -> minimax-m2.7 -> glm-4.7 -> qwen3-coder
+"always-on"  -> deepseek -> kimi -> glm -> minimax -> qwen</pre>
+            <div class="doc-tip"><strong>Tip</strong><p x-text="lang === 'en' ? 'Use combo names as your model in any tool. They show up in /v1/models like regular models.' : 'Pakai nama combo sebagai model di tool apapun. Muncul di /v1/models seperti model biasa.'"></p></div>
+          </div>
+        </div>
+      </div>
 
-      <section id="api-reference" class="card" style="margin-bottom:16px">
-        <h2 style="font-size:13px;font-weight:600;color:var(--fg-1);margin-bottom:12px">API Reference</h2>
-        <p style="font-size:13px;color:var(--fg-2);margin-bottom:12px">Lintasan exposes an OpenAI-compatible API at <code>/v1/chat/completions</code>. Use your API key in the <code>Authorization: Bearer</code> header.</p>
-        <pre style="background:var(--color-bg-input);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto"><code>curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer *** \
-  -H "Content-Type: application/json" \
-  -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'</code></pre>
-      </section>
+      <!-- ====== 4. API KEYS ====== -->
+      <div x-show="activeSection === 'api-keys'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(60,80,224,0.04);">
+            <div class="doc-icon-badge" style="background:var(--primary-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'API Keys' : 'Kunci API'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Create and manage keys for different tools and users' : 'Buat dan kelola key untuk berbagai tool dan user'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Master Key' : 'Master Key'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Your master key is on the Settings page. Copy it and use as API key in any tool. This key has full administrative access.' : 'Master key ada di halaman Settings. Copy dan pakai sebagai API key di tool apapun. Key ini punya akses administratif penuh.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Create API Keys' : 'Buat API Key'"></h3>
+            <div class="doc-step"><div class="doc-step-num">1</div><div><p class="doc-step-title" x-text="lang === 'en' ? 'Go to API Keys page' : 'Buka halaman API Keys'"></p><p class="doc-step-desc" x-text="lang === 'en' ? 'Click API Keys in the sidebar.' : 'Klik API Keys di sidebar.'"></p></div></div>
+            <div class="doc-step"><div class="doc-step-num">2</div><div><p class="doc-step-title" x-text="lang === 'en' ? 'Create New Key' : 'Buat Key Baru'"></p><p class="doc-step-desc" x-text="lang === 'en' ? 'Click Create Key, give it a name, set rate limits and quota if needed.' : 'Klik Create Key, beri nama, atur rate limit dan kuota jika perlu.'"></p></div></div>
+            <div class="doc-step"><div class="doc-step-num">3</div><div><p class="doc-step-title" x-text="lang === 'en' ? 'Use the Key' : 'Pakai Key'"></p><p class="doc-step-desc" x-text="lang === 'en' ? 'Copy the generated key and use it in your tools. Keys can be revoked at any time.' : 'Copy key yang dihasilkan dan pakai di tool kamu. Key bisa dicabut kapan saja.'"></p></div></div>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Per-Key Tracking' : 'Tracking Per-Key'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Usage page shows token consumption per API key. Helps with attribution and cost tracking.' : 'Halaman Usage menampilkan konsumsi token per API key. Membantu atribusi dan tracking biaya.'"></p>
+            <pre class="doc-pre">POST /api/keys        # create key
+GET  /api/keys        # list all keys
+DELETE /api/keys/[id] # revoke key</pre>
+          </div>
+        </div>
+      </div>
 
-      <section id="routing" class="card" style="margin-bottom:16px">
-        <h2 style="font-size:13px;font-weight:600;color:var(--fg-1);margin-bottom:12px">Routing</h2>
-        <p style="font-size:13px;color:var(--fg-2)">Configure routing priorities to control which provider handles requests for each model. Higher priority providers are tried first. Use the Routing page to drag and drop provider order.</p>
-      </section>
+      <!-- ====== 5. TEAMS ====== -->
+      <div x-show="activeSection === 'teams'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(59,130,246,0.04);">
+            <div class="doc-icon-badge" style="background:var(--info-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Teams' : 'Tim'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Group users into teams with shared API keys' : 'Kelompokkan user ke dalam tim dengan API key bersama'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Overview' : 'Gambaran'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Group users into teams. Team API keys are shared among all members. Usage is tracked per-team for billing visibility.' : 'Kelompokkan user ke dalam tim. API key tim dibagi ke semua anggota. Usage dilacak per-tim untuk visibilitas billing.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Team Roles' : 'Role Tim'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Owner</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Can manage team members and settings' : 'Bisa kelola anggota dan settings tim'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Member</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Can use team API keys' : 'Bisa pakai API key tim'"></p></div></div>
+            <pre class="doc-pre">GET/POST         /api/teams
+GET/PUT/DELETE   /api/teams/[id]
+GET/POST/DELETE  /api/teams/[id]/members</pre>
+          </div>
+        </div>
+      </div>
 
-      <section id="fallback" class="card" style="margin-bottom:16px">
-        <h2 style="font-size:13px;font-weight:600;color:var(--fg-1);margin-bottom:12px">Fallback Chains</h2>
-        <p style="font-size:13px;color:var(--fg-2)">Fallback chains define a sequence of providers to try when the primary provider fails. Create chains that step through providers in order until one succeeds.</p>
-      </section>
+      <!-- ====== 6. USERS ====== -->
+      <div x-show="activeSection === 'users'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(59,130,246,0.04);">
+            <div class="doc-icon-badge" style="background:var(--info-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Users' : 'Pengguna'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Multi-user access control with roles' : 'Kontrol akses multi-user dengan role'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'User Roles' : 'Role User'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Admin</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Full access — manage users, teams, settings, connections' : 'Akses penuh — kelola user, tim, settings, koneksi'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Editor</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Manage connections, keys, combos — cannot manage users' : 'Kelola koneksi, key, combo — tidak bisa kelola user'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Viewer</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Read-only dashboard access' : 'Akses dashboard read-only'"></p></div></div>
+            <pre class="doc-pre">GET/POST         /api/users
+PUT/DELETE       /api/users/[id]</pre>
+          </div>
+        </div>
+      </div>
 
-      <section id="caching" class="card" style="margin-bottom:16px">
-        <h2 style="font-size:13px;font-weight:600;color:var(--fg-1);margin-bottom:12px">Caching</h2>
-        <p style="font-size:13px;color:var(--fg-2)">Lintasan can cache LLM responses to reduce costs and latency. Configure cache behavior in Settings. Cached responses are served instantly without calling upstream providers.</p>
-      </section>
-    </div>
-  </div>
+      <!-- ====== 7. WEBHOOKS ====== -->
+      <div x-show="activeSection === 'webhooks'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(245,158,11,0.04);">
+            <div class="doc-icon-badge" style="background:var(--warning-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Webhook Notifications' : 'Notifikasi Webhook'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Get alerted when things go wrong' : 'Dapat notifikasi saat ada masalah'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Event Types' : 'Tipe Event'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">budget_warning</p><p class="doc-feature-desc" x-text="lang === 'en' ? '80% of token budget used' : '80% budget token terpakai'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">budget_exhausted</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Token budget fully consumed' : 'Budget token habis'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">provider_down</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Circuit breaker opened for a provider' : 'Circuit breaker terbuka untuk provider'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">provider_recovered</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Provider back online' : 'Provider kembali online'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">anomaly_detected</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Sudden spike in errors or latency' : 'Lonjakan tiba-tiba di error atau latency'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">high_latency</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'p95 latency exceeds threshold' : 'Latency p95 melebihi threshold'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">cache_hit_rate_low</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Cache effectiveness dropping' : 'Efektivitas cache menurun'"></p></div></div>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Security' : 'Keamanan'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Each webhook has a secret. Payloads are signed with HMAC-SHA256 — verify the X-Signature header to confirm authenticity.' : 'Setiap webhook punya secret. Payload ditandatangani dengan HMAC-SHA256 — verifikasi header X-Signature untuk konfirmasi keaslian.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Retry Logic' : 'Logika Retry'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Failed deliveries retry 3 times with exponential backoff (1s, 2s, 4s).' : 'Pengiriman gagal retry 3 kali dengan exponential backoff (1s, 2s, 4s).'"></p>
+            <pre class="doc-pre">GET    /api/webhooks              # list + history
+POST   /api/webhooks              # register new
+PUT    /api/webhooks              # update
+DELETE /api/webhooks              # remove
+POST   /api/webhooks?action=test&id=ID  # send test</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 8. SETTINGS ====== -->
+      <div x-show="activeSection === 'settings'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(60,80,224,0.04);">
+            <div class="doc-icon-badge" style="background:var(--primary-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Settings' : 'Pengaturan'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Configure all Lintasan features from one page' : 'Konfigurasi semua fitur Lintasan dari satu halaman'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Master Key' : 'Master Key'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Protects your dashboard and API. Use this key as the Bearer token in all API requests.' : 'Melindungi dashboard dan API kamu. Pakai key ini sebagai Bearer token di semua request API.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Rate Limits' : 'Rate Limit'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Maximum requests per minute per API key. Set to 0 for unlimited.' : 'Maksimum request per menit per API key. Set ke 0 untuk unlimited.'"></p>
+            <h3 class="doc-h3">RTK &amp; Caveman</h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Toggle token compression features. RTK compresses inputs, Caveman compresses outputs. See the Caveman section for details.' : 'Toggle fitur kompresi token. RTK kompres input, Caveman kompres output. Lihat bagian Caveman untuk detail.'"></p>
+            <h3 class="doc-h3">Caching</h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Enable exact match, semantic, and stream caching. Greatly reduces costs for repeated queries.' : 'Aktifkan exact match, semantic, dan stream caching. Sangat mengurangi biaya untuk query berulang.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Thinking Mode' : 'Mode Thinking'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Controls whether the AI uses extended reasoning before responding. Auto, Enabled, or Disabled.' : 'Kontrol apakah AI menggunakan extended reasoning sebelum merespons. Auto, Enabled, atau Disabled.'"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 9. PLAYGROUND ====== -->
+      <div x-show="activeSection === 'playground'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(16,185,129,0.04);">
+            <div class="doc-icon-badge" style="background:var(--success-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title">Playground</h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Test models directly from the browser' : 'Test model langsung dari browser'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'How to use' : 'Cara pakai'"></h3>
+            <div class="doc-step"><div class="doc-step-num">1</div><div><p class="doc-step-title" x-text="lang === 'en' ? 'Pick a model' : 'Pilih model'"></p><p class="doc-step-desc" x-text="lang === 'en' ? 'Select any discovered model or combo from the dropdown.' : 'Pilih model atau combo apapun dari dropdown.'"></p></div></div>
+            <div class="doc-step"><div class="doc-step-num">2</div><div><p class="doc-step-title" x-text="lang === 'en' ? 'Type your message' : 'Ketik pesan'"></p><p class="doc-step-desc" x-text="lang === 'en' ? 'Write your prompt in the input field. You can include system messages.' : 'Tulis prompt di input field. Kamu bisa tambahkan system message.'"></p></div></div>
+            <div class="doc-step"><div class="doc-step-num">3</div><div><p class="doc-step-title">Send</p><p class="doc-step-desc" x-text="lang === 'en' ? 'Hit Send and watch the streaming response. Adjust temperature and max tokens in settings.' : 'Tekan Send dan lihat respons streaming. Atur temperature dan max token di settings.'"></p></div></div>
+            <div class="doc-tip"><strong>Tip</strong><p x-text="lang === 'en' ? 'Use Playground to quickly test new models before integrating them into your workflow.' : 'Pakai Playground untuk test cepat model baru sebelum integrasi ke workflow.'"></p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 10. BACKUP ====== -->
+      <div x-show="activeSection === 'backup'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(16,185,129,0.04);">
+            <div class="doc-icon-badge" style="background:var(--success-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Backup &amp; Export' : 'Backup &amp; Export'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Protect your data and export analytics' : 'Lindungi data dan export analytics'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Backup' : 'Backup'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'One-click backup copies the entire SQLite database. Stored in data/backups/ with timestamps. Auto-backup can be scheduled via settings.' : 'Backup satu klik menyalin seluruh database SQLite. Disimpan di data/backups/ dengan timestamp. Auto-backup bisa dijadwalkan via settings.'"></p>
+            <h3 class="doc-h3">Export</h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Config JSON</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Settings, connections, combos, aliases, fallback chains' : 'Settings, koneksi, combo, alias, fallback chain'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Analytics CSV</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Request logs with date range filter' : 'Log request dengan filter rentang tanggal'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Full Export</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Everything in one JSON file' : 'Semua dalam satu file JSON'"></p></div></div>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Restore' : 'Restore'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Restore from any backup file. The current database is replaced — make sure to backup first!' : 'Restore dari file backup manapun. Database saat ini diganti — pastikan backup dulu!'"></p>
+            <pre class="doc-pre">GET  /api/export?type=config|analytics|keys|full
+GET  /api/export?type=analytics&format=csv&from=DATE&to=DATE
+
+GET  /api/backup          # list backups
+POST /api/backup          # create backup
+POST /api/backup?action=restore&file=FILENAME
+DELETE /api/backup?file=FILENAME</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 11. PLUGINS ====== -->
+      <div x-show="activeSection === 'plugins'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(139,92,246,0.04);">
+            <div class="doc-icon-badge" style="background:var(--purple-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Plugin System' : 'Sistem Plugin'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Extend Lintasan with custom middleware' : 'Extend Lintasan dengan middleware custom'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'How It Works' : 'Cara Kerja'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Place .js files in the /plugins/ directory. Each exports a plugin object with hooks. Plugins are hot-loadable — no restart needed.' : 'Taruh file .js di direktori /plugins/. Masing-masing export object plugin dengan hooks. Plugin hot-loadable — tidak perlu restart.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Plugin Structure' : 'Struktur Plugin'"></h3>
+            <pre class="doc-pre">// plugins/my-plugin.js
+export default {
+  name: "my-plugin",
+  version: "1.0.0",
+  description: "What it does",
+  priority: 10, // lower = runs first
+  hooks: {
+    beforeRequest(ctx) {
+      // modify ctx.messages, ctx.model, etc.
+    },
+    afterRequest(ctx, response) {
+      // log, transform response
+    },
+    onError(ctx, error) {
+      // handle errors
+    }
+  }
+};</pre>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Built-in Plugins' : 'Plugin Bawaan'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">request-logger</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Logs all requests with timing info' : 'Log semua request dengan info timing'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">content-filter</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Blocks requests with banned words (configurable)' : 'Blokir request dengan kata terlarang (configurable)'"></p></div></div>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Management' : 'Manajemen'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Enable/disable plugins from Dashboard → Plugins page, or via API:' : 'Enable/disable plugin dari Dashboard → halaman Plugins, atau via API:'"></p>
+            <pre class="doc-pre">GET  /api/plugins          # list all plugins
+POST /api/plugins          # { name, enabled: true/false }</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 12. LOGS ====== -->
+      <div x-show="activeSection === 'logs'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(100,116,139,0.04);">
+            <div class="doc-icon-badge" style="background:var(--bg-body)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--fg-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title">Logs</h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Request history and debugging' : 'Riwayat request dan debugging'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'What is logged' : 'Apa yang dicatat'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Every request is logged with: model used, provider, latency, input/output tokens, cache status (HIT/MISS), and HTTP status code. Data is stored in SQLite.' : 'Setiap request dicatat dengan: model yang dipakai, provider, latensi, token input/output, status cache (HIT/MISS), dan kode status HTTP. Data disimpan di SQLite.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Viewing Logs' : 'Melihat Log'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Dashboard → Logs page shows a paginated table. Filter by model, provider, date range, or search by request content.' : 'Dashboard → halaman Logs menampilkan tabel berpaginasi. Filter by model, provider, rentang tanggal, atau cari berdasarkan konten request.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'API Access' : 'Akses API'"></h3>
+            <pre class="doc-pre">GET /api/logs?page=1&limit=50&model=gpt-4o&from=2024-01-01&to=2024-12-31</pre>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Response Headers' : 'Response Headers'"></h3>
+            <pre class="doc-pre">X-Provider: CommandCode      # which connection handled it
+X-Cache: HIT|MISS|SEMANTIC   # cache status
+X-Latency: 234               # upstream latency (ms)
+X-Connection: conn-id        # connection ID used</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 13. FALLBACK ====== -->
+      <div x-show="activeSection === 'fallback'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(239,68,68,0.04);">
+            <div class="doc-icon-badge" style="background:var(--error-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Fallback Chains' : 'Fallback Chain'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Automatic failover when models or connections fail' : 'Failover otomatis saat model atau koneksi gagal'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'How it works' : 'Cara kerja'"></h3>
+            <pre class="doc-pre" x-show="lang === 'en'">Request with model: always-on
+  -> Try first model in sequence
+  -> If fails (error/timeout/quota) -> try next
+  -> Continue until one succeeds or all fail</pre>
+            <pre class="doc-pre" x-show="lang !== 'en'">Request dengan model: always-on
+  -> Coba model pertama di urutan
+  -> Kalau gagal (error/timeout/kuota) -> coba berikutnya
+  -> Lanjut sampai satu berhasil atau semua gagal</pre>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Model Fallback' : 'Fallback Model'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'If model A fails → try model B → try model C. Triggers: timeout, 5xx errors, 429 rate limit, circuit breaker open.' : 'Jika model A gagal → coba model B → coba model C. Trigger: timeout, error 5xx, 429 rate limit, circuit breaker open.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Connection Fallback' : 'Fallback Koneksi'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'If connection 1 fails → try connection 2 → try connection 3. Works independently from model fallback.' : 'Jika koneksi 1 gagal → coba koneksi 2 → coba koneksi 3. Bekerja independen dari fallback model.'"></p>
+            <h3 class="doc-h3">Sticky Round-Robin</h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Combos stick to the last successful model for 3 requests before rotating. Set sticky limit to 0 for pure round-robin.' : 'Combo tetap di model terakhir yang berhasil selama 3 request sebelum rotasi. Set sticky limit ke 0 untuk round-robin murni.'"></p>
+            <div class="doc-tip"><strong>Tip</strong><p x-text="lang === 'en' ? 'Combine fallback chains with quota limits for automatic cost control and zero downtime.' : 'Gabungkan fallback chain dengan batas kuota untuk kontrol biaya otomatis dan zero downtime.'"></p></div>
+            <pre class="doc-pre">POST /api/fallback
+  { type: "model", id: "gpt-4o", fallbacks: ["gpt-4o-mini", "claude-3-haiku"] }
+
+GET /api/fallback
+GET /api/fallback?stats=true&hours=24</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 14. USAGE ====== -->
+      <div x-show="activeSection === 'usage'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(59,130,246,0.04);">
+            <div class="doc-icon-badge" style="background:var(--info-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Usage Tracking' : 'Tracking Pemakaian'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Token breakdown by provider and model' : 'Rincian token per provider dan model'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Viewing Usage' : 'Melihat Pemakaian'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Dashboard → Usage page shows token breakdown by model, provider, and API key. Includes daily and monthly charts.' : 'Dashboard → halaman Usage menampilkan rincian token per model, provider, dan API key. Termasuk grafik harian dan bulanan.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Quota and Limits' : 'Kuota dan Batas'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Set daily and/or monthly token limits per connection. Exhausted connections are automatically skipped in routing.' : 'Atur batas token harian dan/atau bulanan per koneksi. Koneksi yang habis otomatis dilewati saat routing.'"></p>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Auto-counting' : 'Hitung otomatis'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Every request input + output tokens counted per connection' : 'Setiap input + output token request dihitung per koneksi'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Auto-reset</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Daily at midnight UTC, monthly on 1st' : 'Harian tengah malam UTC, bulanan tanggal 1'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Auto-fallback</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Exhausted connection skipped in routing' : 'Koneksi yang habis dilewati saat routing'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label">Combo-aware</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Combos fall through to next model when quota hit' : 'Combo lanjut ke model berikutnya saat kuota habis'"></p></div></div>
+            <div class="doc-tip"><strong>Tip</strong><p x-text="lang === 'en' ? 'Set limits slightly below actual budget for headroom. Combo + quotas = automatic cost control.' : 'Set batas sedikit di bawah budget aktual untuk ruang gerak. Combo + kuota = kontrol biaya otomatis.'"></p></div>
+            <pre class="doc-pre">GET /api/usage
+GET /api/quota</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 15. ANALYTICS ====== -->
+      <div x-show="activeSection === 'analytics'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(59,130,246,0.04);">
+            <div class="doc-icon-badge" style="background:var(--info-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title">Analytics</h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Real-time monitoring and insights' : 'Monitoring dan insight real-time'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Real-time Dashboard' : 'Dashboard Real-time'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Dashboard → Analytics shows live request metrics, latency percentiles, cache hit rates, and error rates.' : 'Dashboard → Analytics menampilkan metrik request live, persentil latensi, cache hit rate, dan error rate.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Available Metrics' : 'Metrik Tersedia'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Request volume' : 'Volume request'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Requests per minute, hour, day' : 'Request per menit, jam, hari'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Latency distribution' : 'Distribusi latensi'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'p50, p95, p99 latencies per provider' : 'Latensi p50, p95, p99 per provider'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Cache hit rate' : 'Cache hit rate'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Exact + semantic cache effectiveness' : 'Efektivitas cache exact + semantic'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Error rate' : 'Error rate'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Failed requests by type, provider, model' : 'Request gagal per tipe, provider, model'"></p></div></div>
+            <pre class="doc-pre">GET /api/analytics/realtime
+GET /api/analytics/stream    (SSE)</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 16. CACHING ====== -->
+      <div x-show="activeSection === 'caching'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(16,185,129,0.04);">
+            <div class="doc-icon-badge" style="background:var(--success-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title">Caching</h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Reduce costs and latency with intelligent caching' : 'Kurangi biaya dan latensi dengan caching cerdas'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Cache Types' : 'Tipe Cache'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Exact Match Cache' : 'Exact Match Cache'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Reuses identical responses. Same prompt → instant cached response. Highest savings for repeated queries.' : 'Pakai ulang respons identik. Prompt sama → respons cache instan. Hemat terbesar untuk query berulang.'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Semantic Cache' : 'Semantic Cache'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Uses embedding similarity to match semantically equivalent prompts. Slightly different wording still hits cache.' : 'Pakai embedding similarity untuk mencocokkan prompt yang semantiknya setara. Kata-kata sedikit berbeda tetap kena cache.'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Stream Cache' : 'Stream Cache'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Caches streaming responses for replay. Increases storage but improves latency for repeated streaming requests.' : 'Cache respons streaming untuk replay. Meningkatkan penyimpanan tapi meningkatkan latensi untuk request streaming berulang.'"></p></div></div>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Configuration' : 'Konfigurasi'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'All cache types are toggled from the Settings page. Cache TTL is configurable. The X-Cache response header shows HIT, MISS, or SEMANTIC.' : 'Semua tipe cache bisa di-toggle dari halaman Settings. TTL cache bisa dikonfigurasi. Response header X-Cache menunjukkan HIT, MISS, atau SEMANTIC.'"></p>
+            <div class="doc-warning"><strong>Note</strong><p x-text="lang === 'en' ? 'Semantic cache requires embedding model access. Make sure at least one embedding-capable provider is connected.' : 'Semantic cache butuh akses embedding model. Pastikan minimal satu provider yang mendukung embedding terhubung.'"></p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 17. CAVEMAN ====== -->
+      <div x-show="activeSection === 'caveman'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(239,68,68,0.04);">
+            <div class="doc-icon-badge" style="background:var(--error-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Caveman Mode' : 'Mode Caveman'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Output compression, up to 65% savings' : 'Kompresi output, hemat sampai 65%'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Set Level (from Settings page)' : 'Atur Level (dari halaman Settings)'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Lite (~20%)' : 'Lite (~20%)'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Drops filler words and pleasantries. Still readable.' : 'Buang kata pengisi dan basa-basi. Masih terbaca.'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Full (~40%)' : 'Full (~40%)'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Drops articles, uses fragments, lists over prose.' : 'Buang artikel, pakai fragmen, list daripada paragraf.'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot"></div><div><p class="doc-feature-label" x-text="lang === 'en' ? 'Ultra (~65%)' : 'Ultra (~65%)'"></p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Maximum compression. Abbreviations everywhere.' : 'Kompresi maksimal. Singkatan di mana-mana.'"></p></div></div>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Example' : 'Contoh'"></h3>
+            <pre class="doc-pre" x-show="lang === 'en'">Normal:
+  "I think the issue is that your database connection
+   string is not properly configured. You should check the
+   environment variable DATABASE_URL."
+
+Ultra:
+  "DB conn string wrong -> check env.DATABASE_URL"</pre>
+            <pre class="doc-pre" x-show="lang !== 'en'">Normal:
+  "Saya rasa masalahnya adalah connection string
+   database kamu tidak dikonfigurasi dengan benar. Kamu harus
+   cek environment variable DATABASE_URL."
+
+Ultra:
+  "DB conn string salah -> cek env.DATABASE_URL"</pre>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Always preserved' : 'Selalu dijaga'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Code blocks, file paths, commands, error messages, URLs, security warnings.' : 'Code block, path file, command, pesan error, URL, peringatan keamanan.'"></p>
+            <div class="doc-warning"><strong>Note</strong><p x-text="lang === 'en' ? 'Do not use Ultra for user-facing chat. Best for automated coding agents.' : 'Jangan pakai Ultra untuk chat dengan user. Paling cocok untuk coding agent otomatis.'"></p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 18. ERRORS ====== -->
+      <div x-show="activeSection === 'errors'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(239,68,68,0.04);">
+            <div class="doc-icon-badge" style="background:var(--error-light)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title" x-text="lang === 'en' ? 'Error Codes' : 'Kode Error'"></h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Common API error codes and troubleshooting' : 'Kode error API umum dan troubleshooting'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'HTTP Error Codes' : 'Kode Error HTTP'"></h3>
+            <div class="doc-feature"><div class="doc-feature-dot" style="background:var(--error)"></div><div><p class="doc-feature-label">401 Unauthorized</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Invalid or missing API key. Check your Authorization: Bearer header or master key in Settings.' : 'API key tidak valid atau tidak ada. Cek header Authorization: Bearer atau master key di Settings.'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot" style="background:var(--warning)"></div><div><p class="doc-feature-label">404 Not Found</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Model not found on any connected provider. Check the model name and ensure providers are connected.' : 'Model tidak ditemukan di provider manapun. Cek nama model dan pastikan provider terhubung.'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot" style="background:var(--warning)"></div><div><p class="doc-feature-label">429 Too Many Requests</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Rate limited or quota exhausted. Wait for cooldown or increase your quota limits.' : 'Rate limit atau kuota habis. Tunggu cooldown atau naikkan batas kuota.'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot" style="background:var(--error)"></div><div><p class="doc-feature-label">502 Bad Gateway</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'All providers failed. The response body includes a list of what was tried. Check individual provider status.' : 'Semua provider gagal. Response body mencakup daftar yang dicoba. Cek status provider satu per satu.'"></p></div></div>
+            <div class="doc-feature"><div class="doc-feature-dot" style="background:var(--error)"></div><div><p class="doc-feature-label">503 Service Unavailable</p><p class="doc-feature-desc" x-text="lang === 'en' ? 'Circuit breaker is open for all connections. Wait for cooldown period (30s).' : 'Circuit breaker terbuka untuk semua koneksi. Tunggu periode cooldown (30 detik).'"></p></div></div>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Troubleshooting' : 'Troubleshooting'"></h3>
+            <div class="doc-step"><div class="doc-step-num">1</div><div><p class="doc-step-title" x-text="lang === 'en' ? 'Check logs' : 'Cek log'"></p><p class="doc-step-desc" x-text="lang === 'en' ? 'Dashboard → Logs page shows every request with status and error details.' : 'Dashboard → halaman Logs menampilkan setiap request dengan status dan detail error.'"></p></div></div>
+            <div class="doc-step"><div class="doc-step-num">2</div><div><p class="doc-step-title" x-text="lang === 'en' ? 'Verify provider status' : 'Verifikasi status provider'"></p><p class="doc-step-desc" x-text="lang === 'en' ? 'Check the Connections page. Green dot = healthy, yellow = degraded, red = down.' : 'Cek halaman Connections. Titik hijau = sehat, kuning = terdegradasi, merah = down.'"></p></div></div>
+            <div class="doc-step"><div class="doc-step-num">3</div><div><p class="doc-step-title" x-text="lang === 'en' ? 'Test in Playground' : 'Test di Playground'"></p><p class="doc-step-desc" x-text="lang === 'en' ? 'Use the Playground to test individual models and isolate which ones are failing.' : 'Gunakan Playground untuk test model satu per satu dan isolasi mana yang gagal.'"></p></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 19. FAQ ====== -->
+      <div x-show="activeSection === 'faq'">
+        <div class="doc-card">
+          <div class="doc-card-hdr" style="background:rgba(100,116,139,0.04);">
+            <div class="doc-icon-badge" style="background:var(--bg-body)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="doc-card-title">FAQ</h2>
+              <p class="doc-card-subtitle" x-text="lang === 'en' ? 'Frequently asked questions' : 'Pertanyaan yang sering ditanyakan'"></p>
+            </div>
+          </div>
+          <div class="doc-card-body">
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'How do I connect my tools to Lintasan?' : 'Bagaimana cara menghubungkan tool ke Lintasan?'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Point any OpenAI-compatible tool to Lintasan. Base URL: http://your-server:8080/api/v1, API Key: your master key from Settings. All chat/completion requests will be automatically routed.' : 'Arahkan tool OpenAI-compatible ke Lintasan. Base URL: http://server-kamu:8080/api/v1, API Key: master key dari Settings. Semua request chat/completion akan otomatis di-routing.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Can I use multiple API keys for the same provider?' : 'Bisa pakai banyak API key untuk provider yang sama?'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Yes! Add multiple keys per connection from the Connections page. Lintasan rotates between them. More keys = higher rate limits.' : 'Bisa! Tambah banyak key per koneksi dari halaman Connections. Lintasan rotasi di antaranya. Lebih banyak key = rate limit lebih tinggi.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'What happens when a provider goes down?' : 'Apa yang terjadi saat provider down?'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Lintasan automatically falls back to the next model in the combo or the next connection. If all fail, a 502 error is returned with details of what was tried.' : 'Lintasan otomatis fallback ke model berikutnya di combo atau koneksi berikutnya. Jika semua gagal, error 502 dikembalikan dengan detail yang dicoba.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Where is data stored?' : 'Di mana data disimpan?'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Everything is stored in a single SQLite database file (data/lintasan.db). You can back it up from the Dashboard → Backup page.' : 'Semua disimpan dalam satu file database SQLite (data/lintasan.db). Kamu bisa backup dari Dashboard → halaman Backup.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Does Lintasan support streaming?' : 'Apakah Lintasan mendukung streaming?'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Yes! Streaming works out of the box. Add stream: true to your request body. Streaming responses can also be cached.' : 'Ya! Streaming langsung berfungsi. Tambahkan stream: true ke request body. Respons streaming juga bisa di-cache.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Can I use Lintasan with Ollama (local models)?' : 'Bisa pakai Lintasan dengan Ollama (model lokal)?'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Yes! Add Ollama as a provider from the Connections page. It is one of the built-in presets. Works with any locally running Ollama instance.' : 'Ya! Tambah Ollama sebagai provider dari halaman Connections. Itu salah satu preset bawaan. Bekerja dengan instance Ollama lokal apapun.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'Is there a limit on how many providers I can connect?' : 'Ada batas jumlah provider yang bisa dihubungkan?'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'No hard limit. You can connect as many providers as you want. Each gets its own models, quotas, and rate limits.' : 'Tidak ada batas. Kamu bisa hubungkan provider sebanyak yang kamu mau. Masing-masing punya model, kuota, dan rate limit sendiri.'"></p>
+            <h3 class="doc-h3" x-text="lang === 'en' ? 'How do I update my API key for a provider?' : 'Bagaimana cara update API key untuk provider?'"></h3>
+            <p class="doc-p" x-text="lang === 'en' ? 'Open the connection on the Connections page, edit the API key field, and save. No restart needed — the change takes effect immediately.' : 'Buka koneksi di halaman Connections, edit field API key, dan save. Tidak perlu restart — perubahan langsung berlaku.'"></p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /docs-content -->
+  </div><!-- /docs-container -->
 </div>
