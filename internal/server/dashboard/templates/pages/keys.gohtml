@@ -12,7 +12,7 @@
         <p style="font-size:12px;color:var(--fg-3);margin-top:2px">Manage API keys for authenticating requests</p>
       </div>
     </div>
-    <button @click="showForm = !showForm" class="btn-primary" style="padding:10px 18px">
+    <button onclick="showForm = !showForm" class="btn-primary" style="padding:10px 18px">
       <svg x-show="!showForm" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       <svg x-show="showForm" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       <span x-text="showForm ? 'Cancel' : '+ Create Key'"></span>
@@ -138,7 +138,7 @@
               <td>
                 <div style="display:flex;align-items:center;gap:6px">
                   <code class="mono" x-text="key.key ? key.key.substring(0, 8) + '...' : '—'"></code>
-                  <button @click="copyKey(key)" class="btn-secondary" style="padding:4px 8px;width:auto;height:26px" title="Copy to clipboard">
+                  <button onclick="copyKey(key)" class="btn-secondary" style="padding:4px 8px;width:auto;height:26px" title="Copy to clipboard">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                   </button>
                 </div>
@@ -183,7 +183,7 @@
               </td>
               <!-- Actions -->
               <td>
-                <button @click="deleteKey(key, idx)" class="btn-danger" title="Delete key">
+                <button onclick="deleteKey(key, idx)" class="btn-danger" title="Delete key">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                     <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                   </svg>

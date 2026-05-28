@@ -13,7 +13,7 @@
         <p style="font-size:12px;color:var(--fg-3);margin-top:2px">Manage teams, members, and their permissions</p>
       </div>
     </div>
-    <button @click="showForm = !showForm" class="btn-primary" style="padding:10px 18px">
+    <button onclick="showForm = !showForm" class="btn-primary" style="padding:10px 18px">
       <svg x-show="!showForm" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       <svg x-show="showForm" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       <span x-text="showForm ? 'Cancel' : '+ Create Team'"></span>
@@ -115,7 +115,7 @@
               <tr><td colspan="4"><div class="empty-state"><p>No teams yet</p><p style="font-size:12px;color:var(--fg-3);margin-top:4px">Create your first team to get started</p></div></td></tr>
             </template>
             <template x-for="(team, idx) in teams" :key="team.id">
-              <tr @click="selectTeam(team)" style="cursor:pointer" :style="selectedTeam?.id === team.id ? 'background:var(--primary-light)' : ''">
+              <tr onclick="selectTeam(team)" style="cursor:pointer" :style="selectedTeam?.id === team.id ? 'background:var(--primary-light)' : ''">
                 <td>
                   <div style="display:flex;align-items:center;gap:10px">
                     <div style="width:32px;height:32px;border-radius:8px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;flex-shrink:0" x-text="(team.name || 'T').charAt(0).toUpperCase()"></div>
@@ -132,7 +132,7 @@
                   <span class="status-badge" :class="team.active !== false ? 'badge-success' : 'badge-error'" x-text="team.active !== false ? 'Active' : 'Inactive'"></span>
                 </td>
                 <td>
-                  <button @click.stop="deleteTeam(team, idx)" class="btn-danger" style="width:28px;height:28px" title="Delete team">
+                  <button onclick="deleteTeam(team, idx)" class="btn-danger" style="width:28px;height:28px" title="Delete team">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                       <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                     </svg>
@@ -190,7 +190,7 @@
           <div style="margin-bottom:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <h3 style="font-size:13px;font-weight:600;color:var(--fg-1)">Members</h3>
-              <button @click="showAddMember = !showAddMember" class="btn-secondary" style="padding:4px 10px;font-size:11px;height:28px">
+              <button onclick="showAddMember = !showAddMember" class="btn-secondary" style="padding:4px 10px;font-size:11px;height:28px">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add
               </button>
@@ -227,7 +227,7 @@
                     <!-- Role Badge -->
                     <span class="status-badge" :class="member.role === 'admin' ? 'badge-primary' : 'badge-success'" style="font-size:10px" x-text="member.role === 'admin' ? 'Admin' : 'Member'"></span>
                     <!-- Remove -->
-                    <button @click="removeMember(member)" style="width:24px;height:24px;border:none;background:none;color:var(--fg-3);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center" title="Remove member">
+                    <button onclick="removeMember(member)" style="width:24px;height:24px;border:none;background:none;color:var(--fg-3);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center" title="Remove member">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                   </div>

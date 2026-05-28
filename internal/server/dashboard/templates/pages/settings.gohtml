@@ -85,7 +85,7 @@
         <span class="saved-indicator" :class="{ visible: savedFields['token_optimization.rtk_enabled'] }" x-init="savedFields['token_optimization.rtk_enabled'] = false">✓ Saved</span>
         <button class="toggle-pill"
           :class="settings.token_optimization.rtk_enabled ? 'on' : 'off'"
-          @click="settings.token_optimization.rtk_enabled = !settings.token_optimization.rtk_enabled; autoSave('token_optimization.rtk_enabled', settings.token_optimization.rtk_enabled)"></button>
+          onclick="settings.token_optimization.rtk_enabled = !settings.token_optimization.rtk_enabled; autoSave('token_optimization.rtk_enabled', settings.token_optimization.rtk_enabled)"></button>
       </div>
     </div>
 
@@ -99,13 +99,13 @@
         <span class="saved-indicator" :class="{ visible: savedFields['token_optimization.caveman_mode'] }" x-init="savedFields['token_optimization.caveman_mode'] = false">✓ Saved</span>
         <div class="mode-selector">
           <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'off' }"
-            @click="settings.token_optimization.caveman_mode = 'off'; autoSave('token_optimization.caveman_mode', 'off')">Off</button>
+            onclick="settings.token_optimization.caveman_mode = 'off'; autoSave('token_optimization.caveman_mode', 'off')">Off</button>
           <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'auto' }"
-            @click="settings.token_optimization.caveman_mode = 'auto'; autoSave('token_optimization.caveman_mode', 'auto')">Auto</button>
+            onclick="settings.token_optimization.caveman_mode = 'auto'; autoSave('token_optimization.caveman_mode', 'auto')">Auto</button>
           <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'on' }"
-            @click="settings.token_optimization.caveman_mode = 'on'; autoSave('token_optimization.caveman_mode', 'on')">On</button>
+            onclick="settings.token_optimization.caveman_mode = 'on'; autoSave('token_optimization.caveman_mode', 'on')">On</button>
           <button class="mode-option" :class="{ active: settings.token_optimization.caveman_mode === 'aggressive' }"
-            @click="settings.token_optimization.caveman_mode = 'aggressive'; autoSave('token_optimization.caveman_mode', 'aggressive')">Aggressive</button>
+            onclick="settings.token_optimization.caveman_mode = 'aggressive'; autoSave('token_optimization.caveman_mode', 'aggressive')">Aggressive</button>
         </div>
       </div>
     </div>
@@ -179,7 +179,7 @@
         <span class="saved-indicator" :class="{ visible: savedFields['caching.exact'] }" x-init="savedFields['caching.exact'] = false">✓ Saved</span>
         <button class="toggle-pill"
           :class="settings.caching.exact ? 'on' : 'off'"
-          @click="settings.caching.exact = !settings.caching.exact; autoSave('caching.exact', settings.caching.exact)"></button>
+          onclick="settings.caching.exact = !settings.caching.exact; autoSave('caching.exact', settings.caching.exact)"></button>
       </div>
     </div>
 
@@ -193,7 +193,7 @@
         <span class="saved-indicator" :class="{ visible: savedFields['caching.semantic'] }" x-init="savedFields['caching.semantic'] = false">✓ Saved</span>
         <button class="toggle-pill"
           :class="settings.caching.semantic ? 'on' : 'off'"
-          @click="settings.caching.semantic = !settings.caching.semantic; autoSave('caching.semantic', settings.caching.semantic)"></button>
+          onclick="settings.caching.semantic = !settings.caching.semantic; autoSave('caching.semantic', settings.caching.semantic)"></button>
       </div>
     </div>
 
@@ -207,7 +207,7 @@
         <span class="saved-indicator" :class="{ visible: savedFields['caching.stream'] }" x-init="savedFields['caching.stream'] = false">✓ Saved</span>
         <button class="toggle-pill"
           :class="settings.caching.stream ? 'on' : 'off'"
-          @click="settings.caching.stream = !settings.caching.stream; autoSave('caching.stream', settings.caching.stream)"></button>
+          onclick="settings.caching.stream = !settings.caching.stream; autoSave('caching.stream', settings.caching.stream)"></button>
       </div>
     </div>
   </div>
@@ -229,7 +229,7 @@
         <span class="saved-indicator" :class="{ visible: savedFields['embedding_cache.enabled'] }" x-init="savedFields['embedding_cache.enabled'] = false">✓ Saved</span>
         <button class="toggle-pill"
           :class="settings.embedding_cache.enabled ? 'on' : 'off'"
-          @click="settings.embedding_cache.enabled = !settings.embedding_cache.enabled; autoSave('embedding_cache.enabled', settings.embedding_cache.enabled)"></button>
+          onclick="settings.embedding_cache.enabled = !settings.embedding_cache.enabled; autoSave('embedding_cache.enabled', settings.embedding_cache.enabled)"></button>
       </div>
     </div>
 
@@ -265,11 +265,11 @@
         <span class="saved-indicator" :class="{ visible: savedFields['thinking_mode'] }" x-init="savedFields['thinking_mode'] = false">✓ Saved</span>
         <div class="mode-selector">
           <button class="mode-option" :class="{ active: settings.thinking_mode === 'auto' }"
-            @click="settings.thinking_mode = 'auto'; autoSave('thinking_mode', 'auto')">Auto</button>
+            onclick="settings.thinking_mode = 'auto'; autoSave('thinking_mode', 'auto')">Auto</button>
           <button class="mode-option" :class="{ active: settings.thinking_mode === 'enabled' }"
-            @click="settings.thinking_mode = 'enabled'; autoSave('thinking_mode', 'enabled')">Enabled</button>
+            onclick="settings.thinking_mode = 'enabled'; autoSave('thinking_mode', 'enabled')">Enabled</button>
           <button class="mode-option" :class="{ active: settings.thinking_mode === 'disabled' }"
-            @click="settings.thinking_mode = 'disabled'; autoSave('thinking_mode', 'disabled')">Disabled</button>
+            onclick="settings.thinking_mode = 'disabled'; autoSave('thinking_mode', 'disabled')">Disabled</button>
         </div>
       </div>
     </div>
