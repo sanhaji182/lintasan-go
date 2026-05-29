@@ -167,6 +167,13 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/settings", s.handleGetSettings)
 	s.mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
 
+	// Access Logs (in-memory ring buffer)
+	s.mux.HandleFunc("GET /api/access-logs", s.handleAccessLogs)
+	s.mux.HandleFunc("GET /api/access-logs/stats", s.handleAccessLogStats)
+
+	// Guard — content safety check
+	s.mux.HandleFunc("POST /api/guard/check", s.handleGuardCheck)
+
 	// Dashboard API + root redirect
 	s.registerDashboardRoutes()
 }
