@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -23,12 +21,10 @@ import (
 )
 
 type Server struct {
-	cfg             *config.Config
-	db              *db.DB
-	mux             *http.ServeMux
-	proxy           *ProxyHandler
-	dashboardEngine *DashboardEngine
-	nodeProxy       *httputil.ReverseProxy // reverse-proxy to Node dashboard at :20180
+	cfg        *config.Config
+	db         *db.DB
+	mux        *http.ServeMux
+	proxy      *ProxyHandler
 	memHandler *MemoryHandler         // vector memory API handler
 	mitmProxy  *mitm.MITMProxy        // MITM bridge for IDE interception
 	oauthMgr   *auth.OAuthManager     // OAuth session manager
@@ -41,22 +37,10 @@ type Server struct {
 }
 
 func New(cfg *config.Config, database *db.DB) *Server {
-	nodeURL, _ := url.Parse("http://127.0.0.1:20180")
-	nodeProxy := &httputil.ReverseProxy{
-		Rewrite: func(pr *httputil.ProxyRequest) {
-			pr.SetURL(nodeURL)
-			pr.Out.Host = nodeURL.Host
-			// Inject auth cookie so all requests (including client-side fetches) bypass login
-			pr.Out.Header.Set("Cookie", "SR_SESSION=auto")
-		},
-		FlushInterval: -1,
-	}
-
 	s := &Server{
-		cfg:       cfg,
-		db:        database,
-		mux:       http.NewServeMux(),
-		nodeProxy: nodeProxy,
+		cfg: cfg,
+		db:  database,
+		mux: http.NewServeMux(),
 	}
 	s.proxy = NewProxyHandler(cfg, database)
 	s.memHandler = NewMemoryHandler(s.proxy.mem)
@@ -79,16 +63,6 @@ func New(cfg *config.Config, database *db.DB) *Server {
 	// Wire web search engine (SerpAPI key from settings)
 	serpKey, _ := database.GetSetting("serpapi_key")
 	s.webSearch = websearch.New(serpKey)
-
-	// Wire dashboard engine
-	engine, err := NewDashboardEngine()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[DASHBOARD] engine init FAILED: %v\n", err)
-		s.dashboardEngine = nil
-	} else {
-		s.dashboardEngine = engine
-		fmt.Fprintf(os.Stderr, "[DASHBOARD] engine init OK\n")
-	}
 
 	// Wire MITM proxy if MITM_PORT env set
 	if port := os.Getenv("MITM_PORT"); port != "" {
@@ -191,7 +165,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/settings", s.handleGetSettings)
 	s.mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
 
-	// Dashboard — Go native (HTMX + Alpine.js)
+	// Dashboard API + root redirect
 	s.registerDashboardRoutes()
 }
 
