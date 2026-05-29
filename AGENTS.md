@@ -225,6 +225,72 @@ Pitfall lama (sudah resolved tapi catat): lucide-svelte sebagai komponen di `Emp
 
 ---
 
+## 8b. CLI Commands (binary `lintasan`)
+
+Dibangun dengan cobra. Command tersedia:
+
+```
+lintasan start          # start proxy server (port dari env PORT, default 20180)
+lintasan setup          # interactive setup wizard
+lintasan mitm start     # MITM bridge untuk IDE traffic interception (port MITM_PORT, default 8443)
+```
+
+`lintasan.service` menjalankan `lintasan start`. MITM mode adalah fitur terpisah untuk inspect/intercept trafik IDE (lihat package `internal/mitm`).
+
+---
+
+## 8c. Environment Variables
+
+Sumber kebenaran: `.env.example` di root. Copy ke `.env` sebelum jalan.
+
+**Required:**
+| Var | Default | Fungsi |
+|-----|---------|--------|
+| `PORT` | `20180` | Port Go server |
+| `LINTASAN_DATA_DIR` | `./data` | Direktori SQLite DB + runtime data |
+| `LINTASAN_MASTER_KEY` | _(kosong)_ | Master API key untuk autentikasi proxy request. Generate: `openssl rand -hex 32` |
+
+**Optional:**
+| Var | Default | Fungsi |
+|-----|---------|--------|
+| `LINTASAN_JWT_SECRET` | _(auto)_ | Secret untuk JWT signing (auth dashboard). Set eksplisit di production. |
+| `REDIS_ADDR` | `127.0.0.1:6379` | Redis untuk vector memory. Degrade gracefully kalau Redis mati. |
+| `MITM_PORT` | `8443` | Port MITM proxy untuk IDE interception |
+| `DASHBOARD_URL` | `http://127.0.0.1:20180` | URL dashboard untuk reverse-proxy; kosongkan untuk disable |
+
+> ⚠️ Dua mode auth berbeda:
+> - **Proxy clients** (`/v1/*`) → autentikasi pakai `LINTASAN_MASTER_KEY` (Bearer). Kalau master key kosong, middleware allow-all (dev mode).
+> - **Dashboard users** (`/api/auth/*`) → JWT (HS256) ditandatangani `LINTASAN_JWT_SECRET`.
+
+---
+
+## 8d. Database Schema (SQLite, 18 tabel)
+
+DB ada di `$LINTASAN_DATA_DIR/` (default `./data/`). Migrasi otomatis saat start.
+
+| Tabel | Isi |
+|-------|-----|
+| `users` | Akun dashboard (JWT auth), seed `admin` |
+| `connections` | Provider connections (base_url, api_key, format) |
+| `discovered_models` | Hasil model discovery per provider |
+| `settings` | Key-value settings global |
+| `request_logs` | Log semua proxy request |
+| `audit_events` | Audit trail (perubahan penting) |
+| `cost_entries` | Cost tracking per request |
+| `cost_savings` | Penghematan dari cache/routing/compress |
+| `quota_usage` | Pemakaian quota |
+| `semantic_cache` | Cache semantik (cosine similarity) |
+| `response_cache` | Cache response non-stream |
+| `stream_response_cache` | Cache response streaming |
+| `embedding_cache` | Cache embedding |
+| `memories` | Vector memory entries |
+| `plugins` | Plugin terinstall + config |
+| `webhooks` | Webhook subscriptions |
+| `webhook_deliveries` | Log delivery webhook |
+| `oauth_sessions` | Sesi OAuth provider |
+
+---
+
 ## 9. Build, Test, Deploy
 
 **Backend:**
