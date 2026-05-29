@@ -1,24 +1,29 @@
 <script lang="ts">
   import {
     BookOpen, ChevronRight, ChevronDown, Search,
-    Zap, Code2, Settings, Lightbulb, ExternalLink, Copy, Check
+    Zap, Code2, Settings, Lightbulb, Copy, Check, Globe
   } from 'lucide-svelte';
+
+  interface DocSubsection {
+    id: string;
+    id_title: string;
+    en_title: string;
+    id_content: string;
+    en_content: string;
+    id_code?: string;
+    en_code?: string;
+    language?: string;
+  }
 
   interface DocSection {
     id: string;
-    title: string;
+    id_title: string;
+    en_title: string;
     icon: typeof BookOpen;
     subsections: DocSubsection[];
   }
 
-  interface DocSubsection {
-    id: string;
-    title: string;
-    content: string;
-    code?: string;
-    language?: string;
-  }
-
+  let lang = $state<'id' | 'en'>('en');
   let activeSection = $state('getting-started');
   let searchQuery = $state('');
   let expandedSections = $state<Set<string>>(new Set(['getting-started']));
@@ -27,57 +32,98 @@
   const docs: DocSection[] = [
     {
       id: 'getting-started',
-      title: 'Getting Started',
+      id_title: 'Mulai Cepat',
+      en_title: 'Getting Started',
       icon: Zap,
       subsections: [
         {
           id: 'quick-start',
-          title: 'Quick Start',
-          content: `Lintasan is an AI gateway that sits between your application and AI providers. It handles routing, caching, rate limiting, and observability automatically.
+          id_title: 'Mulai Cepat',
+          en_title: 'Quick Start',
+          id_content: `Lintasan adalah **LLM proxy gateway** yang berada di antara aplikasi kamu dan provider AI. Dia menangani routing, caching, rate limiting, dan observability secara otomatis.
 
-To get started, install the Lintasan CLI and initialize a new project:`,
-          code: `# Install Lintasan
-npm install -g @lintasan/cli
+**🇮🇩 Satu endpoint untuk semua provider.** Tidak perlu ganti SDK atau kelola banyak API key.`,
+          en_content: `Lintasan is an **LLM proxy gateway** that sits between your application and AI providers. It handles routing, caching, rate limiting, and observability automatically.
 
-# Initialize a new project
-lintasan init my-gateway
+**🇬🇧 One endpoint for all providers.** No need to switch SDKs or manage multiple API keys.`,
+          id_code: `# Download binary (single file, 24MB)
+curl -L -o lintasan \\
+  https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan
+chmod +x lintasan
 
-# Start the gateway
-cd my-gateway && lintasan start`,
+# Jalankan server
+./lintasan start
+
+# Server berjalan di http://localhost:20180
+# Dashboard di http://localhost:20180/dashboard`,
+          en_code: `# Download binary (single file, 24MB)
+curl -L -o lintasan \\
+  https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan
+chmod +x lintasan
+
+# Start the server
+./lintasan start
+
+# Server running at http://localhost:20180
+# Dashboard at http://localhost:20180/dashboard`,
           language: 'bash',
         },
         {
-          id: 'configuration-basics',
-          title: 'Configuration Basics',
-          content: `Configure your gateway using the \`lintasan.config.js\` file. The minimum configuration requires at least one provider connection:`,
-          code: `// lintasan.config.js
-export default {
-  port: 20181,
-  providers: [
-    {
-      name: 'openai',
-      type: 'openai',
-      apiKey: process.env.OPENAI_API_KEY,
-      models: ['gpt-4o', 'gpt-4o-mini'],
-    },
-  ],
-  cache: {
-    enabled: true,
-    ttl: 300, // seconds
-  },
-};`,
-          language: 'javascript',
+          id: 'providers',
+          id_title: 'Koneksi Provider',
+          en_title: 'Connecting Providers',
+          id_content: `Tambah provider lewat **dashboard UI** atau **API**. 113 provider presets sudah siap — tinggal isi API key.
+
+**Provider yang didukung:** OpenAI, Anthropic, DeepSeek, Google Gemini, Groq, Mistral, xAI, dan 100+ lainnya via LiteLLM presets.`,
+          en_content: `Add providers via the **dashboard UI** or **API**. 113 provider presets are ready — just add your API key.
+
+**Supported providers:** OpenAI, Anthropic, DeepSeek, Google Gemini, Groq, Mistral, xAI, and 100+ more via LiteLLM presets.`,
+          id_code: `# Tambah koneksi via API
+curl -X POST http://localhost:20180/api/connections \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "openai",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "sk-...",
+    "models": ["gpt-4o", "gpt-4o-mini"]
+  }'
+
+# Atau: buka dashboard → Accounts → Add Provider`,
+          en_code: `# Add connection via API
+curl -X POST http://localhost:20180/api/connections \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "openai",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "sk-...",
+    "models": ["gpt-4o", "gpt-4o-mini"]
+  }'
+
+# Or: open dashboard → Accounts → Add Provider`,
+          language: 'bash',
         },
         {
           id: 'first-request',
-          title: 'Making Your First Request',
-          content: `Once the gateway is running, send requests using the OpenAI-compatible API:`,
-          code: `curl http://localhost:20181/v1/chat/completions \\
+          id_title: 'Request Pertama',
+          en_title: 'Your First Request',
+          id_content: `Setelah gateway berjalan dan provider tersambung, kirim request menggunakan **API OpenAI-compatible**:`,
+          en_content: `Once the gateway is running and a provider is connected, send requests using the **OpenAI-compatible API**:`,
+          id_code: `curl http://localhost:20180/v1/chat/completions \\
+  -H "Authorization: Bearer YOUR_MASTER_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "model": "gpt-4o",
     "messages": [
-      { "role": "user", "content": "Hello!" }
+      {"role": "user", "content": "Halo! Apa kabar?"}
+    ]
+  }'`,
+          en_code: `curl http://localhost:20180/v1/chat/completions \\
+  -H "Authorization: Bearer YOUR_MASTER_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      {"role": "user", "content": "Hello! How are you?"}
     ]
   }'`,
           language: 'bash',
@@ -86,28 +132,51 @@ export default {
     },
     {
       id: 'api-reference',
-      title: 'API Reference',
+      id_title: 'Referensi API',
+      en_title: 'API Reference',
       icon: Code2,
       subsections: [
         {
           id: 'chat-completions',
-          title: 'Chat Completions',
-          content: `The chat completions endpoint is fully compatible with the OpenAI API specification.
+          id_title: 'Chat Completions',
+          en_title: 'Chat Completions',
+          id_content: `Endpoint chat completions **sepenuhnya kompatibel dengan OpenAI API**.
+
+**Endpoint:** \`POST /v1/chat/completions\`
+
+**Parameter:**
+- \`model\` (string, wajib) — ID model atau nama combo
+- \`messages\` (array, wajib) — Array pesan (system/user/assistant)
+- \`temperature\` (number) — Suhu sampling (0-2)
+- \`max_tokens\` (integer) — Maksimum token output
+- \`stream\` (boolean) — Aktifkan streaming (SSE)
+- \`top_p\` (number) — Nucleus sampling`,
+          en_content: `The chat completions endpoint is **fully compatible with the OpenAI API specification**.
 
 **Endpoint:** \`POST /v1/chat/completions\`
 
 **Parameters:**
-- \`model\` (string, required) — Model identifier
-- \`messages\` (array, required) — Array of message objects
+- \`model\` (string, required) — Model identifier or combo name
+- \`messages\` (array, required) — Array of message objects (system/user/assistant)
 - \`temperature\` (number) — Sampling temperature (0-2)
 - \`max_tokens\` (integer) — Maximum tokens to generate
-- \`stream\` (boolean) — Enable streaming responses
-- \`top_p\` (number) — Nucleus sampling parameter`,
-          code: `{
+- \`stream\` (boolean) — Enable streaming (SSE)
+- \`top_p\` (number) — Nucleus sampling`,
+          id_code: `{
   "model": "gpt-4o",
   "messages": [
-    { "role": "system", "content": "You are helpful." },
-    { "role": "user", "content": "Explain quantum computing." }
+    {"role": "system", "content": "Kamu asisten yang membantu."},
+    {"role": "user", "content": "Jelaskan quantum computing."}
+  ],
+  "temperature": 0.7,
+  "max_tokens": 1000,
+  "stream": false
+}`,
+          en_code: `{
+  "model": "gpt-4o",
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Explain quantum computing."}
   ],
   "temperature": 0.7,
   "max_tokens": 1000,
@@ -117,144 +186,257 @@ export default {
         },
         {
           id: 'embeddings',
-          title: 'Embeddings',
-          content: `Generate vector embeddings for text inputs.
+          id_title: 'Embeddings',
+          en_title: 'Embeddings',
+          id_content: `Generate vector embeddings untuk teks.
+
+**Endpoint:** \`POST /v1/embeddings\`
+
+**Parameter:**
+- \`model\` (string, wajib) — Model embedding
+- \`input\` (string | array, wajib) — Teks yang di-embed
+- \`encoding_format\` (string) — "float" atau "base64"`,
+          en_content: `Generate vector embeddings for text inputs.
 
 **Endpoint:** \`POST /v1/embeddings\`
 
 **Parameters:**
 - \`model\` (string, required) — Embedding model identifier
 - \`input\` (string | array, required) — Text to embed
-- \`encoding_format\` (string) — Output format: "float" or "base64"`,
-          code: `curl http://localhost:20181/v1/embeddings \\
+- \`encoding_format\` (string) — "float" or "base64"`,
+          id_code: `curl http://localhost:20180/v1/embeddings \\
+  -H "Authorization: Bearer YOUR_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "model": "text-embedding-3-small",
-    "input": "The quick brown fox"
-  }'`,
+  -d '{"model": "text-embedding-3-small", "input": "Halo dunia"}'`,
+          en_code: `curl http://localhost:20180/v1/embeddings \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model": "text-embedding-3-small", "input": "Hello world"}'`,
           language: 'bash',
         },
         {
-          id: 'models-list',
-          title: 'List Models',
-          content: `Retrieve available models across all configured providers.
+          id: 'images-audio',
+          id_title: 'Gambar & Audio',
+          en_title: 'Images & Audio',
+          id_content: `Lintasan juga mem-proxy **image generation** dan **audio (TTS + STT)** via endpoint OpenAI-compatible.
 
-**Endpoint:** \`GET /v1/models\`
+| Endpoint | Fungsi |
+|----------|--------|
+| \`POST /v1/images/generations\` | Generate gambar (DALL-E / SD) |
+| \`POST /v1/audio/speech\` | Text-to-speech |
+| \`POST /v1/audio/transcriptions\` | Speech-to-text |
+| \`GET /v1/models\` | List semua model tersedia |
+| \`GET /v1/memory/search?q=...\` | Vector memory search |`,
+          en_content: `Lintasan also proxies **image generation** and **audio (TTS + STT)** via OpenAI-compatible endpoints.
 
-Returns a list of model objects with their capabilities and provider information.`,
-          code: `curl http://localhost:20181/v1/models`,
+| Endpoint | Function |
+|----------|----------|
+| \`POST /v1/images/generations\` | Generate images (DALL-E / SD) |
+| \`POST /v1/audio/speech\` | Text-to-speech |
+| \`POST /v1/audio/transcriptions\` | Speech-to-text |
+| \`GET /v1/models\` | List all available models |
+| \`GET /v1/memory/search?q=...\` | Vector memory search |`,
+          id_code: `# Generate gambar
+curl http://localhost:20180/v1/images/generations \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model": "dall-e-3", "prompt": "Matahari terbenam di atas gunung"}'
+
+# Text-to-speech
+curl http://localhost:20180/v1/audio/speech \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model": "tts-1", "input": "Halo dunia", "voice": "alloy"}'`,
+          en_code: `# Image generation
+curl http://localhost:20180/v1/images/generations \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model": "dall-e-3", "prompt": "Sunset over mountains"}'
+
+# Text-to-speech
+curl http://localhost:20180/v1/audio/speech \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model": "tts-1", "input": "Hello world", "voice": "alloy"}'`,
           language: 'bash',
         },
       ],
     },
     {
-      id: 'configuration',
-      title: 'Configuration',
+      id: 'features',
+      id_title: 'Fitur & Optimasi',
+      en_title: 'Features & Optimization',
       icon: Settings,
       subsections: [
         {
-          id: 'providers',
-          title: 'Provider Setup',
-          content: `Lintasan supports multiple AI providers. Each provider needs its own configuration block with API credentials and supported models.
+          id: 'smart-routing',
+          id_title: 'Smart Routing',
+          en_title: 'Smart Routing',
+          id_content: `Lintasan menggunakan **multi-stage routing** untuk mengarahkan request ke provider terbaik:
 
-**Supported providers:**
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude 3.5, Claude 3)
-- Google (Gemini Pro)
-- Mistral (Mixtral, Mistral)
-- Custom (any OpenAI-compatible API)`,
-          code: `providers: [
-  {
-    name: 'openai',
-    type: 'openai',
-    apiKey: process.env.OPENAI_API_KEY,
-    models: ['gpt-4o', 'gpt-4o-mini'],
-  },
-  {
-    name: 'anthropic',
-    type: 'anthropic',
-    apiKey: process.env.ANTHROPIC_API_KEY,
-    models: ['claude-3.5-sonnet', 'claude-3-haiku'],
-  },
-  {
-    name: 'custom',
-    type: 'openai-compatible',
-    baseUrl: 'https://my-api.example.com/v1',
-    apiKey: process.env.CUSTOM_API_KEY,
-    models: ['custom-model-1'],
-  },
-]`,
-          language: 'javascript',
+1. **Header-based** — \`X-Connection: <id>\` override manual
+2. **Model name match** — cocokkan model ke provider
+3. **Load-balanced pick** — distribusi berbobot
+4. **Priority sort** — provider prioritas tertinggi
+5. **Fallback chain** — auto-failover jika gagal`,
+          en_content: `Lintasan uses **multi-stage routing** to direct requests to the best provider:
+
+1. **Header-based** — \`X-Connection: <id>\` manual override
+2. **Model name match** — match model to provider
+3. **Load-balanced pick** — weighted distribution
+4. **Priority sort** — highest priority provider first
+5. **Fallback chain** — auto-failover on failure`,
         },
         {
-          id: 'routing-rules',
-          title: 'Routing Rules',
-          content: `Configure intelligent routing to direct requests to specific providers based on model, cost, latency, or custom rules.`,
-          code: `routing: {
-  strategy: 'cost-optimized', // or 'latency', 'round-robin'
-  rules: [
-    {
-      match: { model: 'gpt-4*' },
-      targets: ['openai', 'azure-openai'],
-    },
-    {
-      match: { model: 'claude-*' },
-      targets: ['anthropic'],
-    },
-  ],
-  fallback: {
-    enabled: true,
-    maxRetries: 3,
-  },
-}`,
-          language: 'javascript',
+          id: 'circuit-breaker',
+          id_title: 'Circuit Breaker & Caching',
+          en_title: 'Circuit Breaker & Caching',
+          id_content: `**Circuit Breaker:** Provider yang gagal auto-disabled selama 30 detik. Ini mencegah request lambat terus-menerus ke provider yang down.
+
+**Settings Cache:** Semua settings di-cache di memory dengan 5-detik TTL. Nol DB read per request — akses instant.
+
+**Fallback Chains:** Definisikan urutan model fallback. Kalau \`gpt-4o\` gagal, auto-coba \`claude-sonnet-4\`, lalu \`gemini-pro\`.`,
+          en_content: `**Circuit Breaker:** Failing providers are auto-disabled for 30 seconds. This prevents slow requests to down providers.
+
+**Settings Cache:** All settings are cached in-memory with a 5-second TTL. Zero DB reads per request — instant access.
+
+**Fallback Chains:** Define model fallback order. If \`gpt-4o\` fails, auto-try \`claude-sonnet-4\`, then \`gemini-pro\`.`,
+          id_code: `# Buat fallback chain via API
+curl -X POST http://localhost:20180/api/fallback \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "type": "model",
+    "id": "production-fallback",
+    "fallbacks": ["gpt-4o", "claude-sonnet-4", "gemini-2.5-pro"]
+  }'`,
+          en_code: `# Create fallback chain via API
+curl -X POST http://localhost:20180/api/fallback \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "type": "model",
+    "id": "production-fallback",
+    "fallbacks": ["gpt-4o", "claude-sonnet-4", "gemini-2.5-pro"]
+  }'`,
+          language: 'bash',
         },
         {
-          id: 'caching',
-          title: 'Caching',
-          content: `Enable semantic caching to reduce costs and improve latency for repeated or similar requests.`,
-          code: `cache: {
-  enabled: true,
-  ttl: 300,
-  strategy: 'semantic',  // or 'exact'
-  similarity: 0.95,       // threshold for semantic match
-  excludeModels: ['gpt-4-turbo'], // models to skip caching
-}`,
-          language: 'javascript',
+          id: 'plugins',
+          id_title: 'Plugin System',
+          en_title: 'Plugin System',
+          id_content: `Lintasan punya **plugin system** yang bisa di-extend tanpa ubah core:
+
+- **Built-in plugins:** Request Logger, Rate Limiter, Cost Guard
+- **Plugin Store:** Install plugin dari komunitas
+- **AI Generator:** Generate plugin baru dengan natural language
+
+Semua plugin auto-register dan jalan di request pipeline.`,
+          en_content: `Lintasan has an extensible **plugin system** that works without core changes:
+
+- **Built-in plugins:** Request Logger, Rate Limiter, Cost Guard
+- **Plugin Store:** Install community plugins
+- **AI Generator:** Generate new plugins with natural language
+
+All plugins auto-register and run in the request pipeline.`,
+        },
+        {
+          id: 'load-balancer',
+          id_title: 'Load Balancer & Aliases',
+          en_title: 'Load Balancer & Aliases',
+          id_content: `**Load Balancer:** Distribusikan request ke beberapa provider dengan strategi:
+
+- \`round-robin\` — Giliran merata
+- \`weighted\` — Berdasarkan bobot prioritas
+- \`least-latency\` — Provider tercepat
+
+**Aliases:** Buat nama pendek untuk model — \`gpt4\` → \`gpt-4o\`.`,
+          en_content: `**Load Balancer:** Distribute requests across providers with strategies:
+
+- \`round-robin\` — Even distribution
+- \`weighted\` — Based on priority weights
+- \`least-latency\` — Fastest provider
+
+**Aliases:** Create short names for models — \`gpt4\` → \`gpt-4o\`.`,
+        },
+        {
+          id: 'monitoring',
+          id_title: 'Monitoring & Observability',
+          en_title: 'Monitoring & Observability',
+          id_content: `Dashboard 17 halaman untuk monitoring real-time:
+
+- **Overview:** Request, token, cache hit rate, latency
+- **Logs:** Request log dengan filter & search
+- **Analytics:** Token savings, cache performance
+- **Usage:** Breakdown per provider/model
+- **Cost Tracking:** Real-time biaya per request`,
+          en_content: `17-page dashboard for real-time monitoring:
+
+- **Overview:** Requests, tokens, cache hit rate, latency
+- **Logs:** Filterable & searchable request log
+- **Analytics:** Token savings, cache performance
+- **Usage:** Per-provider/model breakdown
+- **Cost Tracking:** Real-time cost per request`,
         },
       ],
     },
     {
       id: 'examples',
-      title: 'Examples',
+      id_title: 'Contoh Kode',
+      en_title: 'Code Examples',
       icon: Lightbulb,
       subsections: [
         {
           id: 'nodejs-client',
-          title: 'Node.js Client',
-          content: `Use the OpenAI SDK pointed at your Lintasan gateway:`,
-          code: `import OpenAI from 'openai';
+          id_title: 'Node.js / TypeScript',
+          en_title: 'Node.js / TypeScript',
+          id_content: `Gunakan OpenAI SDK yang diarahkan ke Lintasan gateway. **Drop-in replacement** — ganti \`baseURL\` aja.`,
+          en_content: `Use the OpenAI SDK pointed at your Lintasan gateway. **Drop-in replacement** — just change the \`baseURL\`.`,
+          id_code: `import OpenAI from 'openai';
 
 const client = new OpenAI({
-  baseURL: 'http://localhost:20181/v1',
-  apiKey: 'your-lintasan-api-key',
+  baseURL: 'http://localhost:20180/v1',
+  apiKey: process.env.LINTASAN_API_KEY,
 });
 
+// Chat completion
 const response = await client.chat.completions.create({
   model: 'gpt-4o',
-  messages: [
-    { role: 'user', content: 'Hello!' },
-  ],
+  messages: [{ role: 'user', content: 'Halo!' }],
+});
+
+console.log(response.choices[0].message.content);`,
+          en_code: `import OpenAI from 'openai';
+
+const client = new OpenAI({
+  baseURL: 'http://localhost:20180/v1',
+  apiKey: process.env.LINTASAN_API_KEY,
+});
+
+// Chat completion
+const response = await client.chat.completions.create({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
 });
 
 console.log(response.choices[0].message.content);`,
           language: 'typescript',
         },
         {
-          id: 'streaming-example',
-          title: 'Streaming Responses',
-          content: `Stream responses for real-time output:`,
-          code: `const stream = await client.chat.completions.create({
+          id: 'streaming',
+          id_title: 'Streaming (SSE)',
+          en_title: 'Streaming (SSE)',
+          id_content: `Streaming response real-time dengan Server-Sent Events:`,
+          en_content: `Real-time streaming responses with Server-Sent Events:`,
+          id_code: `const stream = await client.chat.completions.create({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Tulis puisi.' }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  const content = chunk.choices[0]?.delta?.content;
+  if (content) process.stdout.write(content);
+}`,
+          en_code: `const stream = await client.chat.completions.create({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Write a poem.' }],
   stream: true,
@@ -268,24 +450,115 @@ for await (const chunk of stream) {
         },
         {
           id: 'python-client',
-          title: 'Python Client',
-          content: `Use the OpenAI Python library with Lintasan:`,
-          code: `from openai import OpenAI
+          id_title: 'Python',
+          en_title: 'Python',
+          id_content: `Gunakan library OpenAI Python. Semua fitur kompatibel:`,
+          en_content: `Use the OpenAI Python library. All features compatible:`,
+          id_code: `from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:20181/v1",
-    api_key="your-lintasan-api-key",
+    base_url="http://localhost:20180/v1",
+    api_key="lintasan-master-key",
 )
 
+# Chat completion
 response = client.chat.completions.create(
     model="gpt-4o",
-    messages=[
-        {"role": "user", "content": "Hello!"}
-    ],
+    messages=[{"role": "user", "content": "Halo!"}],
 )
 
-print(response.choices[0].message.content)`,
+print(response.choices[0].message.content)
+
+# Embeddings
+emb = client.embeddings.create(
+    model="text-embedding-3-small",
+    input="Halo dunia",
+)
+
+# Streaming
+stream = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Halo!"}],
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="")`,
+          en_code: `from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:20180/v1",
+    api_key="lintasan-master-key",
+)
+
+# Chat completion
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+print(response.choices[0].message.content)
+
+# Embeddings
+emb = client.embeddings.create(
+    model="text-embedding-3-small",
+    input="Hello world",
+)
+
+# Streaming
+stream = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="")`,
           language: 'python',
+        },
+        {
+          id: 'curl-examples',
+          id_title: 'curl / Terminal',
+          en_title: 'curl / Terminal',
+          id_content: `Semua endpoint bisa diakses via curl. Autentikasi pakai \`Authorization: Bearer\` header:`,
+          en_content: `All endpoints accessible via curl. Authenticate with \`Authorization: Bearer\` header:`,
+          id_code: `# Chat
+curl http://localhost:20180/v1/chat/completions \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Halo"}]}'
+
+# Streaming
+curl -N http://localhost:20180/v1/chat/completions \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Halo"}],"stream":true}'
+
+# List models
+curl http://localhost:20180/v1/models \\
+  -H "Authorization: Bearer YOUR_KEY"
+
+# Health check
+curl http://localhost:20180/health`,
+          en_code: `# Chat
+curl http://localhost:20180/v1/chat/completions \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'
+
+# Streaming
+curl -N http://localhost:20180/v1/chat/completions \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}],"stream":true}'
+
+# List models
+curl http://localhost:20180/v1/models \\
+  -H "Authorization: Bearer YOUR_KEY"
+
+# Health check
+curl http://localhost:20180/health`,
+          language: 'bash',
         },
       ],
     },
@@ -324,15 +597,13 @@ print(response.choices[0].message.content)`,
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    // Inline code
     html = html.replace(/`([^`]+)`/g, '<code class="doc-inline-code">$1</code>');
-    // Bold
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    // Italic
     html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    // Line breaks (double newline = paragraph break)
+    html = html.replace(/^(\|[^\n]+\|)$/gm, (match) => {
+      return match.replace(/\|([^|]+)\|/g, '| <span class="table-cell">$1</span> |');
+    });
     html = html.replace(/\n\n/g, '</p><p style="margin-top: 8px;">');
-    // Single line breaks
     html = html.replace(/\n/g, '<br>');
 
     return `<p>${html}</p>`;
@@ -344,12 +615,16 @@ print(response.choices[0].message.content)`,
           ...section,
           subsections: section.subsections.filter(
             sub =>
-              sub.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              sub.content.toLowerCase().includes(searchQuery.toLowerCase())
+              (lang === 'id' ? sub.id_title : sub.en_title).toLowerCase().includes(searchQuery.toLowerCase()) ||
+              (lang === 'id' ? sub.id_content : sub.en_content).toLowerCase().includes(searchQuery.toLowerCase())
           ),
         })).filter(section => section.subsections.length > 0)
       : docs
   );
+
+  function t(idText: string, enText: string): string {
+    return lang === 'id' ? idText : enText;
+  }
 </script>
 
 <svelte:head>
@@ -371,13 +646,27 @@ print(response.choices[0].message.content)`,
       display: flex; flex-direction: column;
     "
   >
-    <!-- Search -->
-    <div style="padding: 14px; border-bottom: 1px solid var(--color-border);">
+    <!-- Language toggle + Search -->
+    <div style="padding: 14px; border-bottom: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 10px;">
+      <!-- Lang toggle -->
+      <div style="display: flex; gap: 6px;">
+        <button
+          class="lang-btn"
+          class:active={lang === 'id'}
+          onclick={() => lang = 'id'}
+        >🇮🇩 ID</button>
+        <button
+          class="lang-btn"
+          class:active={lang === 'en'}
+          onclick={() => lang = 'en'}
+        >🇬🇧 EN</button>
+      </div>
+      <!-- Search -->
       <div style="position: relative;">
         <Search size={14} style="color: var(--color-fg-3); position: absolute; left: 10px; top: 50%; transform: translateY(-50%); pointer-events: none;" />
         <input
           class="input-field"
-          placeholder="Search docs..."
+          placeholder={lang === 'id' ? 'Cari docs...' : 'Search docs...'}
           bind:value={searchQuery}
           style="padding-left: 32px; font-size: 12px;"
         />
@@ -397,7 +686,7 @@ print(response.choices[0].message.content)`,
             }}
           >
             <section.icon size={16} stroke-width={1.8} />
-            <span style="flex: 1; text-align: left;">{section.title}</span>
+            <span style="flex: 1; text-align: left;">{t(section.id_title, section.en_title)}</span>
             {#if expandedSections.has(section.id)}
               <ChevronDown size={14} />
             {:else}
@@ -412,7 +701,7 @@ print(response.choices[0].message.content)`,
                   class="sidebar-sub-btn"
                   onclick={() => scrollToSubsection(section.id, sub.id)}
                 >
-                  {sub.title}
+                  {t(sub.id_title, sub.en_title)}
                 </button>
               {/each}
             </div>
@@ -429,8 +718,12 @@ print(response.choices[0].message.content)`,
         <div class="card">
           <div class="flex flex-col items-center justify-center" style="padding: 48px; opacity: 0.6;">
             <Search size={48} style="color: var(--color-fg-3); margin-bottom: 12px;" stroke-width={1.2} />
-            <div style="font-size: 14px; font-weight: 500; color: var(--color-fg-2);">No results found</div>
-            <div style="font-size: 13px; color: var(--color-fg-3); margin-top: 4px;">Try a different search term</div>
+            <div style="font-size: 14px; font-weight: 500; color: var(--color-fg-2);">
+              {lang === 'id' ? 'Tidak ditemukan' : 'No results found'}
+            </div>
+            <div style="font-size: 13px; color: var(--color-fg-3); margin-top: 4px;">
+              {lang === 'id' ? 'Coba kata kunci lain' : 'Try a different search term'}
+            </div>
           </div>
         </div>
       {:else}
@@ -449,10 +742,10 @@ print(response.choices[0].message.content)`,
                   <section.icon size={18} style="color: var(--color-primary);" />
                 </div>
                 <span style="font-size: 16px; font-weight: 600; color: var(--color-fg-0);">
-                  {section.title}
+                  {t(section.id_title, section.en_title)}
                 </span>
                 <span style="font-size: 12px; color: var(--color-fg-3); font-weight: 400;">
-                  {section.subsections.length} section{section.subsections.length !== 1 ? 's' : ''}
+                  {section.subsections.length} {lang === 'id' ? 'bagian' : 'section'}{section.subsections.length !== 1 ? (lang === 'id' ? '' : 's') : ''}
                 </span>
               </div>
               {#if expandedSections.has(section.id)}
@@ -472,14 +765,14 @@ print(response.choices[0].message.content)`,
                     style="animation: fadeInUp {0.2 + i * 0.08}s ease-out;"
                   >
                     <h3 style="font-size: 15px; font-weight: 600; color: var(--color-fg-0); margin-bottom: 12px;">
-                      {sub.title}
+                      {t(sub.id_title, sub.en_title)}
                     </h3>
 
                     <div class="doc-content">
-                      {@html renderDocContent(sub.content)}
+                      {@html renderDocContent(t(sub.id_content, sub.en_content))}
                     </div>
 
-                    {#if sub.code}
+                    {#if (lang === 'id' ? sub.id_code : sub.en_code)}
                       <div class="code-container">
                         <div class="code-header">
                           <span style="font-size: 11px; font-weight: 500; color: var(--color-fg-3); text-transform: uppercase; letter-spacing: 0.5px;">
@@ -487,17 +780,17 @@ print(response.choices[0].message.content)`,
                           </span>
                           <button
                             class="code-copy-btn"
-                            onclick={() => copyCode(sub.code!)}
-                            title="Copy code"
+                            onclick={() => copyCode((lang === 'id' ? sub.id_code : sub.en_code)!)}
+                            title={lang === 'id' ? 'Salin kode' : 'Copy code'}
                           >
-                            {#if copiedCode === sub.code}
+                            {#if copiedCode === (lang === 'id' ? sub.id_code : sub.en_code)}
                               <Check size={12} style="color: var(--color-success);" />
                             {:else}
                               <Copy size={12} />
                             {/if}
                           </button>
                         </div>
-                        <pre class="code-block"><code>{sub.code}</code></pre>
+                        <pre class="code-block"><code>{lang === 'id' ? sub.id_code : sub.en_code}</code></pre>
                       </div>
                     {/if}
                   </div>
@@ -519,6 +812,27 @@ print(response.choices[0].message.content)`,
     .docs-sidebar {
       display: none !important;
     }
+  }
+
+  .lang-btn {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-fg-2);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: var(--transition);
+  }
+  .lang-btn:hover {
+    background: var(--color-bg-body);
+  }
+  .lang-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
   }
 
   .sidebar-section-btn {
