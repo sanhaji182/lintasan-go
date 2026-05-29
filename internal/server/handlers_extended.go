@@ -187,8 +187,25 @@ func (s *Server) handlePluginGenerate(w http.ResponseWriter,r *http.Request){ va
 
 func (s *Server) handleTeams(w http.ResponseWriter,r *http.Request){ writeData(w,s.getJSONSetting("teams",[]any{})) }
 func (s *Server) handleTeamsAction(w http.ResponseWriter,r *http.Request){ var in map[string]any; json.NewDecoder(r.Body).Decode(&in); arr:=s.getJSONSetting("teams",[]any{}).([]any); if in["action"]=="create"||in["name"]!=nil{ in["id"]=uuid.New().String(); in["members"]=[]any{}; arr=append(arr,in); s.setJSONSetting("teams",arr); writeJSON(w,map[string]any{"status":"created"}); return}; writeJSON(w,map[string]any{"status":"ok"}) }
-func (s *Server) handleUsers(w http.ResponseWriter,r *http.Request){ writeData(w,s.getJSONSetting("users",[]any{})) }
-func (s *Server) handleUsersAction(w http.ResponseWriter,r *http.Request){ var in map[string]any; json.NewDecoder(r.Body).Decode(&in); arr:=s.getJSONSetting("users",[]any{}).([]any); if in["action"]=="create"||in["username"]!=nil{ in["id"]=uuid.New().String(); in["active"]=true; arr=append(arr,in); s.setJSONSetting("users",arr); writeJSON(w,map[string]any{"status":"created"}); return}; writeJSON(w,map[string]any{"status":"ok"}) }
+func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
+	// Delegate to auth handler (JWT-based)
+	if s.authHandler != nil {
+		s.authHandler.HandleListUsers()(w, r)
+	} else {
+		writeData(w, s.getJSONSetting("users", []any{}))
+	}
+}
+
+func (s *Server) handleUsersAction(w http.ResponseWriter, r *http.Request) {
+	// Delegate to auth handler (JWT-based)
+	if s.authHandler != nil {
+		s.authHandler.HandleCreateUser()(w, r)
+	} else {
+		var in map[string]any
+		json.NewDecoder(r.Body).Decode(&in)
+		writeJSON(w, map[string]any{"status": "ok"})
+	}
+}
 func (s *Server) handleWebhooks(w http.ResponseWriter,r *http.Request){ writeData(w,s.getJSONSetting("webhooks",map[string]any{"webhooks":[]any{},"history":[]any{}})) }
 func (s *Server) handleWebhooksAction(w http.ResponseWriter,r *http.Request){
 	var in map[string]any; json.NewDecoder(r.Body).Decode(&in)

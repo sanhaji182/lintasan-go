@@ -129,6 +129,14 @@ func (d *DB) migrate() error {
 			expires_at DATETIME NOT NULL,
 			hit_count INTEGER DEFAULT 0
 		)`,
+		`CREATE TABLE IF NOT EXISTS users (
+			id TEXT PRIMARY KEY,
+			username TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			role TEXT NOT NULL DEFAULT 'user',
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)`,
 		`CREATE TABLE IF NOT EXISTS oauth_sessions (
 			id TEXT PRIMARY KEY,
 			provider TEXT NOT NULL,

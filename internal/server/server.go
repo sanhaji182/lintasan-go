@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,20 +24,22 @@ import (
 )
 
 type Server struct {
-	cfg        *config.Config
-	db         *db.DB
-	mux        *http.ServeMux
-	proxy      *ProxyHandler
-	memHandler *MemoryHandler         // vector memory API handler
-	mitmProxy  *mitm.MITMProxy        // MITM bridge for IDE interception
-	oauthMgr   *auth.OAuthManager     // OAuth session manager
-	pluginMgr  *plugin.Manager        // JS plugin engine (also in proxy.pm)
-	discoverer *discover.Discoverer   // auto model discovery
-	fpScanner  *freeproviders.Scanner // free provider scanner
-	rtkComp    *rtk.Compressor        // RTK token compressor
-	webSearch  *websearch.Engine      // web search engine
-	mcpServer  *mcp.Server            // MCP protocol server
-	mitmOnce   sync.Once              // ensures MITM starts exactly once
+	cfg         *config.Config
+	db          *db.DB
+	mux         *http.ServeMux
+	proxy       *ProxyHandler
+	memHandler  *MemoryHandler          // vector memory API handler
+	mitmProxy   *mitm.MITMProxy         // MITM bridge for IDE interception
+	oauthMgr    *auth.OAuthManager      // OAuth session manager
+	userMgr     *auth.UserManager       // Dashboard user manager
+	authHandler *auth.AuthHandler       // HTTP auth handlers
+	pluginMgr   *plugin.Manager         // JS plugin engine (also in proxy.pm)
+	discoverer  *discover.Discoverer    // auto model discovery
+	fpScanner   *freeproviders.Scanner  // free provider scanner
+	rtkComp     *rtk.Compressor         // RTK token compressor
+	webSearch   *websearch.Engine       // web search engine
+	mcpServer   *mcp.Server             // MCP protocol server
+	mitmOnce    sync.Once               // ensures MITM starts exactly once
 }
 
 func New(cfg *config.Config, database *db.DB) *Server {
@@ -49,6 +53,24 @@ func New(cfg *config.Config, database *db.DB) *Server {
 
 	// Wire OAuth manager (reuse the one from proxy or create standalone)
 	s.oauthMgr = auth.NewOAuthManager(database)
+
+	// Wire dashboard auth (JWT token-based)
+	jwtSecret := os.Getenv("LINTASAN_JWT_SECRET")
+	if jwtSecret == "" {
+		// Generate a random secret if not set (survives restarts because stored in DB)
+		jwtSecret, _ = database.GetSetting("jwt_secret")
+		if jwtSecret == "" {
+			jwtSecret = fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("lintasan-%d", time.Now().UnixNano()))))
+			database.SetSetting("jwt_secret", jwtSecret)
+		}
+	}
+	s.userMgr = auth.NewUserManager(database.Conn(), jwtSecret)
+	s.authHandler = auth.NewAuthHandler(s.userMgr)
+
+	// Seed default admin account (admin / admin123 — change on first login!)
+	if err := s.userMgr.SeedAdmin("admin", "admin123"); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: admin seed failed: %v\n", err)
+	}
 
 	// Wire plugin manager (shared with proxy so both have access)
 	s.pluginMgr = s.proxy.pm
@@ -106,6 +128,13 @@ func (s *Server) routes() {
 
 	// Register OAuth routes
 	s.registerOAuthRoutes()
+
+	// Register Auth routes (JWT-based dashboard login)
+	s.mux.HandleFunc("POST /api/auth/login", s.authHandler.HandleLogin())
+	s.mux.HandleFunc("GET /api/auth/me", s.authHandler.HandleMe())
+	s.mux.HandleFunc("POST /api/auth/logout", s.authHandler.HandleLogout())
+	s.mux.HandleFunc("GET /api/auth/users", s.authHandler.HandleListUsers())
+	s.mux.HandleFunc("POST /api/auth/users", s.authHandler.HandleCreateUser())
 
 	// Health
 	s.mux.HandleFunc("GET /health", s.handleHealth)
@@ -250,23 +279,44 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Validate Bearer token
-		auth := r.Header.Get("Authorization")
-		if auth == "Bearer "+masterKey {
+		authHeader := r.Header.Get("Authorization")
+
+		// Validate Bearer token — master key
+		if authHeader == "Bearer "+masterKey {
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		// Also check config master key
-		if s.cfg.MasterKey != "" && auth == "Bearer "+s.cfg.MasterKey {
+		if s.cfg.MasterKey != "" && authHeader == "Bearer "+s.cfg.MasterKey {
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		// Check API keys created from dashboard (/api/keys)
-		if strings.HasPrefix(auth, "Bearer ") && s.validDashboardAPIKey(strings.TrimPrefix(auth, "Bearer ")) {
+		if strings.HasPrefix(authHeader, "Bearer ") && s.validDashboardAPIKey(strings.TrimPrefix(authHeader, "Bearer ")) {
 			next.ServeHTTP(w, r)
 			return
+		}
+
+		// Check JWT token (from cookie or Authorization header)
+		if s.userMgr != nil {
+			// Try cookie first
+			if cookie, cookieErr := r.Cookie("lintasan_token"); cookieErr == nil && cookie.Value != "" {
+				if user, err := s.userMgr.ValidateToken(cookie.Value); err == nil {
+					ctx := context.WithValue(r.Context(), auth.UserContextKey, user)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
+			// Try Authorization header
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				if user, err := s.userMgr.ValidateToken(strings.TrimPrefix(authHeader, "Bearer ")); err == nil {
+					ctx := context.WithValue(r.Context(), auth.UserContextKey, user)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")

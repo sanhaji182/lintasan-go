@@ -560,6 +560,243 @@ curl http://localhost:20180/v1/models \\
 curl http://localhost:20180/health`,
           language: 'bash',
         },
+        {
+          id: 'ide-tools',
+          id_title: 'AI Coding Tools (IDE/CLI)',
+          en_title: 'AI Coding Tools (IDE/CLI)',
+          id_content: `Lintasan kompatibel dengan **semua AI coding tools** yang support OpenAI-compatible API. Cukup arahkan ke Lintasan endpoint — otomatis dapat routing, caching, dan fallback.
+
+Berikut konfigurasi untuk tools populer:`,
+          en_content: `Lintasan is compatible with **all AI coding tools** that support OpenAI-compatible API. Just point to your Lintasan endpoint — you automatically get routing, caching, and fallback.
+
+Here are configurations for popular tools:`,
+        },
+        {
+          id: 'claude-code',
+          id_title: 'Claude Code (Anthropic)',
+          en_title: 'Claude Code (Anthropic)',
+          id_content: `Claude Code adalah AI coding agent CLI dari Anthropic. Arahkan ke Lintasan dengan environment variable. **Semua model provider bisa dipakai** — tidak terbatas Claude saja.`,
+          en_content: `Claude Code is Anthropic's AI coding agent CLI. Point it to Lintasan with environment variables. **Any provider model works** — not limited to Claude.`,
+          id_code: `# ~/.bashrc atau ~/.zshrc
+export ANTHROPIC_BASE_URL="http://localhost:20180/v1"
+export ANTHROPIC_API_KEY="lintasan-master-key"
+
+# Claude Code otomatis pakai Lintasan
+claude`,
+          en_code: `# ~/.bashrc or ~/.zshrc
+export ANTHROPIC_BASE_URL="http://localhost:20180/v1"
+export ANTHROPIC_API_KEY="lintasan-master-key"
+
+# Claude Code automatically uses Lintasan
+claude`,
+          language: 'bash',
+        },
+        {
+          id: 'codex',
+          id_title: 'Codex CLI (OpenAI)',
+          en_title: 'Codex CLI (OpenAI)',
+          id_content: `Codex adalah coding agent CLI dari OpenAI. Support OpenAI-compatible API. **Gunakan model apapun** — GPT, Claude, Gemini, DeepSeek, Groq, dll lewat Lintasan.`,
+          en_content: `Codex is OpenAI's coding agent CLI. Supports OpenAI-compatible API. **Use any model** — GPT, Claude, Gemini, DeepSeek, Groq, etc. via Lintasan.`,
+          id_code: `export OPENAI_API_KEY="lintasan-master-key"
+export OPENAI_API_BASE_URL="http://localhost:20180/v1"
+
+codex edit "Refactor this file to use async/await"`,
+          en_code: `export OPENAI_API_KEY="lintasan-master-key"
+export OPENAI_API_BASE_URL="http://localhost:20180/v1"
+
+codex edit "Refactor this file to use async/await"`,
+          language: 'bash',
+        },
+        {
+          id: 'hermes-agent',
+          id_title: 'Hermes Agent',
+          en_title: 'Hermes Agent',
+          id_content: `Hermes Agent adalah AI assistant dengan multi-provider support. Konfigurasi via file <code>config.yaml</code> — tambahkan Lintasan sebagai custom provider.`,
+          en_content: `Hermes Agent is an AI assistant with multi-provider support. Configure via <code>config.yaml</code> — add Lintasan as a custom provider.`,
+          id_code: `# ~/.hermes/config.yaml
+models:
+  providers:
+    lintasan:
+      base_url: "http://localhost:20180/v1"
+      api_key: "lintasan-master-key"
+      models:
+        - "gpt-4o"
+        - "claude-sonnet-4"
+        - "gemini-2.5-pro"
+
+# Hermes sekarang bisa pakai semua model via Lintasan
+hermes config set provider lintasan
+hermes config set model gpt-4o`,
+          en_code: `# ~/.hermes/config.yaml
+models:
+  providers:
+    lintasan:
+      base_url: "http://localhost:20180/v1"
+      api_key: "lintasan-master-key"
+      models:
+        - "gpt-4o"
+        - "claude-sonnet-4"
+        - "gemini-2.5-pro"
+
+# Hermes now uses all models via Lintasan
+hermes config set provider lintasan
+hermes config set model gpt-4o`,
+          language: 'yaml',
+        },
+        {
+          id: 'opencode',
+          id_title: 'OpenCode CLI',
+          en_title: 'OpenCode CLI',
+          id_content: `OpenCode adalah open-source AI coding agent CLI. Ganti endpoint ke Lintasan via env vars.`,
+          en_content: `OpenCode is an open-source AI coding agent CLI. Switch endpoint to Lintasan via env vars.`,
+          id_code: `export OPENAI_API_KEY="lintasan-master-key"
+export OPENAI_ENDPOINT="http://localhost:20180/v1"
+
+opencode "Buat REST API untuk user management"`,
+          en_code: `export OPENAI_API_KEY="lintasan-master-key"
+export OPENAI_ENDPOINT="http://localhost:20180/v1"
+
+opencode "Create a REST API for user management"`,
+          language: 'bash',
+        },
+        {
+          id: 'zed',
+          id_title: 'Zed Editor',
+          en_title: 'Zed Editor',
+          id_content: `Zed punya fitur AI assistant built-in. Tambahkan Lintasan sebagai provider di settings.`,
+          en_content: `Zed has a built-in AI assistant. Add Lintasan as a provider in settings.`,
+          id_code: `// ~/.config/zed/settings.json
+{
+  "assistant": {
+    "provider": {
+      "name": "lintasan",
+      "type": "open_ai_compatible",
+      "api_url": "http://localhost:20180/v1",
+      "available_models": [
+        "gpt-4o",
+        "claude-sonnet-4",
+        "gemini-2.5-pro"
+      ]
+    },
+    "default_model": "gpt-4o"
+  }
+}`,
+          en_code: `// ~/.config/zed/settings.json
+{
+  "assistant": {
+    "provider": {
+      "name": "lintasan",
+      "type": "open_ai_compatible",
+      "api_url": "http://localhost:20180/v1",
+      "available_models": [
+        "gpt-4o",
+        "claude-sonnet-4",
+        "gemini-2.5-pro"
+      ]
+    },
+    "default_model": "gpt-4o"
+  }
+}`,
+          language: 'json',
+        },
+        {
+          id: 'cursor',
+          id_title: 'Cursor IDE',
+          en_title: 'Cursor IDE',
+          id_content: `Cursor IDE support OpenAI-compatible API. Bisa diarahkan ke Lintasan.`,
+          en_content: `Cursor IDE supports OpenAI-compatible API. Can be pointed to Lintasan.`,
+          id_code: `// Cursor Settings → Models → OpenAI API Key
+// Isi dengan:
+API Key: lintasan-master-key
+Base URL: http://localhost:20180/v1
+
+// Semua model di Lintasan otomatis muncul di Cursor`,
+          en_code: `// Cursor Settings → Models → OpenAI API Key
+// Fill in:
+API Key: lintasan-master-key
+Base URL: http://localhost:20180/v1
+
+// All Lintasan models automatically appear in Cursor`,
+          language: 'plaintext',
+        },
+        {
+          id: 'continue-dev',
+          id_title: 'Continue.dev (VS Code / JetBrains)',
+          en_title: 'Continue.dev (VS Code / JetBrains)',
+          id_content: `Continue.dev adalah AI code assistant open-source untuk VS Code dan JetBrains.`,
+          en_content: `Continue.dev is an open-source AI code assistant for VS Code and JetBrains.`,
+          id_code: `// ~/.continue/config.json
+{
+  "models": [
+    {
+      "title": "Lintasan GPT-4o",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "apiKey": "lintasan-master-key",
+      "apiBase": "http://localhost:20180/v1"
+    },
+    {
+      "title": "Lintasan Claude",
+      "provider": "openai",
+      "model": "claude-sonnet-4",
+      "apiKey": "lintasan-master-key",
+      "apiBase": "http://localhost:20180/v1"
+    }
+  ]
+}`,
+          en_code: `// ~/.continue/config.json
+{
+  "models": [
+    {
+      "title": "Lintasan GPT-4o",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "apiKey": "lintasan-master-key",
+      "apiBase": "http://localhost:20180/v1"
+    },
+    {
+      "title": "Lintasan Claude",
+      "provider": "openai",
+      "model": "claude-sonnet-4",
+      "apiKey": "lintasan-master-key",
+      "apiBase": "http://localhost:20180/v1"
+    }
+  ]
+}`,
+          language: 'json',
+        },
+        {
+          id: 'aider',
+          id_title: 'Aider',
+          en_title: 'Aider',
+          id_content: `Aider adalah AI pair programming CLI. Support OpenAI-compatible API.`,
+          en_content: `Aider is an AI pair programming CLI. Supports OpenAI-compatible API.`,
+          id_code: `export OPENAI_API_KEY="lintasan-master-key"
+export OPENAI_API_BASE="http://localhost:20180/v1"
+
+aider --model gpt-4o`,
+          en_code: `export OPENAI_API_KEY="lintasan-master-key"
+export OPENAI_API_BASE="http://localhost:20180/v1"
+
+aider --model gpt-4o`,
+          language: 'bash',
+        },
+        {
+          id: 'openclaw',
+          id_title: 'OpenClaw',
+          en_title: 'OpenClaw',
+          id_content: `OpenClaw adalah AI coding agent open-source.`,
+          en_content: `OpenClaw is an open-source AI coding agent.`,
+          id_code: `export OPENAI_API_KEY="lintasan-master-key"
+export OPENAI_BASE_URL="http://localhost:20180/v1"
+
+openclaw chat "Implement authentication middleware"`,
+          en_code: `export OPENAI_API_KEY="lintasan-master-key"
+export OPENAI_BASE_URL="http://localhost:20180/v1"
+
+openclaw chat "Implement authentication middleware"`,
+          language: 'bash',
+        },
       ],
     },
   ];
