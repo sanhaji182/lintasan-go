@@ -106,20 +106,20 @@
     <div class="card mb-5" style="animation: fadeInScale 0.3s ease-out;">
       <div class="grid grid-cols-1 md:grid-cols-2" style="gap: 12px;">
         <div>
-          <label style="font-size: 12px; font-weight: 500; color: var(--color-fg-2); display: block; margin-bottom: 4px;">Name</label>
-          <input class="input-field" bind:value={form.name} placeholder="My Provider" />
+          <label for="connection-name" style="font-size: 12px; font-weight: 500; color: var(--color-fg-2); display: block; margin-bottom: 4px;">Name</label>
+          <input id="connection-name" class="input-field" bind:value={form.name} placeholder="My Provider" />
         </div>
         <div>
-          <label style="font-size: 12px; font-weight: 500; color: var(--color-fg-2); display: block; margin-bottom: 4px;">Base URL</label>
-          <input class="input-field" bind:value={form.base_url} placeholder="https://api.openai.com/v1" />
+          <label for="connection-base-url" style="font-size: 12px; font-weight: 500; color: var(--color-fg-2); display: block; margin-bottom: 4px;">Base URL</label>
+          <input id="connection-base-url" class="input-field" bind:value={form.base_url} placeholder="https://api.openai.com/v1" />
         </div>
         <div>
-          <label style="font-size: 12px; font-weight: 500; color: var(--color-fg-2); display: block; margin-bottom: 4px;">API Key</label>
-          <input class="input-field" type="password" bind:value={form.api_key} placeholder="sk-..." />
+          <label for="connection-api-key" style="font-size: 12px; font-weight: 500; color: var(--color-fg-2); display: block; margin-bottom: 4px;">API Key</label>
+          <input id="connection-api-key" class="input-field" type="password" bind:value={form.api_key} placeholder="sk-..." />
         </div>
         <div>
-          <label style="font-size: 12px; font-weight: 500; color: var(--color-fg-2); display: block; margin-bottom: 4px;">Format</label>
-          <select class="input-field" bind:value={form.format}>
+          <label for="connection-format" style="font-size: 12px; font-weight: 500; color: var(--color-fg-2); display: block; margin-bottom: 4px;">Format</label>
+          <select id="connection-format" class="input-field" bind:value={form.format}>
             <option value="openai">OpenAI</option>
             <option value="anthropic">Anthropic</option>
             <option value="gemini">Gemini</option>
@@ -141,7 +141,7 @@
   {:else}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style="gap: 16px;">
       {#each connections as conn}
-        <div class="card relative" style="padding: 20px; transition: var(--transition);" onmouseenter={(e) => (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)'} onmouseleave={(e) => (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)'}>
+        <div class="card relative connection-card" style="padding: 20px;">
           <!-- Status dot -->
           <div class="absolute" style="top: 16px; right: 16px; width: 8px; height: 8px; border-radius: 50%; background: {conn.is_active ? 'var(--color-success)' : 'var(--color-error)'}; box-shadow: 0 0 {conn.is_active ? '8px rgba(16,185,129,0.5)' : '8px rgba(239,68,68,0.5)'};"></div>
 
@@ -184,3 +184,13 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .connection-card {
+    transition: var(--transition);
+  }
+
+  .connection-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+</style>

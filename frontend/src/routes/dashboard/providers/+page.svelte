@@ -182,10 +182,8 @@
       {#each filtered as provider (provider.id)}
         {@const isOpen = expanded.has(provider.id)}
         <div
-          class="card"
-          style="padding: 0; overflow: hidden; transition: box-shadow 0.2s;"
-          onmouseenter={e => (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)'}
-          onmouseleave={e => (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)'}
+          class="card provider-card"
+          style="padding: 0; overflow: hidden;"
         >
           <!-- Provider Header -->
           <button
@@ -289,6 +287,14 @@
 </div>
 
 <style>
+  .provider-card {
+    transition: box-shadow 0.2s;
+  }
+
+  .provider-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+
   :global(.input-field) {
     width: 100%;
     padding: 10px 14px;

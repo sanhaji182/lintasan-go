@@ -141,6 +141,28 @@
     configJson = JSON.stringify(plugin.config || {}, null, 2);
   }
 
+  function closeConfigModal() {
+    configuringPlugin = null;
+  }
+
+  function handleConfigOverlayKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      closeConfigModal();
+    }
+  }
+
+  function stopConfigClose(event: MouseEvent) {
+    event.stopPropagation();
+  }
+
+  function stopConfigCloseKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      closeConfigModal();
+    }
+  }
+
   async function saveConfig() {
     if (!configuringPlugin) return;
     try {
@@ -148,7 +170,7 @@
       await api.patch(`/api/plugins/${configuringPlugin.id}/config`, { config: parsed });
       configuringPlugin.config = parsed;
       installedPlugins = [...installedPlugins];
-      configuringPlugin = null;
+      closeConfigModal();
     } catch (e: any) {
       error = e.message || 'Invalid JSON or failed to save config';
     }
@@ -556,10 +578,22 @@
 
 <!-- Config Modal -->
 {#if configuringPlugin}
-  <div class="modal-backdrop" onclick={() => configuringPlugin = null}>
+  <div
+    class="modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close plugin config modal"
+    onclick={closeConfigModal}
+    onkeydown={handleConfigOverlayKeydown}
+  >
     <div
       class="modal-card card"
-      onclick={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Plugin configuration dialog"
+      tabindex="-1"
+      onclick={stopConfigClose}
+      onkeydown={stopConfigCloseKeydown}
       style="animation: fadeInScale 0.3s ease-out;"
     >
       <div class="flex items-center justify-between" style="margin-bottom: 16px;">
@@ -571,7 +605,7 @@
         </div>
         <button
           class="action-btn"
-          onclick={() => configuringPlugin = null}
+          onclick={closeConfigModal}
         >
           <X size={16} />
         </button>
@@ -586,7 +620,7 @@
       ></textarea>
 
       <div class="flex items-center justify-end gap-2" style="margin-top: 16px;">
-        <button class="btn-secondary" onclick={() => configuringPlugin = null}>Cancel</button>
+        <button class="btn-secondary" onclick={closeConfigModal}>Cancel</button>
         <button class="btn-primary" onclick={saveConfig}>Save Configuration</button>
       </div>
     </div>

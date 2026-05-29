@@ -136,6 +136,29 @@
     }
   }
 
+  function closeMemberModal() {
+    showMemberModal = false;
+    selectedTeam = null;
+  }
+
+  function handleOverlayKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      closeMemberModal();
+    }
+  }
+
+  function stopModalClose(event: MouseEvent) {
+    event.stopPropagation();
+  }
+
+  function stopModalCloseKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      closeMemberModal();
+    }
+  }
+
   function getMemberCount(team: Team): number {
     return team.members.length;
   }
@@ -306,10 +329,23 @@
 
   <!-- Member Management Modal -->
   {#if showMemberModal && selectedTeam}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="modal-overlay" onclick={() => { showMemberModal = false; selectedTeam = null; }}>
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="modal-card card" onclick={(e) => e.stopPropagation()}>
+    <div
+      class="modal-overlay"
+      role="button"
+      tabindex="0"
+      aria-label="Close team member modal"
+      onclick={closeMemberModal}
+      onkeydown={handleOverlayKeydown}
+    >
+      <div
+        class="modal-card card"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Team member management"
+        tabindex="-1"
+        onclick={stopModalClose}
+        onkeydown={stopModalCloseKeydown}
+      >
         <div class="flex items-center justify-between" style="margin-bottom: 20px;">
           <div>
             <div style="font-size: 15px; font-weight: 600; color: var(--color-fg-0);">
@@ -319,7 +355,7 @@
               {selectedTeam.members.length} member{selectedTeam.members.length !== 1 ? 's' : ''}
             </div>
           </div>
-          <button class="btn-icon" onclick={() => { showMemberModal = false; selectedTeam = null; }}>
+          <button class="btn-icon" onclick={closeMemberModal}>
             <X size={16} style="color: var(--color-fg-3);" />
           </button>
         </div>

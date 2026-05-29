@@ -69,8 +69,9 @@
       <div class="bg-gray-800 rounded-lg p-4">
         <h2 class="text-lg font-semibold mb-4">🧪 Test Tool</h2>
         <div class="mb-4">
-          <label class="block text-sm text-gray-400 mb-2">Selected Tool</label>
+          <label for="mcp-selected-tool" class="block text-sm text-gray-400 mb-2">Selected Tool</label>
           <input
+            id="mcp-selected-tool"
             type="text"
             bind:value={selectedTool}
             class="w-full p-2 bg-gray-700 rounded text-white font-mono"
@@ -78,8 +79,9 @@
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm text-gray-400 mb-2">Arguments (JSON)</label>
+          <label for="mcp-tool-args" class="block text-sm text-gray-400 mb-2">Arguments (JSON)</label>
           <textarea
+            id="mcp-tool-args"
             bind:value={testInput}
             class="w-full p-2 bg-gray-700 rounded text-white font-mono h-24"
           ></textarea>
@@ -94,7 +96,7 @@
 
         {#if testResult}
           <div class="mt-4">
-            <label class="block text-sm text-gray-400 mb-2">Result</label>
+            <p class="block text-sm text-gray-400 mb-2">Result</p>
             <pre class="p-3 bg-gray-900 rounded text-sm overflow-auto max-h-64">{testResult}</pre>
           </div>
         {/if}

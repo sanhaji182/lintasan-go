@@ -168,6 +168,8 @@
           <button
             class="toggle-btn"
             class:active={settings.cache_enabled ?? true}
+            aria-label={`Toggle response caching: ${(settings.cache_enabled ?? true) ? 'enabled' : 'disabled'}`}
+            title={`Response caching ${(settings.cache_enabled ?? true) ? 'enabled' : 'disabled'}`}
             onclick={() => settings.cache_enabled = !(settings.cache_enabled ?? true)}
           >
             <div class="toggle-track">
@@ -188,6 +190,8 @@
           <button
             class="toggle-btn"
             class:active={settings.rate_limit_enabled ?? true}
+            aria-label={`Toggle rate limiting: ${(settings.rate_limit_enabled ?? true) ? 'enabled' : 'disabled'}`}
+            title={`Rate limiting ${(settings.rate_limit_enabled ?? true) ? 'enabled' : 'disabled'}`}
             onclick={() => settings.rate_limit_enabled = !(settings.rate_limit_enabled ?? true)}
           >
             <div class="toggle-track">
@@ -208,6 +212,8 @@
           <button
             class="toggle-btn"
             class:active={settings.cors_enabled ?? true}
+            aria-label={`Toggle CORS headers: ${(settings.cors_enabled ?? true) ? 'enabled' : 'disabled'}`}
+            title={`CORS headers ${(settings.cors_enabled ?? true) ? 'enabled' : 'disabled'}`}
             onclick={() => settings.cors_enabled = !(settings.cors_enabled ?? true)}
           >
             <div class="toggle-track">
