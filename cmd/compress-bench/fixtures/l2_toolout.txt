@@ -1,0 +1,71 @@
+$ git status
+On branch feat/rate-limiter
+Your branch is ahead of 'origin/feat/rate-limiter' by 3 commits.
+  (use "git push" to publish your local commits)
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   internal/ratelimit/bucket.go
+	modified:   internal/ratelimit/bucket_test.go
+	modified:   internal/ratelimit/window.go
+	modified:   internal/server/middleware.go
+	modified:   internal/server/middleware_test.go
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	internal/ratelimit/distributed.go
+	internal/ratelimit/distributed_test.go
+	docs/rate-limiting.md
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+$ grep -rn "TODO" internal/ratelimit/
+internal/ratelimit/bucket.go:42:	// TODO: make refill rate configurable per key tier
+internal/ratelimit/bucket.go:89:	// TODO: add jitter to avoid thundering herd on refill
+internal/ratelimit/window.go:17:	// TODO: cap memory per key for heavy clients
+internal/ratelimit/window.go:103:	// TODO: switch to ring buffer to avoid slice growth
+internal/ratelimit/distributed.go:55:	// TODO: handle redis MOVED redirect for cluster mode
+internal/ratelimit/distributed.go:118:	// TODO: fall back to local bucket when redis is down
+internal/ratelimit/distributed.go:204:	// TODO: add circuit breaker around redis calls
+
+$ tree internal/ratelimit/
+internal/ratelimit/
+├── bucket.go
+├── bucket_test.go
+├── window.go
+├── window_test.go
+├── distributed.go
+├── distributed_test.go
+└── ratelimit.go
+
+1 directory, 7 files
+
+$ ls -la internal/ratelimit/
+total 96
+drwxr-xr-x  2 ubuntu ubuntu  4096 May 29 21:10 .
+drwxr-xr-x 38 ubuntu ubuntu  4096 May 29 20:55 ..
+-rw-r--r--  1 ubuntu ubuntu  3214 May 29 21:08 bucket.go
+-rw-r--r--  1 ubuntu ubuntu  2890 May 29 20:41 bucket_test.go
+-rw-r--r--  1 ubuntu ubuntu  4102 May 29 21:09 distributed.go
+-rw-r--r--  1 ubuntu ubuntu  1755 May 29 20:33 distributed_test.go
+-rw-r--r--  1 ubuntu ubuntu  2640 May 29 21:10 window.go
+-rw-r--r--  1 ubuntu ubuntu  1980 May 29 20:30 window_test.go
+-rw-r--r--  1 ubuntu ubuntu   512 May 29 19:58 ratelimit.go
+
+$ tail -f /var/log/lintasan/gateway.log
+2026-05-29T21:10:01Z INFO  ratelimit: key=ak_8821 allowed tokens=4.50 refill=10/s
+2026-05-29T21:10:01Z INFO  ratelimit: key=ak_8821 allowed tokens=3.50 refill=10/s
+2026-05-29T21:10:01Z INFO  ratelimit: key=ak_8821 allowed tokens=2.50 refill=10/s
+2026-05-29T21:10:01Z INFO  ratelimit: key=ak_8821 allowed tokens=1.50 refill=10/s
+2026-05-29T21:10:01Z WARN  ratelimit: key=ak_8821 throttled tokens=0.50 refill=10/s
+2026-05-29T21:10:01Z WARN  ratelimit: key=ak_8821 throttled tokens=0.40 refill=10/s
+2026-05-29T21:10:01Z WARN  ratelimit: key=ak_8821 throttled tokens=0.30 refill=10/s
+2026-05-29T21:10:01Z WARN  ratelimit: key=ak_8821 throttled tokens=0.20 refill=10/s
+2026-05-29T21:10:02Z ERROR ratelimit: redis dial tcp 10.0.0.5:6379: connect: connection refused
+2026-05-29T21:10:02Z ERROR ratelimit: redis dial tcp 10.0.0.5:6379: connect: connection refused
+2026-05-29T21:10:02Z ERROR ratelimit: redis dial tcp 10.0.0.5:6379: connect: connection refused
+2026-05-29T21:10:02Z ERROR ratelimit: redis dial tcp 10.0.0.5:6379: connect: connection refused
+2026-05-29T21:10:02Z ERROR ratelimit: redis dial tcp 10.0.0.5:6379: connect: connection refused
+2026-05-29T21:10:03Z INFO  ratelimit: falling back to in-process token bucket
+2026-05-29T21:10:03Z INFO  ratelimit: key=ak_9001 allowed tokens=9.00 refill=10/s

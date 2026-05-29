@@ -1,0 +1,7 @@
+I'm building a rate limiter for our Go API gateway and I want to make sure I pick the right algorithm. We expect around 5000 requests per second at peak, spread across roughly 2000 distinct API keys. Most keys are low-traffic but a handful of heavy clients can burst to 500 requests in a single second.
+
+I'm torn between a token bucket and a sliding window log. The token bucket feels simpler to reason about and cheap on memory, but I worry it allows short bursts that exceed the intended average. The sliding window log is precise but stores a timestamp per request, which could blow up memory for the heavy keys.
+
+A few constraints: the limiter has to be safe for concurrent use from many goroutines, it should add no more than about one millisecond of latency per request, and it needs to degrade gracefully if Redis is briefly unavailable. We're already running Redis for caching, so a distributed counter is on the table, but I'd prefer to keep the hot path in-process if I can.
+
+Which approach would you recommend, and what's the cleanest way to structure the package so I can swap algorithms later without touching the call sites?
