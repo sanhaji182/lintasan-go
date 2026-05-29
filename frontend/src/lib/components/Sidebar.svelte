@@ -26,7 +26,7 @@
   const manageItems = [
     { label: 'API Keys', path: '/dashboard/keys', icon: Key },
     { label: 'Teams', path: '/dashboard/teams', icon: Users },
-    { label: 'Users', path: '/dashboard/users', icon: UserCircle },
+    { label: 'User Management', path: '/dashboard/users', icon: UserCircle },
     { label: 'Webhooks', path: '/dashboard/webhooks', icon: Webhook },
     { label: 'Backup', path: '/dashboard/backup', icon: Database },
     { label: 'Settings', path: '/dashboard/settings', icon: Settings },
