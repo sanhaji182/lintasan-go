@@ -6,6 +6,7 @@
   import { BarChart3 } from 'lucide-svelte';
 
   let data = $state<any>(null);
+  let quotaData = $state<any[]>([]);
   let loading = $state(true);
   let canvasEl: HTMLCanvasElement = $state()!;
 
@@ -13,8 +14,12 @@
 
   onMount(async () => {
     try {
-      const res = await api.get<any>('/api/usage');
-      data = res?.data || res;
+      const [usageRes, quotaRes] = await Promise.all([
+        api.get<any>('/api/usage'),
+        api.get<any>('/api/quota/stats').catch(() => null)
+      ]);
+      data = usageRes?.data || usageRes;
+      quotaData = quotaRes?.data || [];
     } catch {}
     finally { loading = false; }
   });
@@ -141,7 +146,7 @@
 
     <!-- Model breakdown -->
     {#if data.models?.length}
-      <div class="card">
+      <div class="card mb-5">
         <div style="font-size: 14px; font-weight: 600; color: var(--color-fg-0); margin-bottom: 16px;">Model Breakdown</div>
         <div style="overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -158,6 +163,49 @@
                   <td style="padding: 12px 14px; font-weight: 500; color: var(--color-fg-0); font-size: 12px;">{m.model}</td>
                   <td style="padding: 12px 14px; font-family: var(--font-mono); font-size: 12px;">{m.requests?.toLocaleString() || 0}</td>
                   <td style="padding: 12px 14px; font-family: var(--font-mono); font-size: 12px;">{(m.tokens || 0).toLocaleString()}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Quota Tracking -->
+    {#if quotaData?.length}
+      <div class="card mb-5">
+        <div style="font-size: 14px; font-weight: 600; color: var(--color-fg-0); margin-bottom: 16px;">Quota Tracking</div>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr>
+                {#each ['Provider', 'Input Tokens', 'Output Tokens', 'Cost Est.', 'Remaining', 'Next Reset'] as h}
+                  <th style="text-align: left; padding: 12px 14px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-fg-3); border-bottom: 1px solid var(--color-border);">{h}</th>
+                {/each}
+              </tr>
+            </thead>
+            <tbody>
+              {#each quotaData as q}
+                <tr style="border-bottom: 1px solid var(--color-border-light);">
+                  <td style="padding: 12px 14px; font-weight: 500; color: var(--color-fg-0);">{q.provider}</td>
+                  <td style="padding: 12px 14px; font-family: var(--font-mono); font-size: 12px;">{(q.input_tokens || 0).toLocaleString()}</td>
+                  <td style="padding: 12px 14px; font-family: var(--font-mono); font-size: 12px;">{(q.output_tokens || 0).toLocaleString()}</td>
+                  <td style="padding: 12px 14px; font-family: var(--font-mono); font-size: 12px;">${(q.cost_estimate || 0).toFixed(4)}</td>
+                  <td style="padding: 12px 14px;">
+                    {#if q.remaining?.percent_remaining !== undefined}
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="flex: 1; height: 6px; background: var(--color-border); border-radius: 3px; overflow: hidden; max-width: 100px;">
+                          <div style="width: {Math.max(0, Math.min(100, q.remaining.percent_remaining))}%; height: 100%; background: {q.remaining.percent_remaining > 20 ? 'var(--color-success)' : 'var(--color-error)'}; border-radius: 3px;"></div>
+                        </div>
+                        <span style="font-size: 11px; color: var(--color-fg-3); font-family: var(--font-mono);">{q.remaining.percent_remaining?.toFixed(0)}%</span>
+                      </div>
+                    {:else}
+                      <span style="font-size: 12px; color: var(--color-fg-3);">Unlimited</span>
+                    {/if}
+                  </td>
+                  <td style="padding: 12px 14px; font-size: 12px; color: var(--color-fg-3);">
+                    {q.next_reset ? new Date(q.next_reset).toLocaleString() : '—'}
+                  </td>
                 </tr>
               {/each}
             </tbody>

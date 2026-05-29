@@ -38,6 +38,7 @@
   let newTarget = $state('');
 
   const strategies = [
+    { value: 'auto', label: '🤖 Auto (Smart)', icon: Shuffle },
     { value: 'round-robin', label: 'Round Robin', icon: RotateCw },
     { value: 'least-latency', label: 'Least Latency', icon: CircleDot },
     { value: 'random', label: 'Random', icon: Shuffle },
@@ -70,6 +71,19 @@
       }));
     } catch {
       aliases = [];
+    }
+    // Always include built-in auto aliases
+    const autoAliases = [
+      { id: 'auto', alias: 'auto', target: 'Smart routing — picks best available provider' },
+      { id: 'auto/coding', alias: 'auto/coding', target: 'Optimized for code generation (high success rate)' },
+      { id: 'auto/fast', alias: 'auto/fast', target: 'Optimized for speed (lowest latency)' },
+      { id: 'auto/cheap', alias: 'auto/cheap', target: 'Optimized for cost (cheapest provider)' },
+    ];
+    const existingIds = new Set(aliases.map(a => a.id));
+    for (const aa of autoAliases) {
+      if (!existingIds.has(aa.id)) {
+        aliases = [...aliases, aa];
+      }
     }
   }
 
