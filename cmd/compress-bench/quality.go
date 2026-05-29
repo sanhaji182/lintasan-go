@@ -36,10 +36,12 @@ var (
 )
 
 // markerSet is the deduplicated set of critical markers found in some text,
-// grouped by category.
+// grouped by category. Bare directory/file paths are intentionally NOT tracked:
+// they were too noisy (URLs, \n escape artifacts in JSON tool output, route
+// strings). file:line refs (fileLocs) are the actionable debugging markers;
+// codes + error lines cover the rest.
 type markerSet struct {
 	fileLocs []string // file.go:line
-	paths    []string // bare dir/file paths
 	codes    []string // ERR_* style codes
 	errors   []string // error-line signatures
 }
@@ -47,21 +49,10 @@ type markerSet struct {
 func extractMarkers(text string) markerSet {
 	return markerSet{
 		fileLocs: uniqueSorted(reFileLoc.FindAllString(text, -1)),
-		paths:    nil, // bare paths intentionally excluded: too noisy (URLs, \n escape
-		// artifacts in JSON tool output, route strings). file:line refs in fileLocs
-		// are the actionable debugging markers; codes + error lines cover the rest.
-		codes:  uniqueSorted(reCode.FindAllString(text, -1)),
-		errors: uniqueSorted(extractErrorSignatures(text)),
+		codes:    uniqueSorted(reCode.FindAllString(text, -1)),
+		errors:   uniqueSorted(extractErrorSignatures(text)),
 	}
 }
-
-func (m markerSet) total() int {
-	return len(m.fileLocs) + len(m.paths) + len(m.codes) + len(m.errors)
-}
-
-// filterPaths removed: bare-path markers were too noisy (URLs, \n escape
-// artifacts, route strings). file:line refs are tracked via fileLocs instead.
-
 func extractErrorSignatures(text string) []string {
 	var sigs []string
 	for _, line := range reErrorLine.FindAllString(text, -1) {
@@ -143,12 +134,36 @@ func (q QualityResult) Note() string {
 	return base
 }
 
-// markerSurvives checks one marker of a given category against the compressed text.
+// markerSurvives checks one marker of a given category against the compressed
+// text. fileLocs use component matching (path + line) to survive RTK's grep
+// reformat. Error signatures use a tolerant match: the signature is a 60-char
+// prefix of an error line, and RTK/whitespace normalization can rewrite spacing
+// inside it, so we compare with internal whitespace collapsed rather than an
+// exact substring (which would false-negative on reflowed panic/fatal lines).
 func markerSurvives(cat, marker, compressed string) bool {
-	if cat == "fileLocs" {
+	switch cat {
+	case "fileLocs":
 		return fileLocSurvives(marker, compressed)
+	case "errors":
+		return errorSigSurvives(marker, compressed)
+	default:
+		return strings.Contains(compressed, marker)
 	}
-	return strings.Contains(compressed, marker)
+}
+
+// reWS collapses any run of whitespace to a single space.
+var reWS = regexp.MustCompile(`\s+`)
+
+// errorSigSurvives reports whether an error-line signature survives, tolerant to
+// whitespace reflow. Exact substring first (fast path), then a whitespace-
+// normalized comparison so "panic:  nil   deref" still matches "panic: nil deref".
+func errorSigSurvives(sig, compressed string) bool {
+	if strings.Contains(compressed, sig) {
+		return true
+	}
+	normSig := strings.TrimSpace(reWS.ReplaceAllString(sig, " "))
+	normComp := reWS.ReplaceAllString(compressed, " ")
+	return strings.Contains(normComp, normSig)
 }
 
 // checkQuality compares critical markers against the compressed text, splitting
@@ -164,14 +179,12 @@ func checkQuality(protectedText, fullOriginal, compressed string) QualityResult 
 	// Build a lookup of protected markers per category.
 	protected := map[string]map[string]bool{
 		"fileLocs": toSet(protSet.fileLocs),
-		"paths":    toSet(protSet.paths),
 		"codes":    toSet(protSet.codes),
 		"errors":   toSet(protSet.errors),
 	}
 
 	cats := map[string][]string{
 		"fileLocs": fullSet.fileLocs,
-		"paths":    fullSet.paths,
 		"codes":    fullSet.codes,
 		"errors":   fullSet.errors,
 	}

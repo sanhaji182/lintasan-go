@@ -20,6 +20,13 @@ import (
 // "Measure first, then get smart." This harness produces the numbers that
 // justify (or kill) the later smart-routing work.
 
+// keepLastN is the number of trailing messages the context compressor preserves
+// verbatim. It MUST stay in sync with the value passed to compress.New below —
+// the quality check uses it to define the "protected zone", so a drift here
+// would silently make the harness measure the wrong messages. Single source of
+// truth: change it once and both the compressor and the quality check follow.
+const keepLastN = 6
+
 type levelResult struct {
 	level      int
 	name       string
@@ -40,7 +47,7 @@ func runLevel(level int, name, mode string, messages []map[string]any, synthetic
 	compressFn func([]map[string]any) (string, []map[string]any)) levelResult {
 
 	originalBlob := joinMessageContent(messages)
-	protectedBlob := protectedZoneContent(messages, 6)
+	protectedBlob := protectedZoneContent(messages, keepLastN)
 	inTokens := countMessageTokens(messages)
 
 	// Time only the compression work.
@@ -132,7 +139,7 @@ func main() {
 	results = append(results, runLevel(3, "Large context", "compress.New(8000,6,8000)",
 		level3Messages(), false,
 		func(msgs []map[string]any) (string, []map[string]any) {
-			c := compress.New(8000, 6, 8000)
+			c := compress.New(8000, keepLastN, 8000)
 			out, _ := c.Compress(msgs)
 			return joinMessageContent(out), out
 		}))
@@ -145,7 +152,7 @@ func main() {
 			// RTK, no caveman prompt injection).
 			staged, _ := compress.CompressMessages(msgs, "lite")
 			// Stage 2: context-compress the whole history.
-			c := compress.New(8000, 6, 8000)
+			c := compress.New(8000, keepLastN, 8000)
 			out, _ := c.Compress(staged)
 			return joinMessageContent(out), out
 		}))
