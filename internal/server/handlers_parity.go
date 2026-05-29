@@ -45,9 +45,7 @@ func (s *Server) registerParityRoutes() {
     s.mux.HandleFunc("POST /api/sync", s.handleSync)
     s.mux.HandleFunc("GET /api/marketplace", s.handleMarketplace)
     s.mux.HandleFunc("GET /api/oauth", s.handleOAuth)
-    s.mux.HandleFunc("POST /api/auth/login", s.handleAuthLogin)
     s.mux.HandleFunc("GET /api/auth/check", s.handleAuthCheck)
-    s.mux.HandleFunc("POST /api/auth/logout", s.handleAuthLogout)
     // Alias endpoints for dashboard compatibility
     s.mux.HandleFunc("GET /api/routing", s.handleGetCombos)
     s.mux.HandleFunc("POST /api/routing/reorder", s.handleRoutingReorder)
