@@ -174,6 +174,9 @@ func (s *Server) routes() {
 	// Guard — content safety check
 	s.mux.HandleFunc("POST /api/guard/check", s.handleGuardCheck)
 
+	// Free Provider Discovery
+	s.mux.HandleFunc("GET /api/discover/free-providers", s.handleDiscoverFreeProviders)
+
 	// Dashboard API + root redirect
 	s.registerDashboardRoutes()
 }
