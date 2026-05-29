@@ -1,15 +1,15 @@
 <script>
   import { onMount } from 'svelte';
-  let formats = [];
-  let sourceFormat = 'openai';
-  let targetFormat = 'anthropic';
-  let inputJson = JSON.stringify({
+  let formats = $state([]);
+  let sourceFormat = $state('openai');
+  let targetFormat = $state('anthropic');
+  let inputJson = $state(JSON.stringify({
     model: 'gpt-4',
     messages: [{ role: 'user', content: 'Hello!' }]
-  }, null, 2);
-  let outputJson = '';
-  let loading = true;
-  let translating = false;
+  }, null, 2));
+  let outputJson = $state('');
+  let loading = $state(true);
+  let translating = $state(false);
 
   onMount(async () => {
     try {
@@ -39,8 +39,12 @@
   }
 
   function swapFormats() {
-    [sourceFormat, targetFormat] = [targetFormat, sourceFormat];
-    [inputJson, outputJson] = [outputJson, inputJson];
+    const tmp = sourceFormat;
+    sourceFormat = targetFormat;
+    targetFormat = tmp;
+    const tmpJson = inputJson;
+    inputJson = outputJson;
+    outputJson = tmpJson;
   }
 </script>
 
@@ -59,7 +63,7 @@
         {/each}
       </select>
 
-      <button on:click={swapFormats} class="p-2 bg-gray-700 rounded hover:bg-gray-600">
+      <button onclick={swapFormats} class="p-2 bg-gray-700 rounded hover:bg-gray-600">
         ⇄
       </button>
 
@@ -70,7 +74,7 @@
       </select>
 
       <button
-        on:click={translate}
+        onclick={translate}
         class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 transition"
         disabled={translating}
       >

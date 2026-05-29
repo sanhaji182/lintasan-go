@@ -1,8 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  let summary = null;
-  let history = [];
-  let loading = true;
+  let summary = $state(null);
+  let history = $state([]);
+  let loading = $state(true);
 
   onMount(async () => {
     try {

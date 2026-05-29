@@ -1,10 +1,10 @@
 <script>
   import { onMount } from 'svelte';
-  let tools = [];
-  let loading = true;
-  let testResult = '';
-  let selectedTool = '';
-  let testInput = '{}';
+  let tools = $state([]);
+  let loading = $state(true);
+  let testResult = $state('');
+  let selectedTool = $state('');
+  let testInput = $state('{}');
 
   onMount(async () => {
     try {
@@ -56,7 +56,7 @@
           {#each tools as tool}
             <button
               class="w-full text-left p-3 rounded bg-gray-700 hover:bg-gray-600 transition {selectedTool === tool.name ? 'ring-2 ring-blue-500' : ''}"
-              on:click={() => selectedTool = tool.name}
+              onclick={() => selectedTool = tool.name}
             >
               <div class="font-mono text-sm text-blue-400">{tool.name}</div>
               <div class="text-gray-400 text-xs mt-1">{tool.description}</div>
@@ -85,7 +85,7 @@
           ></textarea>
         </div>
         <button
-          on:click={testTool}
+          onclick={testTool}
           class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 transition"
           disabled={!selectedTool}
         >
