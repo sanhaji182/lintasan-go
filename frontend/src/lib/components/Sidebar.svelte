@@ -1,12 +1,12 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { theme } from '$lib/stores/theme';
   import {
     LayoutDashboard, Link2, GitBranch, ShieldAlert, ScrollText,
     BarChart3, TrendingUp, Key, Users, UserCircle, Webhook,
     Database, Settings, Puzzle, MessageSquare, BookOpen,
-    Brain, Globe, Sun, Moon, Menu, X, Server
+    Brain, Globe, Server, Sun, Moon
   } from 'lucide-svelte';
+  import { theme } from '$lib/stores/theme';
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
@@ -47,104 +47,178 @@
   }
 </script>
 
-<!-- Mobile backdrop -->
 {#if open}
-  <button
-    class="fixed inset-0 bg-black/40 z-40 md:hidden"
-    onclick={() => open = false}
-    aria-label="Close sidebar"
-  ></button>
+  <button class="overlay" onclick={() => open = false} aria-label="Close sidebar"></button>
 {/if}
 
-<aside
-  class="fixed top-0 left-0 h-full z-50 flex flex-col border-r transition-transform duration-300 md:translate-x-0"
-  style="
-    width: var(--sidebar-w);
-    background: var(--color-bg-sidebar);
-    border-color: var(--color-sidebar-border);
-    box-shadow: var(--shadow-sm);
-    transform: {open ? 'translateX(0)' : ''};
-  "
-  class:-translate-x-full={!open}
->
-  <!-- Logo -->
-  <div class="flex items-center gap-3 p-5 border-b" style="border-color: var(--color-sidebar-border);">
-    <div
-      class="flex items-center justify-center text-white font-bold text-base"
-      style="
-        width: 36px; height: 36px; border-radius: 10px;
-        background: linear-gradient(135deg, var(--color-primary) 0%, #6366f1 100%);
-        box-shadow: 0 4px 12px var(--color-primary-glow);
-      "
-    >L</div>
+<aside class="sidebar" class:open>
+  <div class="sidebar-brand">
+    <span class="sb-logo">L</span>
     <div>
-      <div class="font-bold text-sm" style="color: var(--color-fg-0); letter-spacing: -0.2px;">Lintasan</div>
-      <div class="text-xs font-mono" style="color: var(--color-fg-3);">v2.0.0</div>
+      <div class="sb-name">Lintasan</div>
+      <div class="sb-version">v2.5</div>
     </div>
   </div>
 
-  <!-- Navigation -->
-  <nav class="flex-1 overflow-y-auto p-3" style="padding: 12px 10px;">
-    {#each [
-      { label: 'MENU', items: menuItems },
-      { label: 'MANAGE', items: manageItems },
-      { label: 'TOOLS', items: toolItems }
-    ] as group}
-      <div class="mb-5">
-        <div
-          class="text-xs font-semibold uppercase mb-2 px-3"
-          style="color: var(--color-fg-3); letter-spacing: 0.8px; font-size: 10px;"
-        >{group.label}</div>
+  <nav class="sidebar-nav">
+    {#each [{ label: 'MENU', items: menuItems }, { label: 'MANAGE', items: manageItems }, { label: 'TOOLS', items: toolItems }] as group}
+      <div class="nav-group">
+        <div class="nav-group-label">{group.label}</div>
         {#each group.items as item}
           {@const active = isActive(item.path)}
           <a
             href={item.path}
-            class="flex items-center gap-2.5 mb-0.5 rounded-lg transition-all duration-200 relative"
-            style="
-              padding: 10px 12px;
-              font-size: 13px;
-              font-weight: {active ? 600 : 500};
-              color: {active ? 'var(--color-primary)' : 'var(--color-fg-1)'};
-              background: {active ? 'var(--color-primary-light)' : 'transparent'};
-              border-left: 3px solid {active ? 'var(--color-primary)' : 'transparent'};
-            "
+            class="nav-item"
+            class:active
             onclick={() => open = false}
           >
-            <item.icon size={18} stroke-width={1.8} />
+            <item.icon size={18} stroke-width={1.6} />
             <span>{item.label}</span>
-            {#if active}
-              <span
-                class="absolute right-3 w-1.5 h-1.5 rounded-full"
-                style="background: var(--color-primary); animation: dotPulse 2s infinite;"
-              ></span>
-            {/if}
           </a>
         {/each}
       </div>
     {/each}
   </nav>
 
-  <!-- Theme toggle -->
-  <div class="p-4 border-t" style="border-color: var(--color-sidebar-border);">
-    <button
-      class="flex items-center gap-2.5 w-full rounded-lg transition-all duration-200"
-      style="
-        padding: 10px 12px;
-        background: var(--color-bg-sidebar-hover);
-        border: 1px solid var(--color-sidebar-border);
-        color: var(--color-fg-1);
-        font-size: 13px; font-weight: 500;
-        min-height: 44px;
-      "
-      onclick={() => theme.toggle()}
-    >
+  <div class="sidebar-footer">
+    <button class="theme-btn" onclick={() => theme.toggle()}>
       {#if $theme === 'light'}
-        <Moon size={18} stroke-width={1.8} />
-        <span>Dark Mode</span>
+        <Moon size={16} /> Dark mode
       {:else}
-        <Sun size={18} stroke-width={1.8} />
-        <span>Light Mode</span>
+        <Sun size={16} /> Light mode
       {/if}
     </button>
   </div>
 </aside>
+
+<style>
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(15, 23, 42, 0.3);
+    backdrop-filter: blur(4px);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 50;
+    width: var(--sidebar-w);
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.25s ease;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .sb-logo {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: #4f46e5;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .sb-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.2px;
+  }
+
+  .sb-version {
+    font-size: 11px;
+    color: #94a3b8;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 10px;
+  }
+
+  .nav-group { margin-bottom: 20px; }
+
+  .nav-group-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding: 6px 12px 8px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    text-decoration: none;
+    margin-bottom: 2px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .nav-item:hover {
+    background: #f8fafc;
+    color: #1e293b;
+  }
+
+  .nav-item.active {
+    background: #eef2ff;
+    color: #4f46e5;
+    font-weight: 600;
+  }
+
+  .sidebar-footer {
+    padding: 16px 14px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .theme-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+  }
+  .theme-btn:hover { background: #f8fafc; }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      transform: translateX(-100%);
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    .overlay {
+      display: block;
+    }
+  }
+</style>

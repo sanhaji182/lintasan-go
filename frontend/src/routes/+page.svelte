@@ -1,17 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    ArrowRight,
-    CheckCircle2,
-    Cpu,
-    Gauge,
-    Globe,
-    LayoutDashboard,
-    LineChart,
-    Lock,
-    ShieldCheck,
-    Sparkles,
-    Zap
+    ArrowRight, Gauge, Globe, LayoutDashboard,
+    ShieldCheck, Sparkles, Zap
   } from 'lucide-svelte';
   import { api } from '$lib/api';
 
@@ -21,209 +12,126 @@
 
   const features = [
     {
-      icon: Globe,
-      title: 'Unified Provider Routing',
-      description: 'Satu endpoint untuk banyak provider/model dengan fallback cerdas dan failover otomatis.'
+      icon: Globe, title: 'Unified Provider Routing',
+      desc: 'Satu endpoint untuk banyak provider dengan fallback cerdas dan failover otomatis.'
     },
     {
-      icon: Gauge,
-      title: 'Low-Latency Performance',
-      description: 'Pantau latency, cache hit rate, dan request health dalam dashboard observability real-time.'
+      icon: Gauge, title: 'Low-Latency Performance',
+      desc: 'Pantau latency, cache hit rate, dan request health dalam dashboard real-time.'
     },
     {
-      icon: ShieldCheck,
-      title: 'Secure by Default',
-      description: 'JWT auth, API key controls, audit logs, dan proteksi akses untuk operasi production.'
+      icon: ShieldCheck, title: 'Secure by Default',
+      desc: 'JWT auth, API key controls, audit logs, dan proteksi untuk operasi production.'
     },
     {
-      icon: Cpu,
-      title: 'Format Translation',
-      description: 'Bridging format lintas provider tanpa ubah client besar-besaran di layer aplikasi kamu.'
+      icon: Zap, title: 'Smart Caching',
+      desc: 'Semantic cache mengurangi beban provider dan mempercepat response hingga 10x.'
+    },
+    {
+      icon: Sparkles, title: 'Format Translation',
+      desc: 'Bridging format lintas provider tanpa ubah client di layer aplikasi.'
+    },
+    {
+      icon: LayoutDashboard, title: 'Observability Dashboard',
+      desc: 'Logs, analytics, dan monitoring terpusat untuk seluruh AI traffic.'
     }
   ];
 
-  const flow = [
-    {
-      title: 'Connect Providers',
-      text: 'Tambah account provider, set credentials, dan aktifkan model discovery.'
-    },
-    {
-      title: 'Configure Routing',
-      text: 'Atur priority, fallback chain, dan kebijakan cache sesuai kebutuhan traffic.'
-    },
-    {
-      title: 'Ship with Confidence',
-      text: 'Monitor statistik request + logs untuk validasi reliability dan cost efficiency.'
-    }
-  ];
-
-  const trustStats = [
-    { label: 'Response Uptime', value: '99.9%', icon: CheckCircle2 },
-    { label: 'Avg Gateway Latency', value: '< 120ms', icon: Zap },
-    { label: 'Active Model Paths', value: '40+', icon: Sparkles },
-    { label: 'Visibility Coverage', value: 'End-to-end', icon: LineChart }
+  const steps = [
+    { step: '01', title: 'Connect Providers', desc: 'Tambah credentials dan aktifkan model discovery.' },
+    { step: '02', title: 'Configure Routing', desc: 'Atur priority, fallback chain, dan kebijakan cache.' },
+    { step: '03', title: 'Ship with Confidence', desc: 'Monitor statistik dan logs untuk validasi production.' }
   ];
 
   onMount(async () => {
     mounted = true;
     const token = localStorage.getItem('lintasan_token');
-
-    if (!token) {
-      checkingAuth = false;
-      return;
-    }
-
+    if (!token) { checkingAuth = false; return; }
     try {
       await api.get('/api/auth/me');
       isAuthenticated = true;
     } catch {
       localStorage.removeItem('lintasan_token');
       localStorage.removeItem('lintasan_user');
-      isAuthenticated = false;
-    } finally {
-      checkingAuth = false;
-    }
+    } finally { checkingAuth = false; }
   });
 
-  const primaryHref = $derived(
-    checkingAuth ? '/login' : (isAuthenticated ? '/dashboard' : '/login')
-  );
-  const primaryLabel = $derived(
-    checkingAuth ? 'Preparing Workspace...' : (isAuthenticated ? 'Go to Dashboard' : 'Sign in to Dashboard')
-  );
+  const ctaHref = $derived(checkingAuth ? '/login' : (isAuthenticated ? '/dashboard' : '/login'));
+  const ctaLabel = $derived(checkingAuth ? 'Loading...' : (isAuthenticated ? 'Go to Dashboard' : 'Get Started'));
 </script>
 
 <svelte:head>
   <title>Lintasan — AI Gateway Management</title>
-  <meta
-    name="description"
-    content="Lintasan membantu tim mengelola routing, fallback, observability, dan keamanan AI gateway dalam satu dashboard modern."
-  />
+  <meta name="description" content="Kelola multi-provider LLM routing dengan UI modern, aman, dan siap produksi." />
 </svelte:head>
 
 <div class="landing" class:mounted>
-  <div class="noise"></div>
-  <div class="aurora aurora-a"></div>
-  <div class="aurora aurora-b"></div>
-
   <header class="topbar">
     <a class="brand" href="/">
       <span class="brand-mark">L</span>
-      <span class="brand-text">Lintasan</span>
+      <span class="brand-name">Lintasan</span>
     </a>
-    <div class="topbar-actions">
-      <a class="link-muted" href="/dashboard/docs">Docs</a>
-      <a class="btn-ghost" href="/login">Login</a>
-    </div>
+    <nav class="nav-links">
+      <a href="/login" class="nav-link">Sign In</a>
+      <a href={ctaHref} class="btn-cta">
+        {ctaLabel}
+        <ArrowRight size={14} />
+      </a>
+    </nav>
   </header>
 
   <main>
-    <section class="hero section-wrap">
-      <div class="hero-copy">
-        <p class="kicker">AI Gateway Control Plane</p>
-        <h1>Kelola multi-provider LLM routing dengan UI modern, aman, dan siap produksi.</h1>
-        <p class="subtitle">
-          Dari connection management sampai observability real-time, Lintasan bikin operasi AI stack lebih cepat,
-          lebih rapi, dan lebih hemat biaya.
-        </p>
-
-        <div class="hero-cta">
-          <a class="btn-primary" href={primaryHref} aria-busy={checkingAuth}>
-            <LayoutDashboard size={16} />
-            {primaryLabel}
-            <ArrowRight size={16} />
-          </a>
-          <a class="btn-soft" href="/dashboard/docs">View Documentation</a>
-        </div>
-
-        <div class="chip-row">
-          <span class="chip"><Lock size={13} /> JWT Auth</span>
-          <span class="chip"><ShieldCheck size={13} /> Secure Routing</span>
-          <span class="chip"><Gauge size={13} /> Live Metrics</span>
-        </div>
-      </div>
-
-      <div class="hero-panel">
-        <div class="panel-head">Gateway Snapshot</div>
-        <div class="panel-grid">
-          <article>
-            <span class="label">Traffic Health</span>
-            <strong>Stable</strong>
-            <small>Request success trend positif</small>
-          </article>
-          <article>
-            <span class="label">Fallback Readiness</span>
-            <strong>Enabled</strong>
-            <small>Policy multi-path aktif</small>
-          </article>
-          <article>
-            <span class="label">Cache Efficiency</span>
-            <strong>Optimized</strong>
-            <small>Hit-rate konsisten tinggi</small>
-          </article>
-          <article>
-            <span class="label">Routing Visibility</span>
-            <strong>Realtime</strong>
-            <small>Logs + analytics terpusat</small>
-          </article>
-        </div>
-      </div>
+    <section class="hero">
+      <p class="hero-kicker">AI Gateway Control Plane</p>
+      <h1 class="hero-title">Route smarter.<br />Ship faster.</h1>
+      <p class="hero-sub">
+        Lintasan mengelola semua koneksi LLM provider kamu — routing, fallback,
+        caching, dan observability — dalam satu dashboard yang bersih dan efisien.
+      </p>
+      <a href={ctaHref} class="btn-hero">
+        {ctaLabel}
+        <ArrowRight size={16} />
+      </a>
     </section>
 
-    <section class="section-wrap feature-section">
-      <div class="section-title">
-        <h2>Built for reliability dan speed</h2>
-        <p>Komponen utama untuk operasional AI gateway harian tim engineering dan DevOps.</p>
-      </div>
+    <section class="features">
+      <h2 class="section-title">Everything you need</h2>
+      <p class="section-sub">Tools lengkap untuk operasional AI engineering harian.</p>
       <div class="feature-grid">
-        {#each features as item}
+        {#each features as f}
           <article class="feature-card">
-            <div class="icon-wrap"><item.icon size={18} /></div>
-            <h3>{item.title}</h3>
-            <p>{item.description}</p>
+            <div class="feature-icon"><f.icon size={22} stroke-width={1.5} /></div>
+            <h3>{f.title}</h3>
+            <p>{f.desc}</p>
           </article>
         {/each}
       </div>
     </section>
 
-    <section class="section-wrap how-section">
-      <div class="section-title">
-        <h2>How it works</h2>
-        <p>3 langkah sederhana untuk produksi yang terukur dan minim friction.</p>
-      </div>
+    <section class="how">
+      <h2 class="section-title">How it works</h2>
+      <p class="section-sub">Tiga langkah sederhana untuk mulai production.</p>
       <div class="how-grid">
-        {#each flow as step, idx}
+        {#each steps as s}
           <article class="how-card">
-            <span class="step-number">0{idx + 1}</span>
-            <h3>{step.title}</h3>
-            <p>{step.text}</p>
+            <span class="step-num">{s.step}</span>
+            <h3>{s.title}</h3>
+            <p>{s.desc}</p>
           </article>
         {/each}
       </div>
-    </section>
-
-    <section class="section-wrap trust-strip">
-      {#each trustStats as stat}
-        <article class="trust-item">
-          <div class="trust-icon"><stat.icon size={16} /></div>
-          <div>
-            <p class="trust-value">{stat.value}</p>
-            <p class="trust-label">{stat.label}</p>
-          </div>
-        </article>
-      {/each}
     </section>
   </main>
 
-  <footer class="footer section-wrap">
-    <div>
+  <footer class="footer">
+    <div class="footer-brand">
       <strong>Lintasan</strong>
-      <p>Observability-first AI gateway management dashboard.</p>
+      <span>AI Gateway Management</span>
     </div>
     <div class="footer-links">
+      <a href="/login">Sign In</a>
       <a href="/dashboard/docs">Documentation</a>
-      <a href="/login">Login</a>
-      <a href={primaryHref}>Open Dashboard</a>
+      <a href="https://github.com/sans-haji/lintasan" target="_blank" rel="noopener noreferrer">GitHub</a>
     </div>
   </footer>
 </div>
@@ -231,509 +139,250 @@
 <style>
   .landing {
     min-height: 100vh;
-    position: relative;
-    background:
-      radial-gradient(circle at 15% 20%, rgba(59,130,246,0.16), transparent 38%),
-      radial-gradient(circle at 85% 10%, rgba(139,92,246,0.18), transparent 34%),
-      linear-gradient(180deg, #070c18 0%, #0b1220 42%, #0f172a 100%);
-    color: #e2e8f0;
-    overflow: hidden;
+    background: #ffffff;
+    color: #1e293b;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     opacity: 0;
-    transition: opacity 0.45s ease;
+    transition: opacity 0.3s ease;
   }
-
   .landing.mounted { opacity: 1; }
 
-  .noise {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(148,163,184,0.07) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(148,163,184,0.07) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent 90%);
-    pointer-events: none;
-  }
-
-  .aurora {
-    position: absolute;
-    border-radius: 999px;
-    filter: blur(88px);
-    pointer-events: none;
-    opacity: 0.6;
-  }
-
-  .aurora-a {
-    width: 460px;
-    height: 460px;
-    top: -180px;
-    right: -120px;
-    background: rgba(59,130,246,0.42);
-    animation: drift 9s ease-in-out infinite;
-  }
-
-  .aurora-b {
-    width: 420px;
-    height: 420px;
-    bottom: -170px;
-    left: -100px;
-    background: rgba(99,102,241,0.35);
-    animation: drift 11s ease-in-out infinite reverse;
-  }
-
-  .section-wrap {
-    width: min(1120px, calc(100% - 48px));
-    margin: 0 auto;
-  }
-
   .topbar {
-    position: relative;
-    z-index: 3;
-    width: min(1120px, calc(100% - 48px));
-    margin: 0 auto;
-    padding: 20px 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 32px;
   }
 
   .brand {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 10px;
     text-decoration: none;
   }
-
   .brand-mark {
-    width: 34px;
-    height: 34px;
+    width: 36px; height: 36px;
     border-radius: 10px;
+    background: #4f46e5;
+    color: #fff;
     display: grid;
     place-items: center;
-    font-size: 14px;
     font-weight: 700;
-    color: white;
-    background: linear-gradient(135deg, #3c50e0 0%, #6366f1 100%);
-    box-shadow: 0 8px 20px rgba(60,80,224,0.4);
+    font-size: 15px;
   }
-
-  .brand-text {
-    color: #f8fafc;
-    font-size: 16px;
+  .brand-name {
+    font-size: 18px;
     font-weight: 700;
-    letter-spacing: -0.2px;
+    color: #1e293b;
+    letter-spacing: -0.3px;
   }
 
-  .topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .link-muted {
+  .nav-links { display: flex; align-items: center; gap: 16px; }
+  .nav-link {
     text-decoration: none;
-    color: #cbd5e1;
-    font-size: 13px;
+    color: #64748b;
+    font-size: 14px;
     font-weight: 500;
+    padding: 8px 4px;
   }
+  .nav-link:hover { color: #1e293b; }
 
-  .link-muted:hover { color: #f8fafc; }
-
-  .btn-ghost {
-    text-decoration: none;
-    border: 1px solid rgba(148,163,184,0.25);
-    color: #e2e8f0;
-    padding: 8px 14px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    background: rgba(15,23,42,0.55);
-  }
-
-  .btn-ghost:hover {
-    border-color: rgba(148,163,184,0.45);
-    background: rgba(30,41,59,0.75);
-  }
-
-  .hero {
-    position: relative;
-    z-index: 2;
-    padding: 44px 0 34px;
-    display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 28px;
-    align-items: stretch;
-  }
-
-  .kicker {
-    margin: 0 0 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 11px;
-    color: #93c5fd;
-    font-weight: 700;
-  }
-
-  .hero-copy h1 {
-    margin: 0;
-    font-size: clamp(34px, 5vw, 50px);
-    line-height: 1.1;
-    color: #f8fafc;
-    letter-spacing: -0.04em;
-    max-width: 16ch;
-  }
-
-  .subtitle {
-    margin: 18px 0 0;
-    font-size: 16px;
-    line-height: 1.75;
-    color: #cbd5e1;
-    max-width: 58ch;
-  }
-
-  .hero-cta {
-    margin-top: 26px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .btn-primary,
-  .btn-soft {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border-radius: 12px;
-    padding: 11px 18px;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-  }
-
-  .btn-primary {
-    color: #fff;
-    background: linear-gradient(135deg, #3c50e0 0%, #4f63e8 100%);
-    box-shadow: 0 12px 24px rgba(60,80,224,0.3);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 28px rgba(60,80,224,0.34);
-  }
-
-  .btn-soft {
-    color: #e2e8f0;
-    border: 1px solid rgba(148,163,184,0.24);
-    background: rgba(15,23,42,0.55);
-  }
-
-  .btn-soft:hover {
-    background: rgba(30,41,59,0.72);
-    border-color: rgba(148,163,184,0.42);
-  }
-
-  .chip-row {
-    margin-top: 18px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .chip {
+  .btn-cta {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 11px;
-    border-radius: 999px;
-    font-size: 12px;
-    color: #bfdbfe;
-    border: 1px solid rgba(96,165,250,0.26);
-    background: rgba(30,64,175,0.18);
-  }
-
-  .hero-panel {
-    border-radius: 18px;
-    border: 1px solid rgba(148,163,184,0.2);
-    background: rgba(15,23,42,0.72);
-    backdrop-filter: blur(16px);
-    padding: 20px;
-    box-shadow: 0 22px 48px rgba(2,6,23,0.38);
-  }
-
-  .panel-head {
-    font-size: 12px;
-    font-weight: 700;
-    color: #93c5fd;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-
-  .panel-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .panel-grid article {
-    border-radius: 12px;
-    padding: 13px;
-    border: 1px solid rgba(148,163,184,0.18);
-    background: rgba(30,41,59,0.56);
-  }
-
-  .panel-grid .label {
-    font-size: 11px;
-    color: #94a3b8;
-    display: block;
-    margin-bottom: 5px;
-  }
-
-  .panel-grid strong {
-    display: block;
-    color: #f8fafc;
-    font-size: 16px;
-    letter-spacing: -0.02em;
-  }
-
-  .panel-grid small {
-    display: block;
-    margin-top: 3px;
-    font-size: 12px;
-    color: #cbd5e1;
-  }
-
-  .feature-section,
-  .how-section {
-    margin-top: 48px;
-  }
-
-  .section-title h2 {
-    margin: 0;
-    font-size: 29px;
-    line-height: 1.2;
-    color: #f8fafc;
-    letter-spacing: -0.03em;
-  }
-
-  .section-title p {
-    margin: 10px 0 0;
-    color: #cbd5e1;
-    font-size: 14px;
-    line-height: 1.65;
-  }
-
-  .feature-grid {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-  }
-
-  .feature-card {
-    border-radius: 14px;
-    padding: 16px;
-    border: 1px solid rgba(148,163,184,0.17);
-    background: linear-gradient(180deg, rgba(30,41,59,0.58) 0%, rgba(15,23,42,0.78) 100%);
-    transition: transform 0.2s ease, border-color 0.2s ease;
-  }
-
-  .feature-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(96,165,250,0.35);
-  }
-
-  .icon-wrap {
-    width: 36px;
-    height: 36px;
+    padding: 9px 18px;
+    background: #4f46e5;
+    color: #fff;
     border-radius: 10px;
-    display: grid;
-    place-items: center;
-    color: #bfdbfe;
-    background: rgba(30,64,175,0.28);
-    border: 1px solid rgba(96,165,250,0.25);
-  }
-
-  .feature-card h3 {
-    margin: 12px 0 8px;
-    color: #f1f5f9;
-    font-size: 15px;
-    letter-spacing: -0.02em;
-  }
-
-  .feature-card p {
-    margin: 0;
     font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-cta:hover { background: #4338ca; }
+
+  .hero {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 32px 64px;
+    text-align: center;
+  }
+  .hero-kicker {
+    margin: 0 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #4f46e5;
+    text-transform: uppercase;
+  }
+  .hero-title {
+    margin: 0 0 20px;
+    font-size: clamp(40px, 7vw, 64px);
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: #0f172a;
+  }
+  .hero-sub {
+    margin: 0 auto 32px;
+    max-width: 520px;
+    font-size: 17px;
     line-height: 1.65;
-    color: #cbd5e1;
+    color: #64748b;
   }
-
-  .how-grid {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-  }
-
-  .how-card {
-    border-radius: 14px;
-    padding: 16px;
-    border: 1px solid rgba(148,163,184,0.17);
-    background: rgba(15,23,42,0.72);
-  }
-
-  .step-number {
+  .btn-hero {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    height: 26px;
-    padding: 0 10px;
-    border-radius: 999px;
-    font-size: 11px;
+    gap: 8px;
+    padding: 14px 28px;
+    background: #4f46e5;
+    color: #fff;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .btn-hero:hover { background: #4338ca; transform: translateY(-1px); }
+
+  .section-title {
+    margin: 0 0 8px;
+    font-size: 28px;
     font-weight: 700;
-    color: #bfdbfe;
-    border: 1px solid rgba(96,165,250,0.32);
-    background: rgba(30,64,175,0.2);
+    letter-spacing: -0.03em;
+    color: #0f172a;
   }
-
-  .how-card h3 {
-    margin: 12px 0 8px;
-    color: #f1f5f9;
+  .section-sub {
+    margin: 0 0 48px;
     font-size: 16px;
+    color: #64748b;
   }
 
-  .how-card p {
-    margin: 0;
-    color: #cbd5e1;
-    font-size: 13px;
-    line-height: 1.65;
+  .features {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 32px 64px;
   }
-
-  .trust-strip {
-    margin-top: 44px;
+  .feature-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    padding: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .feature-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 14px;
-    border: 1px solid rgba(148,163,184,0.18);
-    background: rgba(15,23,42,0.7);
+    padding: 28px 24px;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
-
-  .trust-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    border-radius: 10px;
-    background: rgba(30,41,59,0.55);
-    border: 1px solid rgba(148,163,184,0.14);
+  .feature-card:hover {
+    border-color: #c7d2fe;
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.08);
   }
-
-  .trust-icon {
-    width: 31px;
-    height: 31px;
-    border-radius: 9px;
+  .feature-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: #eef2ff;
+    color: #4f46e5;
     display: grid;
     place-items: center;
-    color: #bfdbfe;
-    background: rgba(30,64,175,0.22);
-    border: 1px solid rgba(96,165,250,0.22);
+    margin-bottom: 16px;
   }
-
-  .trust-value {
+  .feature-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+  .feature-card p {
     margin: 0;
-    color: #f8fafc;
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1.2;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #64748b;
   }
 
-  .trust-label {
-    margin: 2px 0 0;
-    color: #94a3b8;
-    font-size: 11px;
+  .how {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+    text-align: center;
+  }
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  .how-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 32px 24px;
+    text-align: left;
+  }
+  .step-num {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #4f46e5;
+    background: #eef2ff;
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+  .how-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+  .how-card p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #64748b;
   }
 
   .footer {
-    margin-top: 44px;
-    padding: 24px 0 34px;
-    border-top: 1px solid rgba(148,163,184,0.16);
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px;
+    border-top: 1px solid #e2e8f0;
     display: flex;
-    align-items: flex-end;
     justify-content: space-between;
-    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
   }
-
-  .footer strong {
-    color: #f8fafc;
+  .footer-brand strong {
+    display: block;
     font-size: 15px;
+    color: #1e293b;
   }
-
-  .footer p {
-    margin: 7px 0 0;
+  .footer-brand span {
+    font-size: 13px;
     color: #94a3b8;
-    font-size: 12px;
   }
-
   .footer-links {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 20px;
   }
-
   .footer-links a {
     text-decoration: none;
-    color: #cbd5e1;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 13px;
+    color: #64748b;
   }
-
-  .footer-links a:hover { color: #f8fafc; }
-
-  @media (max-width: 1080px) {
-    .hero { grid-template-columns: 1fr; }
-    .hero-copy h1 { max-width: 20ch; }
-    .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .how-grid { grid-template-columns: 1fr; }
-    .trust-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
+  .footer-links a:hover { color: #1e293b; }
 
   @media (max-width: 640px) {
-    .section-wrap,
-    .topbar {
-      width: calc(100% - 28px);
-    }
-
-    .topbar { padding: 14px 0; }
-    .brand-text { font-size: 15px; }
-    .hero { padding-top: 30px; }
-
-    .hero-copy h1 {
-      font-size: 31px;
-      max-width: 100%;
-    }
-
-    .subtitle { font-size: 15px; }
-    .hero-cta { flex-direction: column; }
-    .btn-primary, .btn-soft { width: 100%; justify-content: center; }
-
-    .panel-grid { grid-template-columns: 1fr; }
+    .topbar { padding: 16px 20px; }
+    .hero { padding: 48px 20px 40px; }
+    .hero-title { font-size: 36px; }
+    .features, .how { padding: 32px 20px 48px; }
     .feature-grid { grid-template-columns: 1fr; }
-    .trust-strip { grid-template-columns: 1fr; }
-
-    .footer {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-  }
-
-  @keyframes drift {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-16px); }
+    .how-grid { grid-template-columns: 1fr; }
+    .footer { flex-direction: column; align-items: flex-start; }
   }
 </style>

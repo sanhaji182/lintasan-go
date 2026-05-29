@@ -3,67 +3,80 @@
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-  --color-primary: #3c50e0;
-  --color-primary-hover: #4f63e8;
-  --color-primary-glow: rgba(60,80,224,0.2);
-  --color-primary-light: #eff4ff;
-  --color-success: #10b981;
+
+  --color-primary: #3b5bdb;
+  --color-primary-hover: #2f4fcb;
+  --color-primary-glow: rgba(59, 91, 219, 0.14);
+  --color-primary-light: #eef2ff;
+
+  --color-success: #059669;
   --color-success-light: #ecfdf5;
-  --color-warning: #f59e0b;
+  --color-warning: #d97706;
   --color-warning-light: #fffbeb;
-  --color-error: #ef4444;
+  --color-error: #dc2626;
   --color-error-light: #fef2f2;
-  --color-info: #3b82f6;
+  --color-info: #2563eb;
   --color-info-light: #eff6ff;
-  --color-purple: #8b5cf6;
+  --color-purple: #7c3aed;
   --color-purple-light: #f5f3ff;
-  --color-bg-body: #f1f5f9;
+
+  --color-bg-body: #f8fafc;
   --color-bg-card: #ffffff;
   --color-bg-sidebar: #ffffff;
-  --color-bg-sidebar-hover: #f1f5f9;
-  --color-fg-0: #1e293b;
+  --color-bg-sidebar-hover: #f8fafc;
+
+  --color-fg-0: #0f172a;
   --color-fg-1: #334155;
   --color-fg-2: #64748b;
   --color-fg-3: #94a3b8;
+
   --color-border: #e2e8f0;
   --color-border-light: #f1f5f9;
   --color-sidebar-border: #e2e8f0;
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
-  --shadow-lg: 0 16px 48px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06);
-  --sidebar-w: 260px;
-  --header-h: 60px;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 18px;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 42px rgba(15, 23, 42, 0.1);
+
+  --sidebar-w: 264px;
+  --header-h: 64px;
+
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-theme="dark"] {
-  --color-bg-body: #0f1419;
-  --color-bg-card: #1a2332;
-  --color-bg-sidebar: #111827;
-  --color-bg-sidebar-hover: #1f2937;
-  --color-fg-0: #f1f5f9;
+  --color-bg-body: #0b1220;
+  --color-bg-card: #111a2d;
+  --color-bg-sidebar: #0f1729;
+  --color-bg-sidebar-hover: #18253d;
+
+  --color-fg-0: #e2e8f0;
   --color-fg-1: #cbd5e1;
   --color-fg-2: #94a3b8;
   --color-fg-3: #64748b;
-  --color-border: #1e293b;
-  --color-border-light: #1e293b;
-  --color-sidebar-border: #1e293b;
-  --color-primary-light: rgba(60,80,224,0.12);
-  --color-success-light: rgba(16,185,129,0.12);
-  --color-warning-light: rgba(245,158,11,0.12);
-  --color-error-light: rgba(239,68,68,0.12);
-  --color-info-light: rgba(59,130,246,0.12);
-  --color-purple-light: rgba(139,92,246,0.12);
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow: 0 2px 8px rgba(0,0,0,0.4);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.5);
-  --shadow-lg: 0 16px 48px rgba(0,0,0,0.6);
+
+  --color-border: #22324d;
+  --color-border-light: #1a2840;
+  --color-sidebar-border: #22324d;
+
+  --color-primary-light: rgba(59, 91, 219, 0.2);
+  --color-success-light: rgba(5, 150, 105, 0.2);
+  --color-warning-light: rgba(217, 119, 6, 0.2);
+  --color-error-light: rgba(220, 38, 38, 0.2);
+  --color-info-light: rgba(37, 99, 235, 0.2);
+  --color-purple-light: rgba(124, 58, 237, 0.2);
+
+  --shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.32);
+  --shadow: 0 8px 22px rgba(2, 6, 23, 0.36);
+  --shadow-md: 0 12px 30px rgba(2, 6, 23, 0.45);
+  --shadow-lg: 0 24px 56px rgba(2, 6, 23, 0.55);
 }
 
 @layer base {
@@ -73,6 +86,17 @@
     background: var(--color-bg-body);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-bg-body);
+    color: var(--color-fg-0);
+  }
+
+  * {
+    box-sizing: border-box;
   }
 
   ::selection {
@@ -80,12 +104,23 @@
     color: #fff;
   }
 
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--color-fg-3); }
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
 
-  * { box-sizing: border-box; }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fg-3);
+  }
 }
 
 @layer utilities {
@@ -98,20 +133,25 @@
   }
 
   .btn-primary {
-    padding: 8px 16px;
+    padding: 9px 16px;
     background: var(--color-primary);
     color: #fff;
     border-radius: var(--radius-sm);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     transition: var(--transition);
     cursor: pointer;
     border: none;
   }
-  .btn-primary:hover { background: var(--color-primary-hover); }
+
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+    box-shadow: 0 8px 18px var(--color-primary-glow);
+  }
 
   .btn-secondary {
-    padding: 8px 16px;
+    padding: 9px 16px;
     background: transparent;
     color: var(--color-fg-1);
     border: 1px solid var(--color-border);
@@ -121,18 +161,23 @@
     transition: var(--transition);
     cursor: pointer;
   }
-  .btn-secondary:hover { background: var(--color-bg-sidebar-hover); }
+
+  .btn-secondary:hover {
+    background: var(--color-bg-sidebar-hover);
+    border-color: color-mix(in srgb, var(--color-border) 70%, var(--color-primary) 30%);
+  }
 
   .input-field {
-    padding: 8px 12px;
-    background: var(--color-bg-body);
+    padding: 9px 12px;
+    background: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: 14px;
     color: var(--color-fg-0);
     transition: var(--transition);
     width: 100%;
   }
+
   .input-field:focus {
     outline: none;
     border-color: var(--color-primary);
@@ -143,17 +188,23 @@
     font-size: 11px;
     font-weight: 600;
     padding: 4px 10px;
-    border-radius: 9999px;
+    border-radius: 999px;
   }
+
   .badge-success { background: var(--color-success-light); color: var(--color-success); }
   .badge-error { background: var(--color-error-light); color: var(--color-error); }
   .badge-warning { background: var(--color-warning-light); color: var(--color-warning); }
   .badge-info { background: var(--color-info-light); color: var(--color-info); }
 
   .skeleton {
-    background: linear-gradient(90deg, var(--color-border-light) 25%, var(--color-border) 50%, var(--color-border-light) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+    background: linear-gradient(
+      90deg,
+      var(--color-border-light) 20%,
+      color-mix(in srgb, var(--color-border) 70%, white 30%) 50%,
+      var(--color-border-light) 80%
+    );
+    background-size: 220% 100%;
+    animation: shimmer 1.4s infinite;
     border-radius: var(--radius-sm);
   }
 }
@@ -162,34 +213,22 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
 @keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
 }
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
-}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
+
 @keyframes dotPulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.4); opacity: 0.7; }
-}
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 4px var(--color-primary-glow); }
-  50% { box-shadow: 0 0 16px var(--color-primary-glow); }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: scale(1.3); opacity: 0.72; }
 }
