@@ -137,7 +137,7 @@ func buildSampleRegistry() *Registry {
 	r.RegisterCollector(func(w io.Writer) {
 		WriteCounter(w, "lintasan_memory_search_calls_total", "calls", 42)
 		WriteGauge(w, "lintasan_memory_search_max_scan_rows", "cap", 2000)
-		WriteLabeledGauge(w, "lintasan_build_info", "build", 1, "version", "2.3.1")
+		WriteLabeledGauge(w, "lintasan_build_info", "build", 1, "version", "test")
 	})
 	r.ObserveHTTP("/v1/chat/completions", "2xx", 0.012)
 	r.ObserveHTTP("/v1/chat/completions", "5xx", 1.5)
@@ -170,8 +170,8 @@ func TestWritePrometheus_ValidExposition(t *testing.T) {
 	}
 
 	// build_info carries a bounded version label, value 1.
-	if !hasSample(samples, "lintasan_build_info", map[string]string{"version": "2.3.1"}, "1") {
-		t.Error("expected lintasan_build_info{version=\"2.3.1\"} 1 in output")
+	if !hasSample(samples, "lintasan_build_info", map[string]string{"version": "test"}, "1") {
+		t.Error("expected lintasan_build_info{version=\"test\"} 1 in output")
 	}
 }
 

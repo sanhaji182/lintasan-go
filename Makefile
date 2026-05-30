@@ -18,7 +18,7 @@ PKG         := ./cmd/lintasan
 DIST        := internal/web/dist
 FRONTEND    := frontend
 VERSION     := $(shell git describe --tags --always 2>/dev/null || echo dev)
-LDFLAGS     := -s -w
+LDFLAGS     := -s -w -X github.com/sanhaji182/lintasan-go/internal/version.Version=$(VERSION)
 
 .PHONY: build frontend backend run test clean release deps
 

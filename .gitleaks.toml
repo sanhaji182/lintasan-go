@@ -1,0 +1,24 @@
+# gitleaks configuration for lintasan-go
+#
+# Extends the default gitleaks ruleset. The allowlist below covers known
+# false positives: deliberately fake secrets used as fixtures in *_test.go
+# files to exercise the secret-masking and metrics-redaction logic. These are
+# not real credentials.
+#
+# Run a full-history scan with:  gitleaks detect --source . --redact
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures: deliberately fake secrets used to verify masking/redaction logic"
+paths = [
+  '''internal/server/settings_mask_test\.go''',
+  '''internal/server/metrics_handler_test\.go''',
+]
+regexes = [
+  '''jwtSecretAbCdEfGhIjKlMnOpQrStUvWxYz0123456789''',
+  '''jwt-secret-LEAKME-zzzz''',
+  '''sk-mas\.\.\.2e1b''',
+  '''sk-con\.\.\.6789''',
+]

@@ -9,6 +9,7 @@ import (
 
 	"github.com/sanhaji182/lintasan-go/internal/memory"
 	"github.com/sanhaji182/lintasan-go/internal/metrics"
+	"github.com/sanhaji182/lintasan-go/internal/version"
 )
 
 // nowFunc is the clock used by the metrics middleware. It's a variable so tests
@@ -73,10 +74,8 @@ func cacheCollector(w io.Writer) {
 func buildInfoCollector(w io.Writer) {
 	metrics.WriteLabeledGauge(w, "lintasan_build_info",
 		"Build information. Value is always 1; the version is carried as a label.",
-		1, "version", serverVersion)
+		1, "version", version.Version)
 }
-
-const serverVersion = "2.3.1"
 
 // HandleMetrics serves GET /metrics in Prometheus text exposition format
 // (v0.0.4). Read-only; numeric counters and bounded labels only — never

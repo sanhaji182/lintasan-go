@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/sanhaji182/lintasan-go/internal/version"
 )
 
 // RegisterAllTools registers all Lintasan tools
@@ -20,7 +22,7 @@ func RegisterAllTools(s *Server, db *sql.DB) {
 	}, func(params map[string]any) (any, error) {
 		return map[string]any{
 			"status":  "ok",
-			"version": "2.3.0",
+			"version": version.Version,
 			"time":    time.Now().Format(time.RFC3339),
 		}, nil
 	})
