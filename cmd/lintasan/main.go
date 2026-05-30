@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
+	"runtime"
 
 	"github.com/sanhaji182/lintasan-go/internal/config"
 	"github.com/sanhaji182/lintasan-go/internal/db"
@@ -10,6 +13,29 @@ import (
 	"github.com/sanhaji182/lintasan-go/internal/server"
 	"github.com/spf13/cobra"
 )
+
+// startPprofIfEnabled starts a profiling HTTP server bound to LOCALHOST ONLY.
+// It is never exposed through nginx and never binds 0.0.0.0. Enabled only when
+// LINTASAN_PPROF=1. Mutex and block profiling are sampled so the five standard
+// profiles (cpu, heap, mutex, goroutine, block) are all available.
+func startPprofIfEnabled() {
+	if os.Getenv("LINTASAN_PPROF") != "1" {
+		return
+	}
+	addr := os.Getenv("LINTASAN_PPROF_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:6060" // localhost only
+	}
+	// Enable mutex + block profiling (off by default in Go).
+	runtime.SetMutexProfileFraction(5)
+	runtime.SetBlockProfileRate(10000) // 1 sample per ~10µs blocked
+	go func() {
+		fmt.Fprintf(os.Stderr, "🔬 pprof listening on http://%s/debug/pprof/ (localhost only)\n", addr)
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			fmt.Fprintf(os.Stderr, "pprof server error: %v\n", err)
+		}
+	}()
+}
 
 var version = "2.0.0"
 
@@ -34,6 +60,8 @@ func main() {
 				return fmt.Errorf("failed to open database: %w", err)
 			}
 			defer database.Close()
+
+			startPprofIfEnabled()
 
 			// MITM bridge is now owned by the server (started only when
 			// LINTASAN_MITM_ENABLED is set, with a per-boot bypass secret).

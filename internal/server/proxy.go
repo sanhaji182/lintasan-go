@@ -48,6 +48,7 @@ type ProxyHandler struct {
 	client *http.Client
 
 	rl            *ratelimit.Limiter          // rate limiter
+	rlEnabled     bool                        // false = limiter bypassed
 	fb            *fallback.Engine            // fallback chain engine
 	cmb           *combo.Engine               // hybrid combo engine
 	lb            *lb.LoadBalancer            // load balancer
@@ -82,7 +83,23 @@ func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
 			},
 		},
 	}
-	ph.rl = ratelimit.New(60, 30)
+	// Rate limiter: per-key requests/min, burst. Defaults 60/30 (unchanged).
+	// Override via env for benchmarking / tuning; 0 disables the limiter.
+	rlPerMin, rlBurst := 60, 30
+	if v := os.Getenv("LINTASAN_RATELIMIT_PERMIN"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			rlPerMin = n
+		}
+	}
+	if v := os.Getenv("LINTASAN_RATELIMIT_BURST"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			rlBurst = n
+		}
+	}
+	ph.rlEnabled = rlPerMin > 0
+	if ph.rlEnabled {
+		ph.rl = ratelimit.New(rlPerMin, rlBurst)
+	}
 	ph.fb = fallback.New(database)
 	ph.fb.LoadChains()
 	ph.cmb = combo.New()
@@ -380,20 +397,22 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 			clientIP = r.RemoteAddr
 		}
 
-		// Check per-key
-		allowed, remaining := p.rl.AllowKey(apiKey, 0)
-		if !allowed {
-			w.Header().Set("X-RateLimit-Remaining", "0")
-			w.Header().Set("Retry-After", "60")
-			http.Error(w, `{"error":{"message":"rate limit exceeded","type":"rate_limit"}}`, http.StatusTooManyRequests)
-			return
-		}
-		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+		// Check per-key (skip entirely when limiter disabled)
+		if p.rlEnabled {
+			allowed, remaining := p.rl.AllowKey(apiKey, 0)
+			if !allowed {
+				w.Header().Set("X-RateLimit-Remaining", "0")
+				w.Header().Set("Retry-After", "60")
+				http.Error(w, `{"error":{"message":"rate limit exceeded","type":"rate_limit"}}`, http.StatusTooManyRequests)
+				return
+			}
+			w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 
-		// Check per-IP
-		if !p.rl.AllowIP(clientIP) {
-			http.Error(w, `{"error":{"message":"rate limit exceeded","type":"rate_limit"}}`, http.StatusTooManyRequests)
-			return
+			// Check per-IP
+			if !p.rl.AllowIP(clientIP) {
+				http.Error(w, `{"error":{"message":"rate limit exceeded","type":"rate_limit"}}`, http.StatusTooManyRequests)
+				return
+			}
 		}
 	}
 
@@ -413,8 +432,11 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 
 	// Vector Memory — Prompt Injection
 	// Search for similar past successes and inject as system context.
+	// Gated by memory_injection_enabled (default false): the search runs on
+	// EVERY request when the store is reachable and is a measured hot-path cost,
+	// so it must be opt-in rather than implicitly on whenever Redis is up.
 	var injectedMemories []memory.Memory
-	if !directMode && p.mem != nil && p.mem.Available() {
+	if !directMode && p.getSetting("memory_injection_enabled", "false") == "true" && p.mem != nil && p.mem.Available() {
 		promptText := buildPromptText(messages)
 		if promptText != "" {
 			queryEmb := memory.Embed(promptText)

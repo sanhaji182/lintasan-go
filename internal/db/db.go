@@ -3,6 +3,8 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -17,7 +19,16 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
 
-	conn.SetMaxOpenConns(1)
+	// Connection pool ceiling. Default 1 (legacy serialized behaviour).
+	// Override with LINTASAN_DB_MAX_CONNS for benchmarking / tuning. WAL mode
+	// supports concurrent readers + a single writer, so >1 helps read-heavy load.
+	maxConns := 1
+	if v := os.Getenv("LINTASAN_DB_MAX_CONNS"); v != "" {
+		if n, perr := strconv.Atoi(v); perr == nil && n > 0 {
+			maxConns = n
+		}
+	}
+	conn.SetMaxOpenConns(maxConns)
 
 	db := &DB{conn: conn}
 	if err := db.migrate(); err != nil {
