@@ -1,0 +1,37 @@
+# Lintasan Go — single-container deployment.
+#
+#   docker compose up --build
+#
+# Serves the full dashboard UI + OpenAI-compatible API on http://localhost:20180
+# from one self-contained binary (SPA embedded via go:embed). Data persists in
+# the named volume `lintasan-data`.
+#
+# IMPORTANT: set a strong LINTASAN_MASTER_KEY before exposing this publicly.
+# Without it the server stays in bootstrap mode until first-run setup completes.
+
+services:
+  lintasan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lintasan-go:latest
+    container_name: lintasan
+    ports:
+      - "20180:20180"
+    environment:
+      PORT: "20180"
+      LINTASAN_DATA_DIR: /app/data
+      # Change this. Generate one with: openssl rand -hex 32
+      LINTASAN_MASTER_KEY: "${LINTASAN_MASTER_KEY:-}"
+    volumes:
+      - lintasan-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:20180/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  lintasan-data:

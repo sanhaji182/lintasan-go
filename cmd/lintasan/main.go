@@ -37,7 +37,7 @@ func startPprofIfEnabled() {
 	}()
 }
 
-var version = "2.3.7"
+var version = "2.4.0"
 
 func main() {
 	rootCmd := &cobra.Command{

@@ -348,6 +348,18 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// Static dashboard UI (embedded SPA) is public: the shell HTML, hashed
+		// JS/CSS assets, favicon, and client-side routes (/dashboard, /login,
+		// /change-password) carry no secrets. All data + mutation endpoints
+		// (/api/*, /v1/*, /mcp) remain gated below. The dashboard's auth guard
+		// runs in the browser (validates the token via /api/auth/me) and
+		// redirects to /login when unauthenticated. This must be allowed in
+		// BOTH bootstrap and active states so the first-run setup UI can load.
+		if isPublicUIPath(r.Method, path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// --- BOOTSTRAP state: only setup endpoints are reachable. ---
 		if !s.isActive() {
 			if isSetupPath(path, r.Method) {

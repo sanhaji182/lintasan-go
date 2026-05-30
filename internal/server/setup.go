@@ -35,7 +35,45 @@ type setupState struct {
 	active int32
 }
 
-// setupPaths are the only endpoints reachable while in BOOTSTRAP.
+// isPublicUIPath reports whether a request targets the embedded dashboard SPA
+// (static shell, hashed assets, or a client-side route) and may be served
+// without authentication. The UI carries no secrets; all data/mutation lives
+// behind /api, /v1, and /mcp which are explicitly excluded here and remain
+// gated by authMiddleware.
+//
+// Allowlist (not denylist) by design: only GET/HEAD, and only paths that are
+// either known static-asset prefixes or known SPA routes. Anything under the
+// API namespaces is rejected so a UI rule can never accidentally open an API.
+func isPublicUIPath(method, path string) bool {
+	if method != http.MethodGet && method != http.MethodHead {
+		return false
+	}
+	// Never treat API / proxy / protocol namespaces as UI.
+	if strings.HasPrefix(path, "/api/") ||
+		strings.HasPrefix(path, "/v1/") ||
+		path == "/mcp" || strings.HasPrefix(path, "/mcp/") ||
+		path == "/metrics" || path == "/health" {
+		return false
+	}
+	// Static asset prefixes emitted by the SvelteKit static build.
+	if strings.HasPrefix(path, "/_app/") {
+		return true
+	}
+	// Top-level static files + known SPA entry routes. SPA sub-routes resolve
+	// to these top-level prefixes (e.g. /dashboard/users).
+	switch {
+	case path == "/favicon.png" || path == "/favicon.ico" || path == "/robots.txt":
+		return true
+	case path == "/login":
+		return true
+	case path == "/change-password":
+		return true
+	case path == "/dashboard" || strings.HasPrefix(path, "/dashboard/"):
+		return true
+	}
+	return false
+}
+
 func isSetupPath(path, method string) bool {
 	switch {
 	case path == "/health":

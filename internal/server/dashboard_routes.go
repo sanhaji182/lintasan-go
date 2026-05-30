@@ -2,6 +2,8 @@ package server
 
 import (
 	"net/http"
+
+	"github.com/sanhaji182/lintasan-go/internal/web"
 )
 
 func (s *Server) registerDashboardRoutes() {
@@ -14,12 +16,20 @@ func (s *Server) registerDashboardRoutes() {
 	mux.HandleFunc("GET /api/dashboard/logs", s.handleDashboardLogs)
 	mux.HandleFunc("PUT /api/dashboard/settings", s.handleDashboardSettings)
 
-	// Root redirect
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
-	})
+	// Embedded SPA dashboard. Mounted at "GET /" — Go 1.22 ServeMux gives the
+	// specific /api, /v1, /health, /metrics, /mcp patterns priority, so this
+	// catch-all only handles UI routes + static assets. Serves index.html as a
+	// fallback for client-side routing (/dashboard, /login, /change-password).
+	// When no UI is embedded (API-only build), falls back to the old redirect.
+	if web.Available() {
+		mux.Handle("GET /", web.Handler())
+	} else {
+		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/" {
+				http.NotFound(w, r)
+				return
+			}
+			http.Redirect(w, r, "/dashboard", http.StatusFound)
+		})
+	}
 }

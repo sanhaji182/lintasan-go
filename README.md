@@ -131,13 +131,13 @@ Lintasan is an **LLM proxy gateway** with 40+ optimization features. One OpenAI-
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| **Backend** | Go 1.24 | HTTP server, routing, proxy, streaming |
+| **Backend** | Go 1.22+ | HTTP server, routing, proxy, streaming |
 | **Database** | SQLite (go-sqlite3) | Embedded, zero config, single-file |
-| **Frontend** | SvelteKit 5 + TypeScript | 17-page dashboard, CSR, adapter-node |
+| **Frontend** | SvelteKit 5 + TypeScript | Dashboard SPA, client-rendered, **embedded into the Go binary** |
 | **Styling** | Tailwind CSS v4 + CSS variables | Dark/light mode, responsive |
 | **CLI** | Cobra | `start`, `setup`, `mitm`, `version` |
-| **Testing** | Go standard library | 373 tests, 33 packages |
-| **Deployment** | Single binary + systemd | No Docker required (optional) |
+| **Testing** | Go standard library | 581 tests, 39 packages |
+| **Deployment** | **Single self-contained binary** + systemd | UI + API in one executable; no Node, no nginx required |
 
 ---
 
@@ -302,15 +302,19 @@ Client (App / Agent / curl / IDE)
 
 ## 🚀 Quick Start
 
+The dashboard UI is **embedded inside the binary**, so one executable serves the full app (UI + API) on `:20180` — no Node, no nginx.
+
 ```bash
-# Download & run in 3 commands
-curl -L -o lintasan https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan
+# Download the pre-built binary (Linux x86_64) and run
+curl -L -o lintasan https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan-linux-amd64
 chmod +x lintasan
 ./lintasan start
 
-# Dashboard → http://localhost:20180/dashboard
-# API → http://localhost:20180/v1/chat/completions
+# Dashboard → http://localhost:20180/   (redirects to /dashboard)
+# API       → http://localhost:20180/v1/chat/completions
 ```
+
+First run seeds an admin account and prints a one-time password to the console — log in, rotate it, and set a master key to finish setup.
 
 ---
 
@@ -320,41 +324,41 @@ chmod +x lintasan
 <summary>🇮🇩 3 Cara Install</summary>
 
 ### Opsi 1: Binary Pre-built (Recommended)
+Satu binary, dashboard sudah termasuk di dalamnya.
 ```bash
-curl -L -o lintasan-go https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan-go-linux-amd64
-chmod +x lintasan-go
-./lintasan-go start
+curl -L -o lintasan https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan-linux-amd64
+chmod +x lintasan
+./lintasan start
 ```
 
 ### Opsi 2: Build dari Source
+Butuh **Go 1.22+** dan **Node 20+** (untuk build dashboard). `make build` meng-compile frontend SvelteKit jadi SPA statis, meng-embed-nya ke binary Go, lalu compile binary tunggal.
 ```bash
 git clone https://github.com/sanhaji182/lintasan-go.git
 cd lintasan-go
-go build -o lintasan-go ./cmd/lintasan
-
-# Frontend
-cd frontend && npm install && npm run build && cd ..
-
-./lintasan-go start
+make build       # frontend → embed → ./lintasan
+./lintasan start
 ```
+> Tanpa Node? `go build -o lintasan ./cmd/lintasan` tetap jalan, tapi menghasilkan server **API-only** (tanpa UI dashboard).
 
-### Opsi 3: Docker
+### Opsi 3: Docker (single container)
 ```bash
 git clone https://github.com/sanhaji182/lintasan-go.git
 cd lintasan-go
-docker compose up --build
+LINTASAN_MASTER_KEY=$(openssl rand -hex 32) docker compose up --build
+# UI + API → http://localhost:20180
 ```
 
 ### CLI Commands
 ```bash
-lintasan-go start      # Start server (default :20180)
-lintasan-go setup      # Initialize database
-lintasan-go mitm start # Start MITM HTTPS bridge
-lintasan-go version    # Show version
-lintasan-go help       # All commands
+./lintasan start      # Start server (UI + API, default :20180)
+./lintasan setup      # Initialize database
+./lintasan mitm start # Start MITM HTTPS bridge (optional)
+./lintasan version    # Show version
+./lintasan help       # All commands
 
 # Custom port
-PORT=8080 ./lintasan-go start
+PORT=8080 ./lintasan start
 ```
 
 </details>
@@ -363,43 +367,41 @@ PORT=8080 ./lintasan-go start
 <summary>🇬🇧 3 Installation Methods</summary>
 
 ### Option 1: Pre-built Binary (Recommended)
+One binary, dashboard included.
 ```bash
-curl -L -o lintasan-go https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan-go-linux-amd64
-chmod +x lintasan-go
-./lintasan-go start
+curl -L -o lintasan https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan-linux-amd64
+chmod +x lintasan
+./lintasan start
 ```
 
 ### Option 2: Build from Source
+Requires **Go 1.22+** and **Node 20+** (to build the dashboard). `make build` compiles the SvelteKit frontend into a static SPA, embeds it into the Go binary, and compiles a single executable.
 ```bash
 git clone https://github.com/sanhaji182/lintasan-go.git
 cd lintasan-go
-
-# Backend
-go build -o lintasan-go ./cmd/lintasan
-
-# Frontend
-cd frontend && npm install && npm run build && cd ..
-
-./lintasan-go start
+make build       # frontend → embed → ./lintasan
+./lintasan start
 ```
+> No Node? `go build -o lintasan ./cmd/lintasan` still works but produces an **API-only** server (no dashboard UI).
 
-### Option 3: Docker
+### Option 3: Docker (single container)
 ```bash
 git clone https://github.com/sanhaji182/lintasan-go.git
 cd lintasan-go
-docker compose up --build
+LINTASAN_MASTER_KEY=$(openssl rand -hex 32) docker compose up --build
+# UI + API → http://localhost:20180
 ```
 
 ### CLI Commands
 ```bash
-lintasan-go start      # Start server (default :20180)
-lintasan-go setup      # Initialize database
-lintasan-go mitm start # Start MITM HTTPS bridge
-lintasan-go version    # Show version
-lintasan-go help       # All commands
+./lintasan start      # Start server (UI + API, default :20180)
+./lintasan setup      # Initialize database
+./lintasan mitm start # Start MITM HTTPS bridge (optional)
+./lintasan version    # Show version
+./lintasan help       # All commands
 
 # Custom port
-PORT=8080 ./lintasan-go start
+PORT=8080 ./lintasan start
 ```
 
 </details>
