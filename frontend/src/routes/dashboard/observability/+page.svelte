@@ -106,10 +106,7 @@
     // /metrics for runtime + http families. Unauthenticated (like /health) but
     // we send the token anyway via api conventions; raw text fetch here.
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('lintasan_token') : null;
-      const res = await fetch('/metrics', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const res = await api.raw('/metrics');
       if (!res.ok) { metricsAvailable = false; return; }
       const text = await res.text();
       const samples = parseProm(text);

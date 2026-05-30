@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { api } from '$lib/api';
   let formats = $state([]);
   let sourceFormat = $state('openai');
   let targetFormat = $state('anthropic');
@@ -13,8 +14,7 @@
 
   onMount(async () => {
     try {
-      const res = await fetch('/api/translate/formats');
-      const data = await res.json();
+      const data = await api.get('/api/translate/formats');
       formats = data.formats || [];
     } catch (e) {
       console.error('Failed to load formats:', e);
@@ -25,7 +25,7 @@
   async function translate() {
     translating = true;
     try {
-      const res = await fetch(`/api/translate?to=${targetFormat}`, {
+      const res = await api.raw(`/api/translate?to=${targetFormat}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: inputJson

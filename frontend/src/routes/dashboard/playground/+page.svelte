@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { api } from '$lib/api';
   import {
     Send, Bot, User, Settings2, Thermometer, Hash,
     Copy, Trash2, ChevronDown, ChevronUp
@@ -108,7 +109,7 @@
         }
       }
 
-      const res = await fetch('/v1/chat/completions', {
+      const res = await api.raw('/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { api } from '$lib/api';
   let tools = $state([]);
   let loading = $state(true);
   let testResult = $state('');
@@ -8,8 +9,7 @@
 
   onMount(async () => {
     try {
-      const res = await fetch('/api/mcp/tools');
-      const data = await res.json();
+      const data = await api.get('/api/mcp/tools');
       tools = data.tools || [];
     } catch (e) {
       console.error('Failed to load MCP tools:', e);
@@ -20,7 +20,7 @@
   async function testTool() {
     if (!selectedTool) return;
     try {
-      const res = await fetch('/mcp', {
+      const res = await api.raw('/mcp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -53,7 +53,7 @@
 
   async function downloadExport(backupId: string) {
     try {
-      const res = await fetch(`/api/backup/${backupId}/download`);
+      const res = await api.raw(`/api/backup/${backupId}/download`);
       if (!res.ok) throw new Error('Download failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

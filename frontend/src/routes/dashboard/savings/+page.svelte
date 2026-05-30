@@ -1,17 +1,17 @@
 <script>
   import { onMount } from 'svelte';
+  import { api } from '$lib/api';
   let summary = $state(null);
   let history = $state([]);
   let loading = $state(true);
 
   onMount(async () => {
     try {
-      const [summaryRes, historyRes] = await Promise.all([
-        fetch('/api/savings/summary'),
-        fetch('/api/savings/history')
+      const [summaryData, historyData] = await Promise.all([
+        api.get('/api/savings/summary'),
+        api.get('/api/savings/history')
       ]);
-      summary = await summaryRes.json();
-      const historyData = await historyRes.json();
+      summary = summaryData;
       history = historyData.history || [];
     } catch (e) {
       console.error('Failed to load savings:', e);
