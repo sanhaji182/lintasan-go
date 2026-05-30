@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -519,15 +520,54 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var k, v string
 		rows.Scan(&k, &v)
-		// Mask sensitive values
-		if k == "master_key" && len(v) > 8 {
-			v = v[:4] + "..." + v[len(v)-4:]
+		// Mask sensitive values before returning them to the dashboard. These
+		// keys hold credentials/secrets that a client never needs in cleartext:
+		// leaking jwt_secret in particular lets an attacker forge valid JWTs.
+		if isSensitiveSettingKey(k) {
+			v = maskSecretValue(v)
 		}
 		settings[k] = v
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"data": settings})
+}
+
+// sensitiveSettingKeys are settings whose values are credentials/secrets and
+// must be masked in GET /api/settings responses.
+var sensitiveSettingKeys = map[string]bool{
+	"master_key": true,
+	"jwt_secret": true,
+}
+
+// isSensitiveSettingKey reports whether a settings key must be masked. It also
+// treats any key containing common secret markers as sensitive, so future keys
+// like "*_secret", "*_token", "*_api_key", or "*password*" are masked by
+// default rather than leaking until someone remembers to add them here.
+func isSensitiveSettingKey(key string) bool {
+	if sensitiveSettingKeys[key] {
+		return true
+	}
+	k := strings.ToLower(key)
+	for _, marker := range []string{"secret", "password", "api_key", "apikey", "token", "private_key"} {
+		if strings.Contains(k, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+// maskSecretValue returns a masked form of a secret that reveals only enough to
+// recognize it (first/last 4 chars) without exposing the value. Short values
+// are fully redacted.
+func maskSecretValue(v string) string {
+	if v == "" {
+		return ""
+	}
+	if len(v) <= 8 {
+		return "***"
+	}
+	return v[:4] + "..." + v[len(v)-4:]
 }
 
 func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {

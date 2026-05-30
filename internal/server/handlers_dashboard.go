@@ -99,7 +99,7 @@ func (s *Server) handleDashboardCache(w http.ResponseWriter, r *http.Request) {
 	var totalRequests int
 	s.db.Conn().QueryRow("SELECT COUNT(*) FROM request_logs").Scan(&totalRequests)
 
-	exactHits = exactHits // already counted
+	// exactHits was already computed above from cached request_logs entries.
 	streamHits = streamCount
 	semanticHits = semCount
 	misses = totalRequests - exactHits
