@@ -51,7 +51,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
 
-  if (res.status === 401) {
+  // A 401 from the login endpoint itself is a CREDENTIAL rejection, not a
+  // session expiry. Surface the server's actual message ("invalid credentials")
+  // via the generic handler below — never clear tokens, redirect, or show the
+  // misleading "Session expired" copy when the user is actively signing in.
+  const isLoginEndpoint = path === '/api/auth/login';
+
+  if (res.status === 401 && !isLoginEndpoint) {
     throw reactToStatus(401)!;
   }
   if (res.status === 403) {
