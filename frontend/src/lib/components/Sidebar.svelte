@@ -4,7 +4,7 @@
     LayoutDashboard, Link2, GitBranch, ShieldAlert, ScrollText,
     BarChart3, TrendingUp, Key, Users, UserCircle, Webhook,
     Database, Settings, Puzzle, MessageSquare, BookOpen,
-    Brain, Globe, Server, Activity, Sun, Moon
+    Brain, Globe, Server, Activity, Sun, Moon, FlaskConical
   } from 'lucide-svelte';
   import { theme } from '$lib/stores/theme';
 
@@ -14,6 +14,7 @@
     { label: 'Overview', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Accounts', path: '/dashboard/connections', icon: Link2 },
     { label: 'Providers', path: '/dashboard/providers', icon: Server },
+    { label: 'Experimental', path: '/dashboard/experimental', icon: FlaskConical },
     { label: 'Discover', path: '/dashboard/discover', icon: Globe },
     { label: 'Routing', path: '/dashboard/routing', icon: GitBranch },
     { label: 'Fallback', path: '/dashboard/fallback', icon: ShieldAlert },
