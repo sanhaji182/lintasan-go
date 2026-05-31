@@ -78,7 +78,7 @@ func TestF2_3_ShadowDoesNotMutateCandidates(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 
-	p.runCapabilityShadow(w, req, false, candidates)
+	p.runCapabilityShadow(w, req, "gpt-4o", false, candidates)
 
 	after := snapshotIDs(candidates)
 	if !reflect.DeepEqual(before, after) {
@@ -103,7 +103,7 @@ func TestF2_3_ShadowFlagOffIsNoOp(t *testing.T) {
 	req := map[string]any{"model": "gpt-4o", "stream": true}
 	w := httptest.NewRecorder()
 
-	p.runCapabilityShadow(w, req, true, candidates)
+	p.runCapabilityShadow(w, req, "gpt-4o", true, candidates)
 
 	if !reflect.DeepEqual(before, snapshotIDs(candidates)) {
 		t.Fatal("flag-off shadow must not touch candidates")

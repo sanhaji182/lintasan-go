@@ -63,6 +63,17 @@ type ShadowDecision struct {
 	// Satisfies reports whether Declared covers every RequiredCap. In SHADOW
 	// mode this is RECORDED ONLY — a false here does NOT exclude the candidate.
 	Satisfies bool `json:"satisfies"`
+	// Tier records HOW the caps were resolved (model / provider / default).
+	// Only data-backed tiers (model, provider) may drive would-exclude; a
+	// default-tier decision is FAIL-OPEN and never contributes to exclusion.
+	// Empty for the legacy coarse path (ShadowEvaluate).
+	Tier IdentityTier `json:"tier,omitempty"`
+	// Label is a human-readable identity label for logs (e.g. "model:gpt-4o").
+	Label string `json:"label,omitempty"`
+	// FailOpen is true when this candidate was NOT data-backed (default tier):
+	// it is kept regardless of the cap math, recording that the decision was
+	// made under missing data per the enforcement invariant.
+	FailOpen bool `json:"fail_open,omitempty"`
 }
 
 // ShadowResult is the full observe-only evaluation for one request against its
@@ -77,7 +88,16 @@ type ShadowResult struct {
 	// This is the load-bearing observability signal: under F2.4 enforcement
 	// these WOULD be dropped. In F2.3 they are kept; this set must be observed
 	// (ideally empty or expected) under real traffic before F2.4 is greenlit.
+	//
+	// FAIL-OPEN INVARIANT: a candidate appears here ONLY if its caps were
+	// resolved from real data (Tier model/provider) AND positively fail to
+	// satisfy Required. Candidates resolved at the default tier (missing data)
+	// are NEVER listed — absence of data is not disqualification.
 	WouldExclude []string `json:"would_exclude"`
+	// TierCounts tallies how candidates were resolved, for re-bake evidence:
+	// how often the precise per-model path fired vs the provider derivation vs
+	// the conservative default. Empty for the legacy coarse path.
+	TierCounts map[IdentityTier]int `json:"tier_counts,omitempty"`
 }
 
 // ShadowEvaluate performs the observe-only capability evaluation. For each
@@ -104,6 +124,55 @@ func ShadowEvaluate(signals RequestSignals, providerIDs []string) ShadowResult {
 		})
 		if !ok {
 			res.WouldExclude = append(res.WouldExclude, id)
+		}
+	}
+	sort.Strings(res.WouldExclude)
+	return res
+}
+
+// ShadowEvaluateIdentity is the F2.3 RE-BAKE evaluator: it resolves each
+// candidate's capabilities through the APPROVED 3-tier identity resolver
+// (per-model catalog → canonical provider-id → conservative default) instead of
+// keying on the coarse wire Format. It remains STRICTLY observe-only: it never
+// mutates, reorders, filters, or selects. It returns richer observability — the
+// tier each candidate resolved at, plus a fail-open-correct WouldExclude.
+//
+// FAIL-OPEN INVARIANT (Sans, 2026-05-31): a candidate is added to WouldExclude
+// ONLY when its caps were resolved from real data (Tier model or provider) AND
+// they positively fail to satisfy the request. A candidate that fell through to
+// the conservative default (missing model entry, underivable provider) is marked
+// FailOpen and is NEVER excluded — absence of data must not eliminate a provider.
+//
+// This is the SAME resolver F2.4 enforcement will use; baking shadow on it first
+// is the precondition that lets the F2.3 evidence predict F2.4 reality.
+func ShadowEvaluateIdentity(signals RequestSignals, identities []CandidateIdentity) ShadowResult {
+	required := signals.requiredCaps()
+	res := ShadowResult{
+		Required:     sortedCaps(required),
+		Decisions:    make([]ShadowDecision, 0, len(identities)),
+		WouldExclude: []string{},
+		TierCounts:   map[IdentityTier]int{},
+	}
+	for _, ident := range identities {
+		resolved := resolveIdentityCaps(ident)
+		ok := resolved.Caps.Satisfies(required)
+		res.TierCounts[resolved.Tier]++
+
+		// FAIL-OPEN: only data-backed tiers may drive exclusion. A default-tier
+		// candidate is kept no matter what the cap math says.
+		failOpen := !resolved.Tier.DataBacked()
+
+		res.Decisions = append(res.Decisions, ShadowDecision{
+			Provider:  ident.Format,
+			Declared:  sortedCaps(resolved.Caps),
+			Satisfies: ok,
+			Tier:      resolved.Tier,
+			Label:     resolved.Label,
+			FailOpen:  failOpen,
+		})
+
+		if !ok && !failOpen {
+			res.WouldExclude = append(res.WouldExclude, resolved.Label)
 		}
 	}
 	sort.Strings(res.WouldExclude)

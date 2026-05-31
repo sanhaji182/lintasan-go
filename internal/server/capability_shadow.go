@@ -70,10 +70,16 @@ func extractRequestSignals(req map[string]any, stream bool) provider.RequestSign
 
 // runCapabilityShadow performs the F2.3 observe-only capability evaluation. It
 // is a complete no-op when the flag is off (a single bool check, zero added
-// latency). When on, it evaluates the candidate pool via the provider facade
-// and RECORDS the result (response header + stderr log) WITHOUT changing
-// `candidates` in any way.
-func (p *ProxyHandler) runCapabilityShadow(w http.ResponseWriter, req map[string]any, stream bool, candidates []*Connection) {
+// latency). When on, it resolves each candidate's capabilities through the
+// APPROVED 3-tier identity resolver (per-model catalog → canonical provider-id →
+// conservative default) and RECORDS the result (response header + stderr log)
+// WITHOUT changing `candidates` in any way.
+//
+// FAIL-OPEN: would_exclude only ever lists candidates whose caps were resolved
+// from real data AND positively fail to satisfy the request. Candidates that
+// fell through to the conservative default (missing data) are kept, recorded
+// with fail_open=true, and NEVER listed — per the enforcement invariant.
+func (p *ProxyHandler) runCapabilityShadow(w http.ResponseWriter, req map[string]any, resolvedModel string, stream bool, candidates []*Connection) {
 	if !p.capabilityShadow {
 		return // default OFF: zero behavior change, zero added work
 	}
@@ -83,20 +89,34 @@ func (p *ProxyHandler) runCapabilityShadow(w http.ResponseWriter, req map[string
 
 	signals := extractRequestSignals(req, stream)
 
-	ids := make([]string, 0, len(candidates))
+	identities := make([]provider.CandidateIdentity, 0, len(candidates))
 	for _, c := range candidates {
-		ids = append(ids, c.Format) // coarse: capability lookup is keyed by Format
+		identities = append(identities, provider.CandidateIdentity{
+			Format:  c.Format,
+			Model:   resolvedModel,
+			BaseURL: c.BaseURL,
+			// OwnedBy is left empty here: deriving it per-candidate would need a
+			// catalog/DB lookup on the hot path. The resolver degrades to host
+			// derivation (Tier E) and then the conservative default — both
+			// fail-open. Per-model (Tier F) still fires from resolvedModel.
+		})
 	}
 
-	result := provider.ShadowEvaluate(signals, ids)
+	result := provider.ShadowEvaluateIdentity(signals, identities)
 
 	// Observability ONLY. The selection logic below this hook is unaffected.
 	w.Header().Set("X-Lintasan-Capability-Shadow",
-		fmt.Sprintf("required=%d candidates=%d would_exclude=%d",
-			len(result.Required), len(result.Decisions), len(result.WouldExclude)))
+		fmt.Sprintf("required=%d candidates=%d would_exclude=%d tiers=m%d/p%d/d%d",
+			len(result.Required), len(result.Decisions), len(result.WouldExclude),
+			result.TierCounts[provider.TierModel],
+			result.TierCounts[provider.TierProvider],
+			result.TierCounts[provider.TierDefault]))
 	if len(result.WouldExclude) > 0 {
 		fmt.Fprintf(os.Stderr,
-			"[capability-shadow] required=%v would_exclude=%v (OBSERVE-ONLY, not excluded)\n",
-			result.Required, result.WouldExclude)
+			"[capability-shadow] required=%v would_exclude=%v tiers=m%d/p%d/d%d (OBSERVE-ONLY, not excluded)\n",
+			result.Required, result.WouldExclude,
+			result.TierCounts[provider.TierModel],
+			result.TierCounts[provider.TierProvider],
+			result.TierCounts[provider.TierDefault])
 	}
 }

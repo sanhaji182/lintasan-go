@@ -593,7 +593,7 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	// required capabilities and RECORD the result. This NEVER mutates, reorders,
 	// or filters `candidates` — selection below is byte-identical regardless.
 	// Enforcement (dropping non-satisfying candidates) is F2.4, gated separately.
-	p.runCapabilityShadow(w, req, stream, candidates)
+	p.runCapabilityShadow(w, req, resolvedModel, stream, candidates)
 
 	req["model"] = resolvedModel
 	body, _ = json.Marshal(req)
