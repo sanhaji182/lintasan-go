@@ -52,6 +52,10 @@ func (p *ProxyHandler) initProviderSDK(database *db.DB) {
 			p.capabilityShadow = true
 		}
 	}
+	// F2.3 Option A: the shadow evidence aggregator. Always constructed (cheap,
+	// empty maps); only WRITTEN when the shadow flag is on. Surfaced read-only
+	// via GET /api/capabilities/shadow for the bake report.
+	p.shadowStats = provider.NewShadowAggregator()
 
 	// F2.5 embedder kill-switch: independent of provider_sdk_enabled and also
 	// default false. When on, HandleEmbeddings builds the upstream request via

@@ -104,6 +104,20 @@ func (p *ProxyHandler) runCapabilityShadow(w http.ResponseWriter, req map[string
 
 	result := provider.ShadowEvaluateIdentity(signals, identities)
 
+	// Option A: fold this request into the evidence aggregator (always, not just
+	// on would_exclude) so the 6-category report covers ALL baked traffic.
+	p.shadowStats.Record(result)
+
+	// Structured per-request evidence line (always emitted under the flag) so the
+	// bake is reconstructable from logs alone. Single line, counts only, no PII.
+	fmt.Fprintf(os.Stderr,
+		"[capability-shadow] model=%q required=%v candidates=%d would_exclude=%d tiers=m%d/p%d/d%d wexc=%v\n",
+		resolvedModel, result.Required, len(result.Decisions), len(result.WouldExclude),
+		result.TierCounts[provider.TierModel],
+		result.TierCounts[provider.TierProvider],
+		result.TierCounts[provider.TierDefault],
+		result.WouldExclude)
+
 	// Observability ONLY. The selection logic below this hook is unaffected.
 	w.Header().Set("X-Lintasan-Capability-Shadow",
 		fmt.Sprintf("required=%d candidates=%d would_exclude=%d tiers=m%d/p%d/d%d",
@@ -111,12 +125,4 @@ func (p *ProxyHandler) runCapabilityShadow(w http.ResponseWriter, req map[string
 			result.TierCounts[provider.TierModel],
 			result.TierCounts[provider.TierProvider],
 			result.TierCounts[provider.TierDefault]))
-	if len(result.WouldExclude) > 0 {
-		fmt.Fprintf(os.Stderr,
-			"[capability-shadow] required=%v would_exclude=%v tiers=m%d/p%d/d%d (OBSERVE-ONLY, not excluded)\n",
-			result.Required, result.WouldExclude,
-			result.TierCounts[provider.TierModel],
-			result.TierCounts[provider.TierProvider],
-			result.TierCounts[provider.TierDefault])
-	}
 }

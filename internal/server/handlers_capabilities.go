@@ -36,3 +36,20 @@ func (s *Server) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 		"note": "Read-only capability diagnostics. Declared = SDK lookup; catalog = models-catalog tags (canonicalized). Routing does not consume capabilities (deferred to a later phase).",
 	})
 }
+
+// handleShadowStats serves GET /api/capabilities/shadow — the F2.3 re-bake
+// evidence snapshot (Option A). It renders the 6-category aggregate the shadow
+// hook has accumulated since startup: tier distribution, capability coverage,
+// would-exclude counts, unknown-capability resolutions, resolver confidence, and
+// the false-positive audit list. Pure read-only; it serializes a copied snapshot
+// and consumes no routing/selection state. Returns zeros when the flag is OFF
+// (nothing recorded yet), which is itself a useful "is the bake live?" signal.
+func (s *Server) handleShadowStats(w http.ResponseWriter, r *http.Request) {
+	stats := s.proxy.shadowStats.Snapshot()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"shadow_enabled": s.proxy.capabilityShadow,
+		"stats":          stats,
+		"note":           "F2.3 re-bake shadow evidence (observe-only). Accumulated since process start; resets on restart. Routing is NOT affected by these numbers.",
+	})
+}

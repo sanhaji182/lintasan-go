@@ -52,9 +52,9 @@ type Server struct {
 
 func New(cfg *config.Config, database *db.DB) *Server {
 	s := &Server{
-		cfg: cfg,
-		db:  database,
-		mux: http.NewServeMux(),
+		cfg:     cfg,
+		db:      database,
+		mux:     http.NewServeMux(),
 		metrics: metrics.NewRegistry(),
 	}
 	// Register pull-based metric collectors. These run on every /metrics scrape
@@ -194,6 +194,7 @@ func (s *Server) routes() {
 	// vs catalog-derived capabilities per official provider. Does NOT influence
 	// routing/selection/eligibility (capability-based routing is a later phase).
 	s.mux.HandleFunc("GET /api/capabilities", s.handleCapabilities)
+	s.mux.HandleFunc("GET /api/capabilities/shadow", s.handleShadowStats)
 	s.mux.HandleFunc("POST /v1/chat/completions", s.proxy.HandleChatCompletions)
 	s.mux.HandleFunc("POST /v1/embeddings", s.proxy.HandleEmbeddings)
 
@@ -334,7 +335,7 @@ func (s *Server) requestUser(r *http.Request) *auth.User {
 // Invariants (asserted by security_boundary_test.go):
 //   - BOOTSTRAP: only setup-path endpoints are reachable; everything else → 503.
 //   - ACTIVE:    no request reaches a management/proxy endpoint without a valid
-//                JWT, master key, or dashboard API key. There is NO fail-open.
+//     JWT, master key, or dashboard API key. There is NO fail-open.
 //   - There is no path-prefix whitelist (e.g. /api/dashboard/*) that bypasses auth.
 //   - The MITM bypass requires a per-boot random secret, never a static value.
 func (s *Server) authMiddleware(next http.Handler) http.Handler {

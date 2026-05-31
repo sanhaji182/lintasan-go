@@ -80,6 +80,9 @@ type ShadowDecision struct {
 // candidate pool. It is pure data; the caller logs/metrics it and otherwise
 // ignores it (selection is unchanged).
 type ShadowResult struct {
+	// Model is the resolved model the request targeted (same for all candidates
+	// at the hook). Recorded for the evidence audit; empty for the legacy path.
+	Model string `json:"model,omitempty"`
 	// Required is the canonical capability set the request needs.
 	Required []Capability `json:"required"`
 	// Decisions is one row per candidate, in input order.
@@ -152,6 +155,9 @@ func ShadowEvaluateIdentity(signals RequestSignals, identities []CandidateIdenti
 		Decisions:    make([]ShadowDecision, 0, len(identities)),
 		WouldExclude: []string{},
 		TierCounts:   map[IdentityTier]int{},
+	}
+	if len(identities) > 0 {
+		res.Model = identities[0].Model // same resolved model for all candidates
 	}
 	for _, ident := range identities {
 		resolved := resolveIdentityCaps(ident)

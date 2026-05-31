@@ -85,6 +85,10 @@ type ProxyHandler struct {
 	// the handler, byte-for-byte identical to the inline path. Read once at
 	// startup in initProviderSDK. See provider_bootstrap.go.
 	embedderSDK bool
+	// shadowStats aggregates F2.3 shadow evidence across requests (Option A,
+	// observe-only). Written AFTER selection, never read by the routing path.
+	// Surfaced read-only via GET /api/capabilities/shadow.
+	shadowStats *provider.ShadowAggregator
 }
 
 func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
