@@ -17,6 +17,12 @@ const (
 	CapVision      Capability = "vision"
 	CapEmbeddings  Capability = "embeddings"
 	CapLongContext Capability = "long_context"
+	// CapJSONMode is the structured-output (json_mode / json_schema) capability.
+	// F2.0 NOTE: this constant was found MISSING during the F2 capability audit —
+	// the models catalog tags 20+ models with "json_mode" but there was no SDK
+	// constant for it. Added here so the canonical vocabulary is complete. It is
+	// declaration-only and not consumed by any runtime/router/selection path.
+	CapJSONMode Capability = "json_mode"
 
 	// Tier hints — an orthogonal axis to functional capabilities.
 	CapCheap   Capability = "cheap"
