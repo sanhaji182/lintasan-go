@@ -44,21 +44,31 @@ provider becomes *a new file + one `Register()` call*, with **zero router edits*
 |------|----------------|
 | `doc.go` | Package overview (godoc) |
 | `types.go` | `Provider` interface, `Request`/`UpstreamRequest`/`Response`/`ConnConfig`, `Track`, optional interfaces |
-| `capability.go` | `Capability` constants, `CapabilitySet` (declaration surface only) |
+| `capability.go` | `Capability` constants (incl. `CapJSONMode`), `CapabilitySet` (declaration surface only) |
+| `vocabulary.go` | **F2.0** — `CanonicalVocabulary` (source of truth, D3), read-only `IsCanonical`/`Vocabulary()`, pure mapping helpers (`CatalogTagsToSet`, `AutoModeToCapability`). Declaration-only; no runtime consumer. |
 | `registry.go` | `Registry` + package-level `Register`/`Get`/`Resolve`/`Names` |
 | `default_provider.go` | `DefaultProvider` — generic OpenAI-compatible fallback (faithful to live router) |
 | `dispatch.go` | `Dispatch()` — router-facing entrypoint that injects the HTTP transport |
 | `errors.go` | Sentinel errors (`errors.Is`-matchable) |
-| `provider_test.go` | 20 unit tests |
+| `provider_test.go` | unit tests (registry, capability, dispatch, default provider) |
+| `vocabulary_test.go` | **F2.0** — vocabulary + mapping tests + non-consumption guard (`TestF2_0_VocabularyNotConsumedByServer`) |
 | `example_test.go` | Runnable `Example()` (godoc-verified output) |
 
 ## What this is NOT (yet)
 
 Not wired into the proxy. No migrated providers, no new providers, no feature
-flag, no schema change. Capability-based routing and experimental-provider
-isolation are *declared* in the contract (so the shape is stable) but are
-deliberately **not implemented** here — those are later, separately-approved
-steps. Wiring this into the router is its own change with its own review.
+flag *for capabilities*, no schema change. Capability-based routing and
+experimental-provider isolation are *declared* in the contract (so the shape is
+stable) but are deliberately **not implemented** here — those are later,
+separately-approved steps. Wiring this into the router is its own change with its
+own review.
+
+> **F2.0 status (2026-05-31):** the canonical capability vocabulary
+> (`vocabulary.go`) is now established as the source of truth (decision D3), and
+> the missing `CapJSONMode` was added. This is **declaration-only** — a
+> non-consumption guard test asserts the `server` package references none of it.
+> F2.1 (lookup integration), capability filtering, provider eligibility, and
+> routing decisions are NOT started and require separate greenlight.
 
 ## Mapping to the live router (for the future wiring step)
 
