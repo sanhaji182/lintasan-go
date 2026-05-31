@@ -49,7 +49,7 @@ func (d *DB) Conn() *sql.DB {
 func (d *DB) migrate() error {
 	// Drop old broken semantic_cache table if it exists (never functional, safe to drop)
 	d.conn.Exec(`DROP TABLE IF EXISTS semantic_cache`)
-	
+
 	// Compatible with Node.js Lintasan schema
 	migrations := []string{
 		`CREATE TABLE IF NOT EXISTS settings (
@@ -193,6 +193,23 @@ func (d *DB) migrate() error {
 		// P0 security: column to force rotation of bootstrap/seeded admin credentials.
 		// Idempotent — fails with "duplicate column" on re-run, which the loop ignores.
 		`ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`,
+		// P1: Experimental Provider Registry Persistence — stores lifecycle state,
+		// admission reports, validation evidence, and descriptor snapshots for the
+		// Experimental provider ecosystem. Credentials are NEVER stored (Invariant 3).
+		`CREATE TABLE IF NOT EXISTS experimental_providers (
+			name TEXT PRIMARY KEY,
+			track TEXT NOT NULL DEFAULT 'experimental',
+			state TEXT NOT NULL DEFAULT 'proposed',
+			descriptor_json TEXT NOT NULL DEFAULT '{}',
+			admission_report_json TEXT DEFAULT NULL,
+			admitted_at TEXT DEFAULT NULL,
+			activated_at TEXT DEFAULT NULL,
+			deactivated_at TEXT DEFAULT NULL,
+			validation_evidence TEXT NOT NULL DEFAULT '',
+			risk_badge TEXT NOT NULL DEFAULT 'experimental',
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)`,
 	}
 
 	for _, m := range migrations {
