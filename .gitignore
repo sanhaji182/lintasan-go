@@ -41,3 +41,4 @@ internal/web/dist/*
 # compress-bench harness binary (built ad-hoc, never commit)
 /compress-bench
 cmd/compress-bench/compress-bench
+rebake-evidence.json
