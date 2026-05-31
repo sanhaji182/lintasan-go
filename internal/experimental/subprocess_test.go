@@ -3,6 +3,7 @@ package experimental
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -49,8 +50,90 @@ func TestMain(m *testing.M) {
 		for {
 			time.Sleep(time.Second)
 		}
+	case "acp-agent":
+		runACPAgentChild()
+		return
 	}
 	os.Exit(m.Run())
+}
+
+// runACPAgentChild is a scripted fake ACP agent for the broker tests. It speaks
+// the JSON-RPC lifecycle over stdio, one request-line in → one response-line
+// out, matching the Subprocess byte transport:
+//
+//	initialize      → {protocolVersion, agentInfo}
+//	session/new     → {sessionId}
+//	session/prompt  → FIRST emits a tool-call request (toolCallId="tc-1"),
+//	                  then (after receiving the tool result) emits the prompt
+//	                  result echoing the toolCallId it saw — so the test can
+//	                  assert end-to-end identifier fidelity.
+//	shutdown        → {}
+func runACPAgentChild() {
+	r := bufio.NewReader(os.Stdin)
+	w := bufio.NewWriter(os.Stdout)
+	defer w.Flush()
+
+	writeLine := func(v any) {
+		b, _ := json.Marshal(v)
+		w.Write(b)
+		w.WriteByte('\n')
+		w.Flush()
+	}
+
+	for {
+		line, err := r.ReadString('\n')
+		if len(line) > 0 {
+			var msg struct {
+				ID     any             `json:"id"`
+				Method string          `json:"method"`
+				Result json.RawMessage `json:"result"`
+			}
+			json.Unmarshal([]byte(line), &msg)
+
+			switch msg.Method {
+			case "initialize":
+				writeLine(map[string]any{"jsonrpc": "2.0", "id": msg.ID,
+					"result": map[string]any{"protocolVersion": "1.0", "agentInfo": map[string]any{"name": "fake-acp"}}})
+			case "session/new":
+				writeLine(map[string]any{"jsonrpc": "2.0", "id": msg.ID,
+					"result": map[string]any{"sessionId": "sess-42"}})
+			case "session/prompt":
+				// Emit a server→client tool-call request (NOT a response to the
+				// prompt id — it has its own Method + id). The broker will reply
+				// with a tool result, which we read on the next iteration.
+				writeLine(map[string]any{"jsonrpc": "2.0", "id": "agent-req-1",
+					"method": "session/requestToolCall",
+					"params": map[string]any{"toolCallId": "tc-1", "name": "get_time",
+						"arguments": json.RawMessage(`{"tz":"UTC"}`)}})
+				// We DON'T know the prompt id here without tracking; the broker
+				// sent prompt with some id. We stashed nothing, so emit the final
+				// result with no id match needed — the broker treats a frame with
+				// no Method as the terminal prompt response regardless of id.
+				// Read the broker's tool-result reply first:
+				resultLine, _ := r.ReadString('\n')
+				var tr struct {
+					Result struct {
+						ToolCallID string `json:"toolCallId"`
+						Content    any    `json:"content"`
+					} `json:"result"`
+				}
+				json.Unmarshal([]byte(resultLine), &tr)
+				// Echo the toolCallId we received back in the prompt result so the
+				// test can assert round-trip fidelity end to end.
+				writeLine(map[string]any{"jsonrpc": "2.0", "id": "prompt-done",
+					"result": map[string]any{"stopReason": "end_turn",
+						"content": json.RawMessage(`{"echoedToolCallId":"` + tr.Result.ToolCallID + `"}`)}})
+			case "shutdown":
+				writeLine(map[string]any{"jsonrpc": "2.0", "id": msg.ID, "result": map[string]any{}})
+			default:
+				writeLine(map[string]any{"jsonrpc": "2.0", "id": msg.ID,
+					"error": map[string]any{"code": -32601, "message": "method not found"}})
+			}
+		}
+		if err != nil {
+			return
+		}
+	}
 }
 
 func runEchoChild() {
