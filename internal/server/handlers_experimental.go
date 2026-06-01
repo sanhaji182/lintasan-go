@@ -185,6 +185,16 @@ func (s *Server) handleExpProviderDetail(w http.ResponseWriter, r *http.Request)
 
 // handleExpProviderAdmit runs the admission flow (fixture-based, in-process) and
 // persists the result. Does NOT trigger live validation (that remains CLI-only).
+//
+// G1 fix: pass the ProxyHandler's provider registry to AdmitProvider so the
+// Experimental provider actually registers (the previous `nil` made every admit
+// fail with "admission-error: expprovider: nil registry"). The Experimental
+// provider is membrane-gated: Track()==Experimental ensures it never leaks into
+// the production (Official) routing pool — see internal/provider/membrane.go.
+// AdmitProvider also transitions the lifecycle record (proposed → admitted on
+// success, → active on a GO verdict); we keep the returned *ACPProvider so its
+// subprocess can be torn down on deactivate, and so the runtime can later
+// reuse it via the explicit opt-in door.
 func (s *Server) handleExpProviderAdmit(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	desc := findDescriptor(name)
@@ -206,6 +216,17 @@ func (s *Server) handleExpProviderAdmit(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Resolve the provider registry from the live ProxyHandler. The Experimental
+	// provider will be registered here, membrane-gated to Track==Experimental so
+	// it stays invisible to the Official routing path (resolveRoute never sees it).
+	if s.proxy == nil || s.proxy.providerReg == nil {
+		writeJSONStatus(w, http.StatusInternalServerError, map[string]any{
+			"error": "provider registry not initialised on ProxyHandler — cannot run admission",
+		})
+		return
+	}
+	reg := s.proxy.providerReg
+
 	store := s.expStore()
 	ctx := r.Context()
 
@@ -220,25 +241,35 @@ func (s *Server) handleExpProviderAdmit(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 
 	spec := desc.LaunchSpec("", nil, nil)
-	p, _, rep, err := expprovider.AdmitProvider(admitCtx, nil, spec, desc.Capabilities, src, desc.ForeignAuthVars)
-	if p != nil {
-		defer p.StopAgent()
+	acp, _, rep, err := expprovider.AdmitProvider(admitCtx, reg, spec, desc.Capabilities, src, desc.ForeignAuthVars)
+	if acp != nil {
+		// Tear down the admission subprocess on handler return. The provider
+		// stays in the registry (membrane-gated); a future activation will reuse
+		// it via the explicit opt-in door.
+		defer acp.StopAgent()
 	}
 
 	now := time.Now().UTC()
 	reportJSON, _ := json.Marshal(rep)
 	descJSON, _ := json.Marshal(descriptorView(*desc))
 
+	// Persist the state in lock-step with the framework's internal lifecycle:
+	//   wiring failure (err != nil) → proposed (no admission happened)
+	//   harness PASS (rep.Go())    → active  (framework transitioned to active)
+	//   harness NO-GO               → admitted (framework stopped at admitted;
+	//                                         a future activate call can flip it)
+	// The previous code rewound "admitted" back to "proposed" on any NO-GO,
+	// which made the activate handler unreachable (it requires state="admitted")
+	// and broke the admit → activate → deactivate chain.
 	state := "admitted"
-	evidence := "fixture-pass"
+	evidence := "admission-no-go"
 	if err != nil {
 		state = "proposed"
 		evidence = "admission-error: " + err.Error()
-	} else if !rep.Go() {
-		state = "proposed"
-		evidence = "admission-no-go"
+	} else if rep.Go() {
+		state = "active"
+		evidence = "fixture-pass"
 	}
-
 	rec := &expprovider.ProviderRecord{
 		Name:                name,
 		Track:               "experimental",
@@ -248,8 +279,11 @@ func (s *Server) handleExpProviderAdmit(w http.ResponseWriter, r *http.Request) 
 		ValidationEvidence:  evidence,
 		RiskBadge:           "experimental",
 	}
-	if state == "admitted" {
+	if state == "admitted" || state == "active" {
 		rec.AdmittedAt = &now
+	}
+	if state == "active" {
+		rec.ActivatedAt = &now
 	}
 
 	if saveErr := store.Save(ctx, rec); saveErr != nil {

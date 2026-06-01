@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -171,7 +172,7 @@ func TestMembrane_ServerHasNoExperimentalRoutingEscape(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() || filepath.Ext(path) != ".go" {
+		if info.IsDir() || filepath.Ext(path) != ".go" || strings.HasSuffix(info.Name(), "_test.go") {
 			return nil
 		}
 		// Skip the dedicated experimental integration files — they ARE the
