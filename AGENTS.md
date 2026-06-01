@@ -271,7 +271,7 @@ Sumber kebenaran: `.env.example` di root. Copy ke `.env` sebelum jalan.
 | `DASHBOARD_URL` | `http://127.0.0.1:20180` | URL dashboard untuk reverse-proxy; kosongkan untuk disable |
 
 > ⚠️ Dua mode auth berbeda:
-> - **Proxy clients** (`/v1/*`) → autentikasi pakai `LINTASAN_MASTER_KEY` (Bearer). Kalau master key kosong, middleware allow-all (dev mode).
+> - **Proxy clients** (`/v1/*`) → autentikasi pakai `LINTASAN_MASTER_KEY` (Bearer). Kalau master key kosong, middleware **fail-closed** (return 401 "Invalid API key") — TIDAK ada dev mode allow-all. Setup state machine (BOOTSTRAP → ACTIVE) menentukan perilaku: BOOTSTRAP hanya mengizinkan setup endpoints; ACTIVE fail-closed untuk semua management endpoints.
 > - **Dashboard users** (`/api/auth/*`) → JWT (HS256) ditandatangani `LINTASAN_JWT_SECRET`.
 
 ---
@@ -300,6 +300,12 @@ DB ada di `$LINTASAN_DATA_DIR/` (default `./data/`). Migrasi otomatis saat start
 | `webhooks` | Webhook subscriptions |
 | `webhook_deliveries` | Log delivery webhook |
 | `oauth_sessions` | Sesi OAuth provider |
+| `experimental_providers` | Experimental provider lifecycle state |
+| `experimental_credentials` | Encrypted credentials for experimental providers (AES-256-GCM) |
+| `provider_presets` | Provider preset catalog (built-in + custom) |
+| `preset_categories` | Preset categories with icons/colors |
+
+> ⚠️ **Credential masking pitfall (observed 2026-06-01):** When API keys are displayed via a masker (e.g. `sk-oHU...60KVQQ`), copying the masked string back into a form and saving it overwrites the real key. The masked value is ~25 chars vs ~51 for a real key. **Mitigations:** (1) Dashboard forms should NEVER pre-fill API key fields with stored values — use `•••• stored` placeholder + password input. (2) Server-side validation should reject `len(api_key) < 40` for `sk-` prefixed keys. (3) Sanity check: `SELECT length(api_key) FROM connections;` — anything below ~40 for `sk-` keys is corrupt. This bug recurs any time a key is rendered via masker and re-pasted.
 
 ---
 
