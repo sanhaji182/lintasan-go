@@ -74,6 +74,28 @@ func (d *DB) migrate() error {
 			created_at TEXT DEFAULT (datetime('now')),
 			updated_at TEXT DEFAULT (datetime('now'))
 		)`,
+		`CREATE TABLE IF NOT EXISTS provider_presets (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			domain TEXT NOT NULL,
+			base_url TEXT NOT NULL,
+			format TEXT NOT NULL DEFAULT 'openai',
+			key_label TEXT NOT NULL DEFAULT 'API Key',
+			category TEXT NOT NULL DEFAULT 'foundation',
+			is_builtin INTEGER DEFAULT 0,
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)`,
+		`CREATE TABLE IF NOT EXISTS preset_categories (
+			key TEXT PRIMARY KEY,
+			label TEXT NOT NULL,
+			icon TEXT NOT NULL DEFAULT '📦',
+			color TEXT NOT NULL DEFAULT '#8b5cf6',
+			sort_order INTEGER DEFAULT 0,
+			is_builtin INTEGER DEFAULT 0,
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)`,
 		`CREATE TABLE IF NOT EXISTS discovered_models (
 			id TEXT PRIMARY KEY,
 			connection_id TEXT NOT NULL,
@@ -207,6 +229,16 @@ func (d *DB) migrate() error {
 			deactivated_at TEXT DEFAULT NULL,
 			validation_evidence TEXT NOT NULL DEFAULT '',
 			risk_badge TEXT NOT NULL DEFAULT 'experimental',
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)`,
+		// Credential Management V1: encrypted credential storage for Experimental
+		// providers. Dashboard-managed credentials override environment variables.
+		// Secrets are AES-256-GCM encrypted (key derived from master_key).
+		`CREATE TABLE IF NOT EXISTS experimental_credentials (
+			provider_name TEXT PRIMARY KEY,
+			encrypted_value TEXT NOT NULL,
+			source TEXT NOT NULL DEFAULT 'dashboard',
 			created_at TEXT DEFAULT (datetime('now')),
 			updated_at TEXT DEFAULT (datetime('now'))
 		)`,
