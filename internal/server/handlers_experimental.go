@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/sanhaji182/lintasan-go/internal/expprovider"
@@ -75,15 +74,18 @@ func (s *Server) handleExpProviderList(w http.ResponseWriter, r *http.Request) {
 		recMap[rec.Name] = rec
 	}
 
+	credSt := s.credStore()
+
 	var providers []providerView
 	for _, d := range descriptors {
+		credStatus := credSt.GetStatus(ctx, d.Name, d.AuthEnvVar)
 		pv := providerView{
 			Name:          d.Name,
 			Track:         "experimental",
 			State:         "proposed",
 			RiskBadge:     "experimental",
 			AuthEnvVar:    d.AuthEnvVar,
-			CredentialSet: os.Getenv(d.AuthEnvVar) != "",
+			CredentialSet: credStatus.Configured,
 			Capabilities:  capNames(d),
 		}
 		// Serialize descriptor (without secrets)
@@ -150,6 +152,8 @@ func (s *Server) handleExpProviderDetail(w http.ResponseWriter, r *http.Request)
 		ForeignAuthVars    []string        `json:"foreign_auth_vars"`
 	}
 
+	detailCredStatus := s.credStore().GetStatus(ctx, desc.Name, desc.AuthEnvVar)
+
 	dv := detailView{
 		Name:            desc.Name,
 		Track:           "experimental",
@@ -157,7 +161,7 @@ func (s *Server) handleExpProviderDetail(w http.ResponseWriter, r *http.Request)
 		RiskBadge:       "experimental",
 		AuthEnvVar:      desc.AuthEnvVar,
 		AuthMethodID:    desc.AuthMethodID,
-		CredentialSet:   os.Getenv(desc.AuthEnvVar) != "",
+		CredentialSet:   detailCredStatus.Configured,
 		Capabilities:    capNames(*desc),
 		DefaultPath:     desc.DefaultPath,
 		Args:            desc.Args,
@@ -189,12 +193,14 @@ func (s *Server) handleExpProviderAdmit(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Check credential availability
-	if os.Getenv(desc.AuthEnvVar) == "" {
+	// Check credential availability (dashboard > env)
+	credStore := s.credStore()
+	credStatus := credStore.GetStatus(r.Context(), desc.Name, desc.AuthEnvVar)
+	if !credStatus.Configured {
 		writeJSONStatus(w, http.StatusPreconditionFailed, map[string]any{
 			"error":    "credential not available",
 			"env_var":  desc.AuthEnvVar,
-			"hint":     "set " + desc.AuthEnvVar + " in the server environment before admission",
+			"hint":     "set credential via dashboard or " + desc.AuthEnvVar + " in the server environment",
 			"provider": name,
 		})
 		return
@@ -203,14 +209,11 @@ func (s *Server) handleExpProviderAdmit(w http.ResponseWriter, r *http.Request) 
 	store := s.expStore()
 	ctx := r.Context()
 
-	// Build credential source for this provider
-	src := expprovider.CredentialSourceFunc(func(p string) (string, bool) {
-		if p == desc.Name {
-			v := os.Getenv(desc.AuthEnvVar)
-			return v, v != ""
-		}
-		return "", false
-	})
+	// Build credential source with priority: dashboard > env
+	masterKey, _ := s.db.GetSetting("master_key")
+	dashStore := expprovider.NewDashboardCredentialStore(s.db.Conn(), masterKey)
+	envMap := map[string]string{desc.Name: desc.AuthEnvVar}
+	src := expprovider.NewDashboardCredentialSource(dashStore, envMap)
 
 	// Run admission (fixture-based, bounded timeout)
 	admitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)

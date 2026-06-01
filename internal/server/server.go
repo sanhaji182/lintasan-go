@@ -170,6 +170,9 @@ func (s *Server) routes() {
 	// Register Experimental Provider API (P2)
 	s.registerExperimentalRoutes()
 
+	// Register Credential Management API (V1)
+	s.registerCredentialRoutes()
+
 	// Register Auth routes (JWT-based dashboard login)
 	s.mux.HandleFunc("POST /api/auth/login", s.authHandler.HandleLogin())
 	s.mux.HandleFunc("GET /api/auth/me", s.authHandler.HandleMe())

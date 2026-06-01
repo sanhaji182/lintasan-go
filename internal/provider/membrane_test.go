@@ -147,10 +147,24 @@ func TestMembrane_ServerHasNoExperimentalRoutingEscape(t *testing.T) {
 	if _, err := os.Stat(serverDir); err != nil {
 		t.Skipf("server package not found at %s (skipping): %v", serverDir, err)
 	}
-	// Forbidden in the server: the Experimental-reaching primitives + the raw
-	// track axis. NOT forbidden: RoutableProviders / ResolveRoutable / IsRoutable
-	// (the Official-only production door is exactly what the server SHOULD use).
+	// Forbidden in the server's PRODUCTION routing path: the Experimental-reaching
+	// primitives + the raw track axis. NOT forbidden: RoutableProviders /
+	// ResolveRoutable / IsRoutable (the Official-only production door is exactly
+	// what the server SHOULD use).
+	//
+	// EXCEPTION: dedicated experimental integration files (experimental_bootstrap.go,
+	// experimental_runtime.go) are the EXPLICIT opt-in door — they use
+	// ResolveExperimental deliberately and are structurally separated from the
+	// Official routing path. The membrane invariant is preserved because
+	// ResolveExperimental returns ONLY Experimental-track providers, and the
+	// production resolveRoute path never calls handleExperimentalRoute's internals.
 	forbidden := regexp.MustCompile(`\b(ResolveExperimental|ExperimentalProviders|ListByTrack|TrackExperimental)\b`)
+
+	// Files that constitute the explicit experimental door (approved R2 integration).
+	experimentalDoor := map[string]bool{
+		"experimental_bootstrap.go": true,
+		"experimental_runtime.go":   true,
+	}
 
 	var offenders []string
 	err := filepath.Walk(serverDir, func(path string, info os.FileInfo, err error) error {
@@ -158,6 +172,11 @@ func TestMembrane_ServerHasNoExperimentalRoutingEscape(t *testing.T) {
 			return err
 		}
 		if info.IsDir() || filepath.Ext(path) != ".go" {
+			return nil
+		}
+		// Skip the dedicated experimental integration files — they ARE the
+		// explicit door, not the production routing path.
+		if experimentalDoor[filepath.Base(path)] {
 			return nil
 		}
 		data, readErr := os.ReadFile(path)

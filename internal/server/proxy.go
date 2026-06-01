@@ -174,6 +174,7 @@ func NewProxyHandler(cfg *config.Config, database *db.DB) *ProxyHandler {
 	ph.costCalc = cost.NewCalculator()
 	ph.loadQuotaLimits(database)
 	ph.initProviderSDK(database)
+	ph.hydrateExperimentalProviders()
 	go ph.prewarmConnectionPool()
 
 	return ph
@@ -578,6 +579,16 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 	// both caches disabled) is NOT a miss and must not inflate the denominator.
 	if exactCacheEnabled || semanticEnabled {
 		metrics.CacheMiss()
+	}
+
+	// --- Experimental Provider interception (R2) ------------------------------
+	// BEFORE normal routing: check for an explicit experimental opt-in signal.
+	// If present, resolve + execute via the Agent interface and return. The
+	// normal resolveRoute path is NEVER reached for experimental requests.
+	// Membrane: the handler uses the explicit experimental door, never
+	// ResolveRoutable. Official routing is byte-for-byte unchanged.
+	if p.handleExperimentalRoute(w, r, model, req, body) {
+		return
 	}
 
 	candidates, resolvedModel, comboName, err := p.resolveRoute(model)
