@@ -395,12 +395,12 @@ journalctl -u lintasan -n 50 --no-pager
 
 ### Headline
 
-- **`main` HEAD:** `c030fdd` (post-audit final)
-- **Release tag:** `v0.24.1` (code state at `c030fdd`)
-- **Predecessor tag:** `v0.24.0` (versioning reset only, no code change)
-- **Production:** `v0.24.1` deployed to `lintasan.sans.biz.id:20180`
-- **Tests:** **816 passing in 44 packages** (zero regressions; 28 new tests
-  since v0.24.0 covering `curl_import.go`)
+- **`main` HEAD:** `a7fdf41` (post-audit final, on `fix/beta-p0-p1`)
+- **Release tag:** `v0.24.2` (code state at `a7fdf41`)
+- **Predecessor tags:** `v0.24.1` (test + proxy fix), `v0.24.0` (versioning reset only)
+- **Production:** `v0.24.2` deployed to `lintasan.sans.biz.id:20180`
+- **Tests:** **816 → 826 passing in 44 packages** (zero regressions; 10 new tests
+  in `handlers_beta_p0_test.go`)
 
 ### Branches — final state
 
@@ -454,6 +454,40 @@ All other worktrees removed (kanban `t_949aa391` and `/tmp/lintasan-curl-import`
 6. Tag `v0.24.1` created at `c030fdd`. GitHub release published with
    binary attachment.
 
+### Audit follow-up (2026-06-05, batch `fix/beta-p0-p1`)
+
+The beta-readiness audit (see `CHANGELOG.md` v0.24.2) flagged 4 P0/P1
+items; all fixed in this batch:
+
+7. `9551304` — fix(frontend): `/api/load-balancer` PUT → POST (1 line)
+8. `c6cd2fd` — fix(server): `handlePluginGenerate` is real LLM codegen
+   (no more fake template); returns 503 with hint if not configured
+9. `e73b019` — fix(server): `handleCosts` reads real data from
+   `request_logs` via `cost.NewCalculator()`, no more hardcoded zeros
+10. `a7fdf41` — docs(agent): §11 quick reference no longer claims
+    `admin/admin123` (which was never a valid password); replaced with
+    a recovery-flow comment
+11. 10 new unit tests in `handlers_beta_p0_test.go`. Suite: 826/826
+    passing in 44 packages. `go vet` clean.
+
+### Audit corrections (IMPORTANT)
+
+The original beta-readiness audit (v0.24.1) reported "16+ frontend
+calls hit non-existent routes" as a Critical issue. This was a
+**false positive**: the audit only grepped `server.go` and
+`handlers_parity.go`, missing `handlers_rest.go` where all 16 routes
+were already wired in commit `777a553` ("fix(dashboard): register
+missing REST routes for resource mutations"). The 16 routes are real
+implementations with real tests. The audit also missed the cause of
+the 401s they observed: the auth middleware runs before the mux
+matches, so missing-route and unauthenticated both return 401, which
+made the routes LOOK missing during unauthenticated probing. With a
+valid token they work.
+
+This §12 entry exists so the next session doesn't re-derive the
+conclusion. The audit also over-claimed "load-balancer 401"; that
+one WAS real (PUT/POST mismatch) and is fixed in commit `9551304`.
+
 ### Recovery notes (per §9 conventions)
 
 - **Main worktree scrub pitfall** (May 2026): `~/lintasan-go` is subject to
@@ -472,4 +506,4 @@ All other worktrees removed (kanban `t_949aa391` and `/tmp/lintasan-curl-import`
 
 ---
 
-*Last updated: 2026-06-05 · Stack: Go 1.22.2 + SvelteKit 5 (embedded SPA) · 816 backend tests / 44 packages · single self-contained binary (v0.24.1)*
+*Last updated: 2026-06-05 · Stack: Go 1.22.2 + SvelteKit 5 (embedded SPA) · 826 backend tests / 44 packages · single self-contained binary (v0.24.2)*
