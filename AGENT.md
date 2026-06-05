@@ -4,7 +4,7 @@
 >
 > **Aturan konflik:** kalau dokumen lama berbeda dengan state repo/runtime sekarang, **repo + runtime menang**. Semua angka di bawah diverifikasi langsung dari `git` dan dari mesin prod, bukan dari ingatan.
 >
-> **Terakhir direkonsiliasi:** 2026-05-31, terhadap `main @ 52647d1` dan prod binary `0989e21a` (`v2.4.0-20-gca85973`).
+> **Terakhir direkonsiliasi:** 2026-06-05, terhadap `main @ 17322f6` dan prod binary `7b273520` (`v0.24.0-1-g17322f6`).
 
 ---
 
@@ -16,23 +16,24 @@ Dua jalur kerja besar yang aktif sekarang:
 
 1. **Official Layer (Provider SDK + Capability System)** — sudah masuk prod. F1 (Provider SDK) + F2.0–F2.5 (capability vocabulary, catalog, resolver, shadow, enforcement, embedder path) semuanya **merged ke main** dan **terkompilasi di binary prod**. F2.4 capability enforcement **armed (flag ON)** di prod.
 
-2. **Experimental Ecosystem (ACP Shape-2 agents)** — foundation + **Generic ACP Provider Framework** **merged ke main**. Provider pertama (**Codex**) **onboarding-complete + wire-validated**. Framework generik sudah jadi **baseline**: onboarding provider = descriptor + credential mapping + fixture, bukan kode flow baru. Cohort-A lainnya (Claude Code, Gemini CLI, Copilot) punya descriptor + mapping + fixture skeleton (**readiness**, belum live-validated). Semua **additive + dormant + membrane-gated**, belum di-deploy ke prod binary, belum diaktifkan.
+2. **Experimental Ecosystem (ACP Shape-2 agents)** — foundation + **Generic ACP Provider Framework** + **Codex onboarding** + **Codex wire-remediation** + **Cohort-A readiness** semuanya **merged ke main DAN terkompilasi di binary prod** (sejak deploy 2026-06-05). Framework generik sudah jadi **baseline**: onboarding provider = descriptor + credential mapping + fixture, bukan kode flow baru. Cohort-A lainnya (Claude Code, Gemini CLI, Copilot) punya descriptor + mapping + fixture skeleton (**readiness**, belum live-validated). Semua **additive + dormant + membrane-gated**, sudah di prod binary tapi **belum diaktifkan**.
 
-**Posisi singkat:** Official Layer = produksi. Experimental Layer = siap di main, tidur. Framework generik baseline; Codex nunggu kredensial untuk validasi M5 akhir; Cohort-A lain nunggu live validation masing-masing.
+**Posisi singkat:** Official Layer = produksi. Experimental Layer = **sudah masuk prod binary, tidur** (membrane-gated, tak ada auto-activation). Framework generik baseline; Codex nunggu kredensial untuk validasi M5 akhir; Cohort-A lain nunggu live validation masing-masing.
 
 ---
 
 ## 2. Current Production State
 
 - **Service:** `lintasan.service` (systemd, `Restart=always`), port `20180`, single binary serving UI + API. **Status: active.**
-- **Running binary:** SHA256 `0989e21a…`, versi `v2.4.0-20-gca85973` → **dibangun di commit `ca85973`**.
+- **Running binary:** SHA256 `7b273520…`, versi `v0.24.0-1-g17322f6` → **dibangun di commit `17322f6`**.
 - **Binary drift:** TIDAK ADA. SHA `/proc/<pid>/exe` == SHA `./lintasan` on-disk. Running == deployed.
-- **Prod binary tertinggal 5 commit di belakang `main`** (`ca85973..52647d1`). 5 commit itu **persis** = seluruh Experimental ecosystem: substrate G1-G6 (`095b5d6`), ACP wire reconciliation (`0a6bbd6`), Codex onboarding (`7f96a7e`), Codex wire-remediation (`4794542`), Generic ACP Framework (`52647d1`). Artinya seluruh Experimental Layer **bahkan belum terkompilasi** ke binary prod — lapisan dormansi ekstra di atas membrane-gating.
+- **Prod binary = main** (`main @ 17322f6`, `HEAD` = `main` = `origin/main`, no drift). Versi: `v0.24.0` (tag) + 1 commit (the curl-import hot-fix).
+- **Versi scheme (2026-06-05 reset):** Lintasan sekarang 0.x.x (pre-1.0), bukan 2.x.x. Tag `v2.4.0` tetap di history sebagai referensi. Lihat CHANGELOG untuk rationale.
 - **Flag prod (DB `settings`, `data/lintasan.db`):**
   - `capability_enforce_enabled = true` (F2.4 **armed**)
   - `capability_shadow_enabled = true` (F2.3 shadow ON)
-- **Yang AKTIF di hot path prod:** capability system (F2.0–F2.5), F2.4 enforcement, membrane (struktural). Provider SDK (F1) flag-gated.
-- **Yang DORMANT di binary prod:** E1 isolation (Phase 3), ACP integration layer / broker (Phase 4), F2-membrane (aktif sebagai guard tapi tak ada Experimental provider untuk di-gate karena substrate belum di-deploy).
+- **Yang AKTIF di hot path prod:** capability system (F2.0–F2.5), F2.4 enforcement, membrane (struktural), curl import endpoint (`POST /api/connections/import-curl`). Provider SDK (F1) flag-gated.
+- **Yang DORMANT di binary prod:** Experimental substrate G1–G6 (`internal/expprovider`), Generic ACP Provider Framework, Codex onboarding + wire-remediation, Cohort-A descriptors (Claude/Gemini/Copilot). Semua additive+dormant; membrane satu-arah mencegah auto-routing. Aktivasi = checkpoint operator-gated terpisah.
 
 > ⚠️ Prod DB aktual = `/home/ubuntu/lintasan-go/data/lintasan.db`. (`./lintasan.db` dan `~/.lintasan/lintasan.db` kosong — jangan tertipu.)
 
@@ -54,11 +55,13 @@ Semua merged ke `main`. Yang berbintang (★) sudah di binary prod.
 | F2-membrane — Official/Experimental one-way routing | ✅ merged | ★ ya |
 | Phase 3 — E1 process isolation harness | ✅ merged | ★ ya (dormant) |
 | Phase 4 — ACP integration layer (JSON-RPC broker) | ✅ merged | ★ ya (dormant) |
-| Experimental substrate G1–G6 (`internal/expprovider`) | ✅ merged | ❌ belum (di depan prod) |
-| ACP wire reconciliation (spec-faithful broker) | ✅ merged | ❌ belum |
-| Codex onboarding (provider #1) | ✅ merged | ❌ belum |
-| Codex wire-remediation (authenticate/sessionId/ContentBlock/cwd) | ✅ merged | ❌ belum |
-| Generic ACP Provider Framework | ✅ merged, **BASELINE** | ❌ belum |
+| Experimental substrate G1–G6 (`internal/expprovider`) | ✅ merged | ★ ya (dormant) |
+| ACP wire reconciliation (spec-faithful broker) | ✅ merged | ★ ya (dormant) |
+| Codex onboarding (provider #1) | ✅ merged | ★ ya (dormant) |
+| Codex wire-remediation (authenticate/sessionId/ContentBlock/cwd) | ✅ merged | ★ ya (dormant) |
+| Generic ACP Provider Framework | ✅ merged, **BASELINE** | ★ ya (dormant) |
+| Cohort-A readiness (Claude/Gemini/Copilot descriptors) | ✅ merged | ★ ya (dormant) |
+| Curl import endpoint (`/api/connections/import-curl`) | ✅ merged (`17322f6`) | ★ ya, **ACTIVE** |
 
 ---
 
@@ -143,7 +146,7 @@ Ketiga provider sisa Cohort-A punya **descriptor + credential mapping + fixture 
 | Acceptance Gate (in-process, tool-loop close) | ✅ PASS | Codex + Fix4 + framework genericity + Cohort-A tests |
 | Generic framework genericity | ✅ PASS | synthetic `acme-agent` onboard, zero framework code |
 | Cohort-A onboardability (Claude/Gemini/Copilot) | ✅ PASS (in-process, fixture skeleton) | `TestCohortA_AllProvidersOnboard_NoFrameworkChange` |
-| Full repo suite | ✅ pass / 0 fail / 43 pkg | `main @ 52647d1` (lihat catatan) |
+| Full repo suite | ✅ pass / 0 fail / 44 pkg / 788 tests | `main @ 17322f6` |
 | **Codex Full M5 live (tool-loop close vs OpenAI nyata)** | ⛔ **PENDING** | **environment blocker** (`OPENAI_API_KEY` valid) |
 | **Cohort-A lain live (real CLI)** | ⛔ **PENDING** | per-provider operator-gated checkpoint |
 
@@ -153,26 +156,28 @@ Ketiga provider sisa Cohort-A punya **descriptor + credential mapping + fixture 
 
 ## 8. Open Branches
 
-`main = origin/main = 52647d1`. Branch yang relevan:
+`main = origin/main = 17322f6`. Branch yang relevan:
 
 | Branch | State vs main | Catatan |
 |--------|---------------|---------|
 | `feat/codex-live-remediation` | merged | Sudah FF ke main (`4794542`). Aman dihapus. |
 | `feat/acp-generic-framework` | merged | Sudah FF ke main (`52647d1`). Aman dihapus. |
-| `feat/cohort-a-readiness` | unmerged (branch ini) | Cohort-A readiness: credential mapping + 3 fixture skeleton + onboardability test + refresh AGENT.md. framework.go byte-identical. |
+| `feat/cohort-a-readiness` | merged | Sudah FF ke main (`0a3f176`). Aman dihapus. |
 | `feat/codex-onboarding`, `feat/acp-wire-reconciliation`, `feat/f1-official-wiring`, `feat/f2.*` | merged | Sudah di main. Aman dihapus. |
+| `feat/curl-import-connection` | unmerged | Curl-import feature: 2 commit di depan main (proxy.go, provider_bootstrap.go debug). Lapisan utama `curl_import.go` sudah di-land terpisah via `17322f6`. Tinggal rebase + merge kalau perubahan proxy itu masih relevan. |
 | `feat/codex-m0-skeleton` | unmerged | **Shape-1** Codex Responses ingress (multi-agent shim). Orthogonal, lifecycle terpisah. Jangan campur dengan Shape-2. |
 
-Branch lain (`fix/*`, `feat/smart-routing`, `feat/observability`, dll) di luar scope dokumen ini.
+Branch lain (`fix/*`, `feat/smart-routing`, `feat/observability`, `feat/compress-bench-harness`, dll) di luar scope dokumen ini.
 
 ---
 
 ## 9. Pending Decisions
 
 1. **Sediakan `OPENAI_API_KEY` valid** untuk validasi M5 penuh Codex. Gating item utama Codex.
-2. **Deploy main ke prod binary?** — prod tertinggal 5 commit (seluruh Experimental Layer). Deploy membawa substrate + framework masuk binary, tapi **tetap dormant** (membrane-gated, tak ada auto-activation). Keputusan operator.
+2. ~~**Deploy main ke prod binary?**~~ **RESOLVED (2026-06-05):** prod binary = main @ 17322f6. Experimental Layer sudah masuk binary, dormant (membrane-gated, tak ada auto-activation). Tidak ada langkah deploy terpisah yang perlu.
 3. **Live validation Cohort-A** (Claude/Gemini/Copilot) — masing-masing butuh binary CLI asli + kredensial + checkpoint operator untuk konfirmasi wire contract. Per provider, satu langkah disetujui.
-4. **Hapus branch yang sudah merged** — housekeeping opsional.
+4. **Hapus branch yang sudah merged** — housekeeping opsional. Banyak `feat/acp-*`, `feat/codex-*`, `feat/f1-*`, `feat/f2-*` branch yang sudah merged dan bisa di-prune.
+5. **Curl import feature follow-up:** `internal/server/curl_import.go` sudah di-land sebagai hot-fix (commit `17322f6`) untuk repair build. Implementasi lengkap tapi **belum ada unit test** — gap yang perlu di-address sebelum dipakai luas. Branch `feat/curl-import-connection` punya perubahan tambahan (proxy.go, provider_bootstrap.go) yang masih unmerged; rebase/merge setelah versi stabil.
 
 ---
 
@@ -235,13 +240,14 @@ Cohort-A lain: live validation per provider (real CLI + kredensial), masing-masi
 
 ## 14. Recovery / Rollback Notes
 
-- **main saat ini:** `52647d1`. Baseline sebelum framework: `4794542` (Codex remediation). Sebelum Codex: `0a6bbd6` (ACP reconciliation). Sebelum Experimental sama sekali: `ca85973` (= commit binary prod sekarang).
+- **main saat ini:** `17322f6`. Tag `v0.24.0` di `cfc007a`. 1 commit sejak tag = `17322f6` (curl-import hot-fix). Sebelum versi reset: `6b29d79` (HEAD terakhir dengan `v2.4.0`). Baseline sebelum framework: `4794542` (Codex remediation). Sebelum Codex: `0a6bbd6` (ACP reconciliation). Sebelum Experimental sama sekali: `ca85973`.
 - **Rollback branch belum-merge:** cukup jangan merge. Kalau sudah merge & belum deploy: `git revert <sha>` (additive-only, clean) atau (karena FF) `git reset --hard <prev>` + force-push (destruktif, butuh izin operator).
-- **Prod rollback:** binary prod = `ca85973`, **belum** memuat Experimental sama sekali → tak ada yang perlu di-rollback di runtime untuk Experimental/Codex. Dormant + belum ter-deploy = risiko runtime nol.
+- **Prod rollback:** prod binary sekarang = main (`17322f6`). Untuk roll back ke state pre-Experimental (binary yang **tidak** memuat Experimental sama sekali), target = `ca85973` — binary lama sudah di-overwrite, jadi perlu re-build dari commit itu (`git checkout ca85973 && make build` + deploy). Catatan: rollback ini berarti kehilangan curl-import endpoint (commit `17322f6`) — pastikan itu acceptable dulu.
 - **F2.4 disarm:** set `capability_enforce_enabled=false` di prod DB `data/lintasan.db` (flag OFF = inert). Tak perlu rebuild — dibaca saat bootstrap; restart service untuk reload.
 - **Backup deploy DB:** `~/backups/lintasan-*-deploy-*/lintasan.db` (snapshot per deploy).
 - **Build/deploy:** `make build` → `sudo systemctl stop lintasan` → swap binary → `start` → `curl localhost:20180/health` (cek versi). Downtime ~0.2–0.3s. Detail di `AGENTS.md §3`.
+- **PENTING: pre-deploy build hygiene.** Main worktree `~/lintasan-go` di-scrub proses git eksternal (file untracked KEHAPUS ~60s, ref drift). Sebelum build, **WAJIB `git status --porcelain` harus kosong**. Parkir file untracked ke `/tmp/lintasan-parked-<n>/` (jangan dihapus — `.bak`/`.new` = rollback artifact). Setelah build selesai, restore. Kalau skip step ini → binary vcs.modified=true (degraded provenance) atau file hilang saat deploy.
 
 ---
 
-*Akhir AGENT.md. Reconciled terhadap git + runtime 2026-05-31 (`main @ 52647d1`). Kalau ada yang berubah di repo/prod, update file ini lebih dulu sebelum lanjut checkpoint.*
+*Akhir AGENT.md. Reconciled terhadap git + runtime 2026-06-05 (`main @ 17322f6`, prod binary `7b273520` / `v0.24.0-1-g17322f6`). Kalau ada yang berubah di repo/prod, update file ini lebih dulu sebelum lanjut checkpoint.*
