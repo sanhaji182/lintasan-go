@@ -857,8 +857,14 @@ func (p *ProxyHandler) HandleChatCompletions(w http.ResponseWriter, r *http.Requ
 		}
 
 		for k, v := range resp.Header {
-			if strings.EqualFold(k, "Content-Encoding") {
-				continue // strip: we disable upstream compression (Accept-Encoding: identity)
+			// Skip hop-by-hop and transport headers that conflict with the
+			// downstream response writer. Go's http.Transport auto-decompresses
+			// gzip and clears Content-Length; forwarding a stale or zero value
+			// causes the client to see an empty body even when w.Write() has
+			// data. Content-Encoding is likewise handled by the transport.
+			switch strings.ToLower(k) {
+			case "content-length", "content-encoding", "transfer-encoding":
+				continue
 			}
 			for _, vv := range v {
 				w.Header().Add(k, vv)
@@ -1771,7 +1777,13 @@ func (p *ProxyHandler) HandleEmbeddings(w http.ResponseWriter, r *http.Request) 
 	defer resp.Body.Close()
 
 	for k, v := range resp.Header {
-		if strings.EqualFold(k, "Content-Encoding") {
+		// Skip hop-by-hop and transport headers that conflict with the
+		// downstream response writer. Go's http.Transport auto-decompresses
+		// gzip and clears Content-Length; forwarding a stale or zero value
+		// causes the client to see an empty body even when w.Write() has
+		// data. Content-Encoding is likewise handled by the transport.
+		switch strings.ToLower(k) {
+		case "content-length", "content-encoding", "transfer-encoding":
 			continue
 		}
 		for _, vv := range v {
@@ -1818,7 +1830,13 @@ func (p *ProxyHandler) proxyPath(w http.ResponseWriter, r *http.Request, upstrea
 	}
 	defer resp.Body.Close()
 	for k, v := range resp.Header {
-		if strings.EqualFold(k, "Content-Encoding") {
+		// Skip hop-by-hop and transport headers that conflict with the
+		// downstream response writer. Go's http.Transport auto-decompresses
+		// gzip and clears Content-Length; forwarding a stale or zero value
+		// causes the client to see an empty body even when w.Write() has
+		// data. Content-Encoding is likewise handled by the transport.
+		switch strings.ToLower(k) {
+		case "content-length", "content-encoding", "transfer-encoding":
 			continue
 		}
 		for _, vv := range v {
