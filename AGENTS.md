@@ -361,10 +361,18 @@ systemctl status lintasan --no-pager
 # Health check
 curl -s https://lintasan.sans.biz.id/health
 
-# Login (dapat token)
-curl -s -X POST https://lintasan.sans.biz.id/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"admin123"}'
+# Login — see first-run password recovery below. The bootstrap password is
+# randomly generated on first start (never hardcoded) and surfaced once on
+# stderr. It is forced-rotation on first login.
+#
+# Password recovery (after the operator rotated and forgot):
+#   1. SSH into the host and inspect /var/log/syslog or
+#      `journalctl -u lintasan -n 200 --no-pager` for the FIRST-RUN banner.
+#   2. If the rotated password is unknown, stop the service, delete the
+#      admin row from data/lintasan.db, restart — a fresh admin will be
+#      seeded and the password printed to stderr.
+#   3. Production operators should set a stable master_key and rotate the
+#      admin password via the dashboard Users page.
 
 # Chat completion (OpenAI-compatible)
 curl -s -X POST https://lintasan.sans.biz.id/v1/chat/completions \
