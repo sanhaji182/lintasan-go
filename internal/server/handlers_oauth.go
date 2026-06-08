@@ -4,167 +4,233 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
 
-	"github.com/google/uuid"
+	"github.com/sanhaji182/lintasan-go/internal/auth"
 )
 
-// registerOAuthRoutes registers OAuth endpoints on the server mux.
-// Called from server.go routes().
+// registerOAuthRoutes registers experimental IDE OAuth endpoints.
 func (s *Server) registerOAuthRoutes() {
+	s.mux.HandleFunc("GET /api/oauth/status", s.handleOAuthStatus)
 	s.mux.HandleFunc("POST /api/oauth/authorize", s.handleOAuthAuthorize)
 	s.mux.HandleFunc("GET /api/oauth/callback/{provider}", s.handleOAuthCallback)
 	s.mux.HandleFunc("GET /api/oauth/sessions", s.handleOAuthSessions)
 	s.mux.HandleFunc("DELETE /api/oauth/sessions/{id}", s.handleOAuthRevokeSession)
 }
 
-// POST /api/oauth/authorize — start OAuth flow for a provider
+// POST /api/oauth/authorize — admin starts OAuth flow for an IDE provider.
 func (s *Server) handleOAuthAuthorize(w http.ResponseWriter, r *http.Request) {
+	if !s.oauthIdeEnabled() {
+		oauthIdeDisabledJSON(w)
+		return
+	}
+	admin, ok := s.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+
 	var input struct {
-		Provider string `json:"provider"`
+		Provider           string `json:"provider"`
+		AcknowledgeRisk    bool   `json:"acknowledge_risk"`
+		AcknowledgeRiskAlt bool   `json:"acknowledgeRisk"`
 	}
-
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeJSON(w, map[string]string{"error": "invalid JSON"})
+		writeJSONStatus(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
 		return
 	}
-
 	if input.Provider == "" {
-		writeJSON(w, map[string]string{"error": "provider is required"})
+		writeJSONStatus(w, http.StatusBadRequest, map[string]string{"error": "provider is required"})
 		return
 	}
-
-	// Validate provider
-	validProviders := map[string]bool{
-		"cursor":         true,
-		"codex":          true,
-		"claude-desktop": true,
-		"copilot":        true,
-		"windsurf":       true,
-		"aider":          true,
+	if !auth.IsIdeOAuthProvider(input.Provider) {
+		writeJSONStatus(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("unknown provider: %s", input.Provider)})
+		return
 	}
-	if !validProviders[input.Provider] {
-		writeJSON(w, map[string]string{"error": fmt.Sprintf("unknown provider: %s", input.Provider)})
+	if !input.AcknowledgeRisk && !input.AcknowledgeRiskAlt {
+		writeJSONStatus(w, http.StatusBadRequest, map[string]any{
+			"error":      "acknowledge_risk required",
+			"disclaimer": auth.IdeOAuthDisclaimer,
+		})
 		return
 	}
 
 	session, err := s.oauthMgr.CreateSession(input.Provider)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": fmt.Sprintf("failed to create session: %v", err)})
+		writeJSONStatus(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to create session: %v", err)})
 		return
 	}
 
-	// Build provider-specific authorization URL
-	authURL := buildOAuthURL(input.Provider, session.ID)
+	authURL := buildOAuthURL(s.oauthPublicBaseURL(), input.Provider, session.ID)
+	s.audit("oauth.ide.authorize", admin.Username, "oauth/"+input.Provider, map[string]any{
+		"session_id": session.ID,
+		"provider":   input.Provider,
+	})
 
 	writeJSON(w, map[string]any{
 		"status":       "pending",
+		"experimental": true,
 		"session_id":   session.ID,
 		"provider":     input.Provider,
 		"redirect_url": authURL,
-		"message":      fmt.Sprintf("Visit %s to authorize %s", authURL, input.Provider),
+		"message":      fmt.Sprintf("Open redirect_url in a browser logged into your %s account (BYO subscription).", input.Provider),
 	})
 }
 
-// GET /api/oauth/callback/{provider} — OAuth callback handler
+// GET /api/oauth/callback/{provider} — public callback; validates state + exchanges code when configured.
 func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
+	if !s.oauthIdeEnabled() {
+		oauthIdeDisabledHTML(w, "OAuth IDE lab is disabled on this instance.")
+		return
+	}
+
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 	provider := r.PathValue("provider")
-
-	if code == "" || state == "" {
-		writeJSON(w, map[string]string{"error": "code and state are required"})
-		return
-	}
-
 	if provider == "" {
-		provider = "cursor"
+		provider = r.URL.Query().Get("provider")
 	}
-
-	accessToken := fmt.Sprintf("sk-lintasan-%s", uuid.New().String())
-	refreshToken := fmt.Sprintf("sk-lin...esh-%s", uuid.New().String())
-
-	// Use raw SQL to create/update the session with proper expiry
-	_, err := s.db.Conn().Exec(
-		`INSERT INTO oauth_sessions (id, provider, access_token, refresh_token, expires_at, status, created_at)
-		 VALUES (?, ?, ?, ?, datetime('now', '+24 hours'), 'active', datetime('now', 'localtime'))
-		 ON CONFLICT(id) DO UPDATE SET access_token = ?, refresh_token = ?, expires_at = datetime('now', '+24 hours'), status = 'active'`,
-		state, provider, accessToken, refreshToken,
-		accessToken, refreshToken,
-	)
-
-	if err != nil {
-		writeJSON(w, map[string]string{"error": fmt.Sprintf("failed to store tokens: %v", err)})
+	if code == "" || state == "" {
+		oauthIdeDisabledHTML(w, "Missing code or state from provider.")
+		return
+	}
+	if !auth.IsIdeOAuthProvider(provider) {
+		oauthIdeDisabledHTML(w, "Unknown provider.")
 		return
 	}
 
-	// Suppress unused variable warning
-	_ = code
+	pending, err := s.oauthMgr.GetPendingSession(state)
+	if err != nil || pending == nil {
+		oauthIdeDisabledHTML(w, "Invalid or expired OAuth session (state). Start authorize again from the dashboard.")
+		return
+	}
+	if pending.Provider != provider {
+		oauthIdeDisabledHTML(w, "Provider mismatch for this session.")
+		return
+	}
+
+	tokens, exchErr := exchangeIdeOAuthCode(provider, code, s.oauthPublicBaseURL())
+	if exchErr != nil {
+		s.audit("oauth.ide.callback_failed", provider, state, map[string]any{"error": exchErr.Error()})
+		oauthIdeDisabledHTML(w, "Token exchange failed: "+exchErr.Error())
+		return
+	}
+
+	expires := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
+	if tokens.ExpiresIn <= 0 {
+		expires = time.Now().Add(24 * time.Hour)
+	}
+	if err := s.oauthMgr.UpdateSessionTokens(state, tokens.AccessToken, tokens.RefreshToken, expires); err != nil {
+		oauthIdeDisabledHTML(w, "Failed to store tokens.")
+		return
+	}
+
+	s.audit("oauth.ide.callback_ok", provider, state, map[string]any{"provider": provider})
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`<!DOCTYPE html>
-<html>
-<head><title>Lintasan OAuth</title>
+	fmt.Fprintf(w, oauthSuccessHTML, provider)
+}
+
+func oauthIdeDisabledHTML(w http.ResponseWriter, msg string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusBadRequest)
+	fmt.Fprintf(w, oauthErrorHTML, msg)
+}
+
+const oauthSuccessHTML = `<!DOCTYPE html>
+<html><head><title>Lintasan OAuth (Experimental)</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0d1117; color: #c9d1d9; }
-  .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 40px; text-align: center; max-width: 400px; }
-  h1 { color: #58a6ff; margin-bottom: 8px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 40px; text-align: center; max-width: 440px; }
+  h1 { color: #58a6ff; margin-bottom: 8px; font-size: 1.25rem; }
+  .badge { display: inline-block; background: #6e40c922; color: #bc8cff; border: 1px solid #6e40c944; padding: 2px 8px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; }
   .success { color: #3fb950; }
-</style></head>
-<body>
+  .warn { color: #d29922; font-size: 13px; margin-top: 16px; }
+</style></head><body>
 <div class="card">
-  <h1>Authorization Complete</h1>
-  <p class="success">` + provider + ` has been authorized for Lintasan.</p>
-  <p>You can now close this window and return to your IDE.</p>
-</div>
-</body>
-</html>`))
-}
+  <div class="badge">Experimental</div>
+  <h1>Authorization complete</h1>
+  <p class="success">%s</p>
+  <p>Close this window and return to the Lintasan dashboard.</p>
+  <p class="warn">Lab feature only — upstream ToS may restrict this use. Tokens live in your DB; revoke from OAuth IDE when done.</p>
+</div></body></html>`
 
-// GET /api/oauth/sessions — list all OAuth sessions
+const oauthErrorHTML = `<!DOCTYPE html>
+<html><head><title>Lintasan OAuth</title>
+<style>
+  body { font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; background: #0d1117; color: #c9d1d9; }
+  .card { background: #161b22; border: 1px solid #f85149; border-radius: 12px; padding: 32px; max-width: 480px; }
+  h1 { color: #f85149; font-size: 1.1rem; }
+</style></head><body><div class="card"><h1>OAuth failed</h1><p>%s</p></div></body></html>`
+
+// GET /api/oauth/sessions — admin lists sessions (tokens masked).
 func (s *Server) handleOAuthSessions(w http.ResponseWriter, r *http.Request) {
+	if !s.oauthIdeEnabled() {
+		oauthIdeDisabledJSON(w)
+		return
+	}
+	if _, ok := s.requireAdmin(w, r); !ok {
+		return
+	}
 	sessions, err := s.oauthMgr.ListSessions()
 	if err != nil {
-		writeJSON(w, map[string]string{"error": fmt.Sprintf("failed to list sessions: %v", err)})
+		writeJSONStatus(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to list sessions: %v", err)})
 		return
 	}
-
-	writeJSON(w, map[string]any{"data": sessions})
+	writeJSON(w, map[string]any{"data": sessions, "experimental": true})
 }
 
-// DELETE /api/oauth/sessions/{id} — revoke a session
+// DELETE /api/oauth/sessions/{id}
 func (s *Server) handleOAuthRevokeSession(w http.ResponseWriter, r *http.Request) {
+	if !s.oauthIdeEnabled() {
+		oauthIdeDisabledJSON(w)
+		return
+	}
+	admin, ok := s.requireAdmin(w, r)
+	if !ok {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
-		writeJSON(w, map[string]string{"error": "session id is required"})
+		writeJSONStatus(w, http.StatusBadRequest, map[string]string{"error": "session id is required"})
 		return
 	}
-
 	if err := s.oauthMgr.RevokeSession(id); err != nil {
-		writeJSON(w, map[string]string{"error": fmt.Sprintf("failed to revoke session: %v", err)})
+		writeJSONStatus(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to revoke session: %v", err)})
 		return
 	}
-
+	s.audit("oauth.ide.revoke", admin.Username, "oauth/"+id, nil)
 	writeJSON(w, map[string]string{"status": "revoked"})
 }
 
-// buildOAuthURL builds a provider-specific OAuth authorization URL.
-func buildOAuthURL(provider, sessionID string) string {
-	baseURL := "http://localhost:20180"
+func buildOAuthURL(publicBase, provider, sessionID string) string {
+	redirect := publicBase + "/api/oauth/callback/" + url.PathEscape(provider)
+	redirectEnc := url.QueryEscape(redirect)
 	switch provider {
 	case "cursor":
-		return "https://cursor.com/oauth/authorize?response_type=code&client_id=lintasan&redirect_uri=" + baseURL + "/api/oauth/callback%3Fprovider%3Dcursor&state=" + sessionID + "&scope=ai:read+ai:write"
+		return "https://cursor.com/oauth/authorize?response_type=code&client_id=" + oauthClientID(provider) + "&redirect_uri=" + redirectEnc + "&state=" + url.QueryEscape(sessionID) + "&scope=ai:read+ai:write"
 	case "codex":
-		return "https://codex.openai.com/oauth/authorize?response_type=code&client_id=lintasan&redirect_uri=" + baseURL + "/api/oauth/callback%3Fprovider%3Dcodex&state=" + sessionID + "&scope=openid+offline_access"
+		return "https://codex.openai.com/oauth/authorize?response_type=code&client_id=" + oauthClientID(provider) + "&redirect_uri=" + redirectEnc + "&state=" + url.QueryEscape(sessionID) + "&scope=openid+offline_access"
 	case "claude-desktop":
-		return "https://claude.ai/oauth/authorize?response_type=code&client_id=lintasan&redirect_uri=" + baseURL + "/api/oauth/callback%3Fprovider%3Dclaude-desktop&state=" + sessionID + "&scope=anthropic:api"
+		return "https://claude.ai/oauth/authorize?response_type=code&client_id=" + oauthClientID(provider) + "&redirect_uri=" + redirectEnc + "&state=" + url.QueryEscape(sessionID) + "&scope=anthropic:api"
 	case "copilot":
-		return "https://github.com/login/oauth/authorize?client_id=lintasan&redirect_uri=" + baseURL + "/api/oauth/callback%3Fprovider%3Dcopilot&state=" + sessionID + "&scope=user+read:org"
+		return "https://github.com/login/oauth/authorize?client_id=" + oauthClientID(provider) + "&redirect_uri=" + redirectEnc + "&state=" + url.QueryEscape(sessionID) + "&scope=user+read:org"
 	case "windsurf":
-		return "https://windsurf.com/oauth/authorize?response_type=code&client_id=lintasan&redirect_uri=" + baseURL + "/api/oauth/callback%3Fprovider%3Dwindsurf&state=" + sessionID + "&scope=ai:read"
+		return "https://windsurf.com/oauth/authorize?response_type=code&client_id=" + oauthClientID(provider) + "&redirect_uri=" + redirectEnc + "&state=" + url.QueryEscape(sessionID) + "&scope=ai:read"
 	case "aider":
-		return "https://aider.chat/oauth/authorize?response_type=code&client_id=lintasan&redirect_uri=" + baseURL + "/api/oauth/callback%3Fprovider%3Daider&state=" + sessionID + "&scope=openid"
+		return "https://aider.chat/oauth/authorize?response_type=code&client_id=" + oauthClientID(provider) + "&redirect_uri=" + redirectEnc + "&state=" + url.QueryEscape(sessionID) + "&scope=openid"
 	default:
-		return baseURL + "/api/oauth/callback?provider=" + provider + "&state=" + sessionID
+		return redirect + "?state=" + url.QueryEscape(sessionID)
 	}
+}
+
+func oauthClientID(provider string) string {
+	key := "LINTASAN_OAUTH_IDE_" + strings.ToUpper(strings.ReplaceAll(provider, "-", "_")) + "_CLIENT_ID"
+	if v := os.Getenv(key); v != "" {
+		return url.QueryEscape(v)
+	}
+	return "lintasan-lab-unconfigured"
 }

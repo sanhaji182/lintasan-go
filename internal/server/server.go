@@ -417,6 +417,12 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// Experimental IDE OAuth: provider redirect (no browser JWT).
+		if s.oauthIdeEnabled() && isOAuthIdeCallback(r.Method, path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// MITM bridge bypass: ONLY with the per-boot random secret. Never a
 		// static, source-guessable value. Disabled entirely if no secret set.
 		if s.mitmSecret != "" {

@@ -1,0 +1,206 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { api } from '$lib/api';
+  import Spinner from '$lib/components/Spinner.svelte';
+  import { FlaskConical, ShieldAlert, ExternalLink, Trash2 } from 'lucide-svelte';
+
+  interface OAuthStatus {
+    enabled: boolean;
+    experimental?: boolean;
+    providers?: string[];
+    disclaimer?: string;
+    public_base?: string;
+    hint?: string;
+    error?: string;
+  }
+
+  interface OAuthSession {
+    id: string;
+    provider: string;
+    status: string;
+    expires_at?: string;
+    created_at?: string;
+  }
+
+  let status = $state<OAuthStatus | null>(null);
+  let sessions = $state<OAuthSession[]>([]);
+  let loading = $state(true);
+  let actionLoading = $state('');
+  let acknowledge = $state(false);
+  let selectedProvider = $state('copilot');
+  let lastRedirect = $state('');
+  let error = $state('');
+
+  const providers = ['copilot', 'cursor', 'codex', 'claude-desktop', 'windsurf', 'aider'];
+
+  async function load() {
+    loading = true;
+    error = '';
+    try {
+      const st = await api.get<OAuthStatus>('/api/oauth/status');
+      status = st;
+      if (st.enabled) {
+        const sess = await api.get<{ data: OAuthSession[] }>('/api/oauth/sessions');
+        sessions = sess.data ?? [];
+      } else {
+        sessions = [];
+      }
+    } catch (e: any) {
+      error = e?.message || 'Failed to load OAuth IDE status';
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function authorize() {
+    if (!acknowledge) {
+      error = 'Acknowledge the risks before continuing.';
+      return;
+    }
+    actionLoading = 'authorize';
+    error = '';
+    lastRedirect = '';
+    try {
+      const res = await api.post<any>('/api/oauth/authorize', {
+        provider: selectedProvider,
+        acknowledge_risk: true,
+      });
+      lastRedirect = res.redirect_url || '';
+      if (lastRedirect) {
+        window.open(lastRedirect, '_blank', 'noopener,noreferrer');
+      }
+      await load();
+    } catch (e: any) {
+      error = e?.message || 'Authorize failed';
+    } finally {
+      actionLoading = '';
+    }
+  }
+
+  async function revoke(id: string) {
+    actionLoading = id;
+    try {
+      await api.delete(`/api/oauth/sessions/${id}`);
+      await load();
+    } catch (e: any) {
+      error = e?.message || 'Revoke failed';
+    } finally {
+      actionLoading = '';
+    }
+  }
+
+  onMount(load);
+</script>
+
+<svelte:head><title>OAuth IDE (Experimental) — Lintasan</title></svelte:head>
+
+<div class="page">
+  <header class="page-header">
+    <div class="title-row">
+      <FlaskConical size={28} stroke-width={1.6} />
+      <div>
+        <h1>OAuth IDE <span class="badge">Experimental</span></h1>
+        <p class="subtitle">Lab feature — personal BYO subscription only. Default OFF on the server.</p>
+      </div>
+    </div>
+  </header>
+
+  {#if loading}
+    <Spinner />
+  {:else}
+    {#if error}
+      <div class="alert error">{error}</div>
+    {/if}
+
+    <section class="card warn-card">
+      <ShieldAlert size={20} />
+      <div>
+        <strong>ToS &amp; risk</strong>
+        <pre class="disclaimer">{status?.disclaimer ?? 'Upstream providers may prohibit third-party OAuth routing. Account suspension is possible. Not a substitute for official API keys.'}</pre>
+      </div>
+    </section>
+
+    {#if !status?.enabled}
+      <section class="card">
+        <p><strong>Disabled on this instance.</strong></p>
+        <p class="muted">Enable only on private/lab hosts:</p>
+        <code class="block">LINTASAN_OAUTH_IDE_ENABLED=true</code>
+        <code class="block">LINTASAN_OAUTH_PUBLIC_BASE_URL=https://your-host</code>
+        <p class="muted small">Per provider: <code>LINTASAN_OAUTH_IDE_COPILOT_CLIENT_ID</code>, <code>_CLIENT_SECRET</code>, and for non-GitHub providers <code>_TOKEN_URL</code>.</p>
+      </section>
+    {:else}
+      <section class="card">
+        <p class="muted small">Public base: <code>{status.public_base}</code></p>
+        <p class="muted small">{status.hint}</p>
+
+        <label class="ack">
+          <input type="checkbox" bind:checked={acknowledge} />
+          I understand this is experimental, for my own account, and may violate upstream terms.
+        </label>
+
+        <div class="row">
+          <select bind:value={selectedProvider}>
+            {#each providers as p}
+              <option value={p}>{p}</option>
+            {/each}
+          </select>
+          <button class="btn primary" disabled={!acknowledge || actionLoading === 'authorize'} onclick={authorize}>
+            {actionLoading === 'authorize' ? 'Starting…' : 'Authorize (admin)'}
+          </button>
+        </div>
+        {#if lastRedirect}
+          <p class="muted small">Opened: <a href={lastRedirect} target="_blank" rel="noopener noreferrer">provider login <ExternalLink size={14} /></a></p>
+        {/if}
+      </section>
+
+      <section class="card">
+        <h2>Sessions</h2>
+        {#if sessions.length === 0}
+          <p class="muted">No OAuth sessions yet.</p>
+        {:else}
+          <ul class="session-list">
+            {#each sessions as s}
+              <li>
+                <span><strong>{s.provider}</strong> — {s.status}</span>
+                <span class="muted mono">{s.id}</span>
+                <button class="btn ghost" disabled={actionLoading === s.id} onclick={() => revoke(s.id)}>
+                  <Trash2 size={16} /> Revoke
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </section>
+    {/if}
+  {/if}
+</div>
+
+<style>
+  .page { max-width: 720px; margin: 0 auto; padding: 1.5rem; }
+  .title-row { display: flex; gap: 1rem; align-items: flex-start; }
+  h1 { font-size: 1.35rem; margin: 0; }
+  .badge {
+    font-size: 0.7rem; vertical-align: middle;
+    background: rgba(139, 92, 246, 0.15); color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    padding: 2px 8px; border-radius: 6px; margin-left: 8px;
+  }
+  .subtitle { color: var(--text-muted, #94a3b8); margin: 0.25rem 0 0; font-size: 0.9rem; }
+  .card { background: var(--surface, #1e293b); border: 1px solid var(--border, #334155); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+  .warn-card { display: flex; gap: 12px; border-color: rgba(234, 179, 8, 0.35); background: rgba(234, 179, 8, 0.06); }
+  .disclaimer { white-space: pre-wrap; font-size: 0.8rem; margin: 0.5rem 0 0; font-family: inherit; color: var(--text-muted); }
+  .ack { display: flex; gap: 8px; align-items: flex-start; margin: 1rem 0; font-size: 0.9rem; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  select, .btn { padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); }
+  .btn.primary { background: #3b82f6; color: #fff; border: none; cursor: pointer; }
+  .btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.ghost { background: transparent; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+  .session-list { list-style: none; padding: 0; margin: 0; }
+  .session-list li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+  .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
+  .muted { color: var(--text-muted, #94a3b8); }
+  .small { font-size: 0.85rem; }
+  .block { display: block; margin: 0.35rem 0; padding: 0.35rem 0.5rem; background: #0f172a; border-radius: 6px; font-size: 0.8rem; }
+  .alert.error { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+  code { font-size: 0.85em; }
+</style>

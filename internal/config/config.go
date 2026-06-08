@@ -14,6 +14,10 @@ type Config struct {
 	MasterKey   string
 	MITMPort    int
 	MITMEnabled bool
+	// OAuthIDEEnabled gates the experimental IDE OAuth lab (default OFF).
+	OAuthIDEEnabled bool
+	// OAuthPublicBaseURL is the public origin for redirect_uri (e.g. https://lintasan.example.com).
+	OAuthPublicBaseURL string
 }
 
 func Load() (*Config, error) {
@@ -23,12 +27,14 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		Port:      getEnvInt("PORT", 20180),
-		DBPath:    filepath.Join(dataDir, "lintasan.db"),
-		DataDir:   dataDir,
-		MasterKey:   getEnv("LINTASAN_MASTER_KEY", ""),
-		MITMPort:    getEnvInt("MITM_PORT", 8443),
-		MITMEnabled: getEnvBool("LINTASAN_MITM_ENABLED", false),
+		Port:               getEnvInt("PORT", 20180),
+		DBPath:             filepath.Join(dataDir, "lintasan.db"),
+		DataDir:            dataDir,
+		MasterKey:          getEnv("LINTASAN_MASTER_KEY", ""),
+		MITMPort:           getEnvInt("MITM_PORT", 8443),
+		MITMEnabled:        getEnvBool("LINTASAN_MITM_ENABLED", false),
+		OAuthIDEEnabled:    getEnvBool("LINTASAN_OAUTH_IDE_ENABLED", false),
+		OAuthPublicBaseURL: strings.TrimRight(getEnv("LINTASAN_OAUTH_PUBLIC_BASE_URL", ""), "/"),
 	}, nil
 }
 

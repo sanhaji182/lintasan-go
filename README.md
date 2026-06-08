@@ -430,6 +430,8 @@ PORT=8080 ./lintasan start
 | `PORT` | `20180` | Port server utama |
 | `LINTASAN_DATA_DIR` | `./data` | Direktori data (DB, logs) |
 | `LINTASAN_MASTER_KEY` | auto-generated | Master API key |
+| `LINTASAN_OAUTH_IDE_ENABLED` | `false` | Experimental IDE OAuth lab (admin-only; see `docs/oauth-ide-experimental.md`) |
+| `LINTASAN_OAUTH_PUBLIC_BASE_URL` | — | Public origin for OAuth redirect when IDE OAuth is enabled |
 | `MITM_PORT` | `8443` | MITM bridge port |
 
 Tidak perlu `.env` file — set env vars atau gunakan default. Database auto-create saat pertama run.
@@ -444,6 +446,8 @@ Tidak perlu `.env` file — set env vars atau gunakan default. Database auto-cre
 | `PORT` | `20180` | Main server port |
 | `LINTASAN_DATA_DIR` | `./data` | Data directory (DB, logs) |
 | `LINTASAN_MASTER_KEY` | auto-generated | Master API key |
+| `LINTASAN_OAUTH_IDE_ENABLED` | `false` | Experimental IDE OAuth lab (admin-only; see `docs/oauth-ide-experimental.md`) |
+| `LINTASAN_OAUTH_PUBLIC_BASE_URL` | — | Public origin for OAuth redirect when IDE OAuth is enabled |
 | `MITM_PORT` | `8443` | MITM bridge port |
 
 No `.env` file needed — just set env vars or use defaults. Database auto-creates on first run.

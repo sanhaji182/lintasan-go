@@ -597,7 +597,9 @@ func (s *Server) handlePromptOptimizer(w http.ResponseWriter,r *http.Request){ v
 func (s *Server) handleExport(w http.ResponseWriter,r *http.Request){ w.Header().Set("Content-Type","application/json"); writeJSON(w,map[string]any{"exported_at":time.Now(),"settings":s.getJSONSetting("settings",map[string]any{})}) }
 func (s *Server) handleSync(w http.ResponseWriter,r *http.Request){ s.handleModelsSync(w,r) }
 func (s *Server) handleMarketplace(w http.ResponseWriter,r *http.Request){ s.handlePluginStore(w,r) }
-func (s *Server) handleOAuth(w http.ResponseWriter,r *http.Request){ writeJSON(w,map[string]any{"status":"not_configured","providers":[]any{}}) }
+func (s *Server) handleOAuth(w http.ResponseWriter, r *http.Request) {
+	s.handleOAuthStatus(w, r)
+}
 func (s *Server) handleTeamByID(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	teams := asSlice(s.getJSONSetting("teams", []any{}))

@@ -15,6 +15,7 @@
     { label: 'Accounts', path: '/dashboard/connections', icon: Link2 },
     { label: 'Providers', path: '/dashboard/providers', icon: Server },
     { label: 'Experimental', path: '/dashboard/experimental', icon: FlaskConical },
+    { label: 'OAuth IDE', path: '/dashboard/oauth-ide', icon: ShieldAlert },
     { label: 'Discover', path: '/dashboard/discover', icon: Globe },
     { label: 'Routing', path: '/dashboard/routing', icon: GitBranch },
     { label: 'Fallback', path: '/dashboard/fallback', icon: ShieldAlert },
