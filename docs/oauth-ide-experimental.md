@@ -11,7 +11,7 @@ Mirrors `9router` `OAUTH_PROVIDERS` @ v0.4.71:
 | claude | PKCE | planned |
 | antigravity | PKCE | planned |
 | codex | PKCE | planned |
-| github | device_code | planned |
+| **github** | device_code | **ready** |
 | cursor | import_token | import_only |
 | **xai** | PKCE | **ready** |
 | kilocode | custom_device | planned |

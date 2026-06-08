@@ -25,6 +25,13 @@ func TestXAIReady(t *testing.T) {
 	}
 }
 
+func TestGitHubReady(t *testing.T) {
+	p := ByID("github")
+	if p == nil || p.Impl != ImplReady {
+		t.Fatalf("github should be ready, got %+v", p)
+	}
+}
+
 func TestPKCE(t *testing.T) {
 	pk, err := NewPKCE(32)
 	if err != nil || pk.Verifier == "" || pk.Challenge == "" {

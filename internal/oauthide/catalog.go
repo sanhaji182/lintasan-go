@@ -48,7 +48,7 @@ func Catalog() []Provider {
 			DeprecationNote: "Antigravity IDE only — proxy use may trigger bans", RiskNotice: RiskNotice},
 		{ID: "codex", Name: "OpenAI Codex", Flow: FlowPKCE, Impl: ImplPlanned, Deprecated: true, RiskNotice: RiskNotice,
 			Notes: "OpenAI auth.openai.com PKCE"},
-		{ID: "github", Name: "GitHub Copilot", Flow: FlowDevice, Impl: ImplPlanned, Deprecated: true, RiskNotice: RiskNotice,
+		{ID: "github", Name: "GitHub Copilot", Flow: FlowDevice, Impl: ImplReady, Deprecated: true, RiskNotice: RiskNotice,
 			Notes: "Device code + copilot_internal token (9router GITHUB_CONFIG)"},
 		{ID: "cursor", Name: "Cursor IDE", Flow: FlowImport, Impl: ImplImportOnly,
 			Notes: "Import from state.vscdb — no browser OAuth URL"},

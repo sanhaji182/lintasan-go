@@ -216,6 +216,8 @@ func (d *DB) migrate() error {
 		// Idempotent — fails with "duplicate column" on re-run, which the loop ignores.
 		`ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE oauth_sessions ADD COLUMN pkce_verifier TEXT DEFAULT ''`,
+		`ALTER TABLE oauth_sessions ADD COLUMN device_code TEXT DEFAULT ''`,
+		`ALTER TABLE oauth_sessions ADD COLUMN flow_meta TEXT DEFAULT ''`,
 		// P1: Experimental Provider Registry Persistence — stores lifecycle state,
 		// admission reports, validation evidence, and descriptor snapshots for the
 		// Experimental provider ecosystem. Credentials are NEVER stored (Invariant 3).

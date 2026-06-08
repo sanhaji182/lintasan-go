@@ -21,33 +21,20 @@ func (s *Server) handleOAuthStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if enabled {
 		out["public_base"] = s.oauthPublicBaseURL()
-		out["hint"] = "Providers with implementation=ready support browser authorize. Others show planned flow type until ported."
+		out["hint"] = "ready: xai (browser), github (device code + poll). Others planned."
 	}
 	writeJSON(w, out)
 }
 
 func startOAuthAuthorize(s *Server, provider, sessionID, publicBase string) (redirectURL string, err error) {
-	meta := oauthide.ByID(provider)
-	if meta == nil {
-		return "", fmt.Errorf("unknown provider %s", provider)
+	res, err := startOAuthAuthorizeFull(s, provider, sessionID, publicBase)
+	if err != nil {
+		return "", err
 	}
-	switch provider {
-	case "xai":
-		if meta.Impl != oauthide.ImplReady {
-			return "", fmt.Errorf("xai not ready")
-		}
-		pkce, err := oauthide.NewPKCE(oauthide.XAIPKCEBytes)
-		if err != nil {
-			return "", err
-		}
-		if err := s.oauthMgr.SetSessionPKCE(sessionID, pkce.Verifier); err != nil {
-			return "", err
-		}
-		redirect := publicBase + "/api/oauth/callback/xai"
-		return oauthide.BuildXAIAuthorizeURL(redirect, sessionID, pkce.Challenge), nil
-	default:
-		return "", fmt.Errorf("provider %s not implemented yet (flow=%s). Catalog lists all 8; port in progress.", provider, meta.Flow)
+	if res.Flow != "browser_redirect" {
+		return "", fmt.Errorf("use device_code response for %s", provider)
 	}
+	return res.RedirectURL, nil
 }
 
 func exchangeOAuthCallback(provider, code, redirectURI, pkceVerifier string) (access, refresh string, expiresIn int, err error) {

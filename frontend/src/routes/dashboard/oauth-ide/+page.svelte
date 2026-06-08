@@ -37,6 +37,8 @@
   let actionLoading = $state('');
   let acknowledge = $state(false);
   let selectedProvider = $state('xai');
+  let deviceInfo = $state<any>(null);
+  let pollSessionId = $state('');
   let lastRedirect = $state('');
   let error = $state('');
 
@@ -75,13 +77,39 @@
         provider: selectedProvider,
         acknowledge_risk: true,
       });
-      lastRedirect = res.redirect_url || '';
-      if (lastRedirect) {
-        window.open(lastRedirect, '_blank', 'noopener,noreferrer');
+      pollSessionId = res.session_id || '';
+      if (res.flow === 'device_code' && res.device) {
+        deviceInfo = res.device;
+        lastRedirect = '';
+      } else {
+        deviceInfo = null;
+        lastRedirect = res.redirect_url || '';
+        if (lastRedirect) {
+          window.open(lastRedirect, '_blank', 'noopener,noreferrer');
+        }
       }
       await load();
     } catch (e: any) {
       error = e?.message || 'Authorize failed';
+    } finally {
+      actionLoading = '';
+    }
+  }
+
+  async function pollDevice() {
+    if (!pollSessionId) return;
+    actionLoading = 'poll';
+    error = '';
+    try {
+      const res = await api.post<any>(`/api/oauth/device/poll?session_id=${encodeURIComponent(pollSessionId)}`, {});
+      if (res.status === 'active') {
+        deviceInfo = null;
+        await load();
+      } else {
+        error = res.hint || 'Still pending — complete device login on GitHub';
+      }
+    } catch (e: any) {
+      error = e?.message || 'Poll failed';
     } finally {
       actionLoading = '';
     }
@@ -177,6 +205,16 @@
             {actionLoading === 'authorize' ? 'Starting…' : 'Authorize (admin)'}
           </button>
         </div>
+        {#if deviceInfo}
+          <div class="device-box">
+            <p><strong>GitHub device login</strong></p>
+            <p>Code: <code class="user-code">{deviceInfo.user_code}</code></p>
+            <p><a href={deviceInfo.verification_uri_complete || deviceInfo.verification_uri} target="_blank" rel="noopener noreferrer">Open GitHub <ExternalLink size={14} /></a></p>
+            <button class="btn primary" disabled={actionLoading === 'poll'} onclick={pollDevice}>
+              {actionLoading === 'poll' ? 'Polling…' : 'Poll for completion'}
+            </button>
+          </div>
+        {/if}
         {#if lastRedirect}
           <p class="muted small">Opened: <a href={lastRedirect} target="_blank" rel="noopener noreferrer">provider login <ExternalLink size={14} /></a></p>
         {/if}
@@ -230,6 +268,8 @@
   .catalog li { padding: 0.35rem 0; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .pill { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #334155; }
   .pill.warn { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+  .device-box { margin-top: 1rem; padding: 1rem; border: 1px dashed var(--border); border-radius: 8px; }
+  .user-code { font-size: 1.25rem; letter-spacing: 0.1em; }
   .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
   .muted { color: var(--text-muted, #94a3b8); }
   .small { font-size: 0.85rem; }

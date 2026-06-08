@@ -20,6 +20,8 @@ type OAuthSession struct {
 	AccessToken  string    `json:"access_token,omitempty"`
 	RefreshToken string    `json:"refresh_token,omitempty"`
 	PKCEVerifier string    `json:"-"` // never expose
+	DeviceCode   string    `json:"-"`
+	FlowMeta     string    `json:"-"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	Status       string    `json:"status"` // "pending", "active", "expired", "revoked"
 	CreatedAt    string    `json:"created_at"`

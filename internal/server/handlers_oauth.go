@@ -17,6 +17,7 @@ func (s *Server) registerOAuthRoutes() {
 	s.mux.HandleFunc("GET /api/oauth/status", s.handleOAuthStatus)
 	s.mux.HandleFunc("POST /api/oauth/authorize", s.handleOAuthAuthorize)
 	s.mux.HandleFunc("GET /api/oauth/callback/{provider}", s.handleOAuthCallback)
+	s.mux.HandleFunc("POST /api/oauth/device/poll", s.handleOAuthDevicePoll)
 	s.mux.HandleFunc("GET /api/oauth/sessions", s.handleOAuthSessions)
 	s.mux.HandleFunc("DELETE /api/oauth/sessions/{id}", s.handleOAuthRevokeSession)
 }
@@ -63,7 +64,7 @@ func (s *Server) handleOAuthAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authURL, err := startOAuthAuthorize(s, input.Provider, session.ID, s.oauthPublicBaseURL())
+	result, err := startOAuthAuthorizeFull(s, input.Provider, session.ID, s.oauthPublicBaseURL())
 	if err != nil {
 		writeJSONStatus(w, http.StatusBadRequest, map[string]any{
 			"error":      err.Error(),
@@ -76,16 +77,24 @@ func (s *Server) handleOAuthAuthorize(w http.ResponseWriter, r *http.Request) {
 	s.audit("oauth.ide.authorize", admin.Username, "oauth/"+input.Provider, map[string]any{
 		"session_id": session.ID,
 		"provider":   input.Provider,
+		"flow":       result.Flow,
 	})
 
-	writeJSON(w, map[string]any{
+	out := map[string]any{
 		"status":       "pending",
 		"experimental": true,
 		"session_id":   session.ID,
 		"provider":     input.Provider,
-		"redirect_url": authURL,
-		"message":      fmt.Sprintf("Open redirect_url in a browser logged into your %s account (BYO subscription).", input.Provider),
-	})
+		"flow":         result.Flow,
+	}
+	if result.Flow == "browser_redirect" {
+		out["redirect_url"] = result.RedirectURL
+		out["message"] = fmt.Sprintf("Open redirect_url in a browser logged into your %s account (BYO subscription).", input.Provider)
+	} else {
+		out["device"] = result.Device
+		out["message"] = "Enter user_code at GitHub, then click Poll until active."
+	}
+	writeJSON(w, out)
 }
 
 // GET /api/oauth/callback/{provider} — public callback; validates state + exchanges code when configured.
