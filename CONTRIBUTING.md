@@ -1,8 +1,8 @@
-# Contributing to Lintasan Go
+# Contributing to Lintasan
 
 Terima kasih atas minatnya untuk berkontribusi! 🚀
 
-Lintasan Go adalah LLM proxy router open-source yang menghubungkan client (OpenAI-compatible SDK, IDE plugin, CLI) ke berbagai provider AI — dengan failover otomatis, caching, rate limiting, dan vector memory.
+Lintasan adalah LLM proxy router open-source yang menghubungkan client (OpenAI-compatible SDK, IDE plugin, CLI) ke berbagai provider AI — dengan failover otomatis, caching, rate limiting, dan vector memory.
 
 ---
 
@@ -19,8 +19,8 @@ Lintasan Go adalah LLM proxy router open-source yang menghubungkan client (OpenA
 
 ```bash
 # 1. Clone repo
-git clone https://github.com/sanhaji182/lintasan-go.git
-cd lintasan-go
+git clone https://github.com/sanhaji182/lintasan.git
+cd lintasan
 
 # 2. Setup env
 cp .env.example .env
@@ -45,7 +45,7 @@ cd dashboard && npm install && cd ..
 ## Struktur Proyek
 
 ```
-lintasan-go/
+lintasan/
 ├── cmd/lintasan/          # Entry point + CLI (Cobra)
 ├── internal/              # Core packages
 │   ├── auth/              # OAuth token manager (Cursor/Codex/Copilot)
@@ -253,7 +253,7 @@ Kalo ada leak, bersihkan dulu. Jangan pernah push real credentials.
 1. Update version di codebase
 2. Update CHANGELOG.md
 3. Tag: `git tag vX.Y.Z`
-4. Build binary: `go build -ldflags="-s -w" -o lintasan-go ./cmd/lintasan/`
+4. Build binary: `go build -ldflags="-s -w" -o lintasan ./cmd/lintasan/`
 5. Buat GitHub Release dengan binary attachment
 6. Announce di Discussions
 

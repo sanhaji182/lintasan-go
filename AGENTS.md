@@ -10,7 +10,7 @@ Lintasan adalah **LLM proxy gateway** — satu endpoint OpenAI-compatible yang m
 
 - **Backend:** Go (single binary, ~24MB)
 - **Frontend:** SvelteKit 5 (dashboard, 26+ halaman)
-- **Repo:** `github.com/sanhaji182/lintasan-go` (monorepo)
+- **Repo:** `github.com/sanhaji182/lintasan` (monorepo)
 - **Filosofi:** "Setiap Koneksi Punya Jalannya."
 
 > ⚠️ **Node.js v1 sudah DIHAPUS (May 2026).** Semua kode aktif ada di monorepo ini. Jangan cari/buat referensi ke `~/lintasan` lama.

@@ -1,16 +1,21 @@
-# 🇮🇩 Lintasan Go (v2)
+# 🇮🇩 Lintasan
+
+[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://go.dev)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/version-v0.24.2-blue)](https://github.com/sanhaji182/lintasan/releases)
+[![Tests](https://img.shields.io/badge/tests-700+-success)](.)
 
 > **Setiap Koneksi Punya Jalannya** — Jalur cerdas yang menghubungkan manusia, AI, dan sistem dalam satu aliran terintegrasi.
 
-> ⚡ 35x lebih ringan dari Node.js v1 · single binary ~24MB · 700+ tests · 118+ provider presets · Go (v0.24.0) + SvelteKit Embedded SPA
+> ⚡ 35x lebih ringan dari Node.js v1 · single binary ~24MB · 700+ tests · 118+ provider presets · Go (v0.24.2) + SvelteKit Embedded SPA
 
 ---
 
-## 🇬🇧 Lintasan Go (v2)
+## 🇬🇧 Lintasan
 
 > **Every Connection Has Its Path** — An intelligent pathway connecting humans, AI, and systems in one integrated flow.
 
-> ⚡ 35x lighter than Node.js v1 · single ~24MB binary · 700+ tests · 118+ provider presets · Go (v0.24.0) + SvelteKit Embedded SPA
+> ⚡ 35x lighter than Node.js v1 · single ~24MB binary · 700+ tests · 118+ provider presets · Go (v0.24.2) + SvelteKit Embedded SPA
 
 ---
 
@@ -114,8 +119,8 @@ Lintasan is an **LLM proxy gateway** with 40+ optimization features. One OpenAI-
 
 ## 💪 Kenapa Go? / Why Go?
 
-| Metric | Node.js (v1) | Go (v2) | Improvement |
-|--------|-------------|---------|-------------|
+| Metric | Node.js (legacy) | Go (current) | Improvement |
+|--------|------------------|--------------|-------------|
 | **RAM** | ~500MB | ~14MB | **35x lebih hemat** |
 | **Binary size** | 513MB (node_modules) | 24MB (single file) | **21x lebih kecil** |
 | **Startup** | 3-5 detik | <50ms | **60-100x lebih cepat** |
@@ -313,7 +318,7 @@ The dashboard UI is **embedded inside the binary**, so one executable serves the
 
 ```bash
 # Download the pre-built binary (Linux x86_64) and run
-# curl -L -o lintasan https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan-linux-amd64
+# curl -L -o lintasan https://github.com/sanhaji182/lintasan/releases/latest/download/lintasan-linux-amd64
 # chmod +x lintasan
 # ./lintasan start
 
@@ -333,7 +338,7 @@ First run seeds an admin account and prints a one-time password to the console �
 ### Opsi 1: Binary Pre-built (Recommended)
 Satu binary, dashboard sudah termasuk di dalamnya.
 ```bash
-curl -L -o lintasan https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan-linux-amd64
+curl -L -o lintasan https://github.com/sanhaji182/lintasan/releases/latest/download/lintasan-linux-amd64
 chmod +x lintasan
 ./lintasan start
 ```
@@ -341,8 +346,8 @@ chmod +x lintasan
 ### Opsi 2: Build dari Source
 Butuh **Go 1.22+** dan **Node 20+** (untuk build dashboard). `make build` meng-compile frontend SvelteKit jadi SPA statis, meng-embed-nya ke binary Go, lalu compile binary tunggal.
 ```bash
-git clone https://github.com/sanhaji182/lintasan-go.git
-cd lintasan-go
+git clone https://github.com/sanhaji182/lintasan.git
+cd lintasan
 make build       # frontend → embed → ./lintasan
 ./lintasan start
 ```
@@ -350,8 +355,8 @@ make build       # frontend → embed → ./lintasan
 
 ### Opsi 3: Docker (single container)
 ```bash
-git clone https://github.com/sanhaji182/lintasan-go.git
-cd lintasan-go
+git clone https://github.com/sanhaji182/lintasan.git
+cd lintasan
 LINTASAN_MASTER_KEY=$(openssl rand -hex 32) docker compose up --build
 # UI + API → http://localhost:20180
 ```
@@ -376,7 +381,7 @@ PORT=8080 ./lintasan start
 ### Option 1: Pre-built Binary (Recommended)
 One binary, dashboard included.
 ```bash
-curl -L -o lintasan https://github.com/sanhaji182/lintasan-go/releases/latest/download/lintasan-linux-amd64
+curl -L -o lintasan https://github.com/sanhaji182/lintasan/releases/latest/download/lintasan-linux-amd64
 chmod +x lintasan
 ./lintasan start
 ```
@@ -384,8 +389,8 @@ chmod +x lintasan
 ### Option 2: Build from Source
 Requires **Go 1.22+** and **Node 20+** (to build the dashboard). `make build` compiles the SvelteKit frontend into a static SPA, embeds it into the Go binary, and compiles a single executable.
 ```bash
-git clone https://github.com/sanhaji182/lintasan-go.git
-cd lintasan-go
+git clone https://github.com/sanhaji182/lintasan.git
+cd lintasan
 make build       # frontend → embed → ./lintasan
 ./lintasan start
 ```
@@ -393,8 +398,8 @@ make build       # frontend → embed → ./lintasan
 
 ### Option 3: Docker (single container)
 ```bash
-git clone https://github.com/sanhaji182/lintasan-go.git
-cd lintasan-go
+git clone https://github.com/sanhaji182/lintasan.git
+cd lintasan
 LINTASAN_MASTER_KEY=$(openssl rand -hex 32) docker compose up --build
 # UI + API → http://localhost:20180
 ```
@@ -631,7 +636,7 @@ AWS SageMaker · GigaChat · Predibase · OpenPipe · Scale AI · Titan ML · Oc
 ## 📂 Struktur Project / Project Structure
 
 ```
-lintasan-go/
+lintasan/
 ├── cmd/lintasan/              # CLI entry point (Cobra)
 ├── internal/
 │   ├── auth/                  # OAuth + API key auth
@@ -682,8 +687,8 @@ lintasan-go/
 
 ```bash
 # Clone
-git clone https://github.com/sanhaji182/lintasan-go.git
-cd lintasan-go
+git clone https://github.com/sanhaji182/lintasan.git
+cd lintasan
 
 # Backend
 go run ./cmd/lintasan start        # Run server (hot-reload with air if installed)
@@ -727,7 +732,7 @@ cd frontend && npm run check       # SvelteKit type-check + lint
 
 ```bash
 # Build statically linked production binary
-cd lintasan-go
+cd lintasan
 go build -ldflags="-s -w" -o lintasan ./cmd/lintasan
 
 # Build frontend inside go executable
@@ -741,7 +746,7 @@ scp -r frontend/build user@server:/opt/lintasan/frontend-build/
 sudo tee /etc/systemd/system/lintasan.service << 'EOF'
 [Unit]
 Description=Lintasan LLM Proxy Gateway
-Documentation=https://github.com/sanhaji182/lintasan-go
+Documentation=https://github.com/sanhaji182/lintasan
 After=network.target
 
 [Service]
