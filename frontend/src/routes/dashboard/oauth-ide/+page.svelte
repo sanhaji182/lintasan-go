@@ -4,14 +4,23 @@
   import Spinner from '$lib/components/Spinner.svelte';
   import { FlaskConical, ShieldAlert, ExternalLink, Trash2 } from 'lucide-svelte';
 
+  interface CatalogEntry {
+    id: string;
+    name: string;
+    flow: string;
+    implementation: string;
+    deprecated?: boolean;
+    notes?: string;
+  }
+
   interface OAuthStatus {
     enabled: boolean;
     experimental?: boolean;
-    providers?: string[];
+    catalog?: CatalogEntry[];
     disclaimer?: string;
     public_base?: string;
     hint?: string;
-    error?: string;
+    source?: string;
   }
 
   interface OAuthSession {
@@ -27,11 +36,12 @@
   let loading = $state(true);
   let actionLoading = $state('');
   let acknowledge = $state(false);
-  let selectedProvider = $state('copilot');
+  let selectedProvider = $state('xai');
   let lastRedirect = $state('');
   let error = $state('');
 
-  const providers = ['copilot', 'cursor', 'codex', 'claude-desktop', 'windsurf', 'aider'];
+  const catalog = $derived(status?.catalog ?? []);
+  const readyProviders = $derived(catalog.filter((p) => p.implementation === 'ready'));
 
   async function load() {
     loading = true;
@@ -120,6 +130,23 @@
       </div>
     </section>
 
+    {#if catalog.length > 0}
+      <section class="card">
+        <h2>9router OAuth catalog (8)</h2>
+        <p class="muted small">{status?.source}</p>
+        <ul class="catalog">
+          {#each catalog as p}
+            <li>
+              <strong>{p.name}</strong> <code>{p.id}</code>
+              <span class="pill">{p.implementation}</span>
+              <span class="pill muted">{p.flow}</span>
+              {#if p.deprecated}<span class="pill warn">deprecated</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+
     {#if !status?.enabled}
       <section class="card">
         <p><strong>Disabled on this instance.</strong></p>
@@ -140,11 +167,13 @@
 
         <div class="row">
           <select bind:value={selectedProvider}>
-            {#each providers as p}
-              <option value={p}>{p}</option>
+            {#each catalog as p}
+              <option value={p.id} disabled={p.implementation !== 'ready'}>
+                {p.name} ({p.implementation})
+              </option>
             {/each}
           </select>
-          <button class="btn primary" disabled={!acknowledge || actionLoading === 'authorize'} onclick={authorize}>
+          <button class="btn primary" disabled={!acknowledge || actionLoading === 'authorize' || readyProviders.length === 0} onclick={authorize}>
             {actionLoading === 'authorize' ? 'Starting…' : 'Authorize (admin)'}
           </button>
         </div>
@@ -197,6 +226,10 @@
   .btn.ghost { background: transparent; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
   .session-list { list-style: none; padding: 0; margin: 0; }
   .session-list li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+  .catalog { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+  .catalog li { padding: 0.35rem 0; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .pill { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #334155; }
+  .pill.warn { background: rgba(234, 179, 8, 0.2); color: #eab308; }
   .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
   .muted { color: var(--text-muted, #94a3b8); }
   .small { font-size: 0.85rem; }

@@ -92,6 +92,14 @@ func oauthProviderEndpoints(provider string) (clientID, clientSecret, tokenURL s
 	return clientID, clientSecret, tokenURL, nil
 }
 
+func exchangeIdeOAuthCodeLegacy(provider, code, publicBase string) (access, refresh string, expiresIn int, err error) {
+	tokens, err := exchangeIdeOAuthCode(provider, code, publicBase)
+	if err != nil {
+		return "", "", 0, err
+	}
+	return tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresIn, nil
+}
+
 func truncateOAuthErr(s string) string {
 	s = strings.TrimSpace(s)
 	if len(s) > 200 {

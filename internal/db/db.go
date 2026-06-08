@@ -215,6 +215,7 @@ func (d *DB) migrate() error {
 		// P0 security: column to force rotation of bootstrap/seeded admin credentials.
 		// Idempotent — fails with "duplicate column" on re-run, which the loop ignores.
 		`ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE oauth_sessions ADD COLUMN pkce_verifier TEXT DEFAULT ''`,
 		// P1: Experimental Provider Registry Persistence — stores lifecycle state,
 		// admission reports, validation evidence, and descriptor snapshots for the
 		// Experimental provider ecosystem. Credentials are NEVER stored (Invariant 3).

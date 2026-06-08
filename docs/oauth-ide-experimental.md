@@ -1,25 +1,41 @@
-# OAuth IDE (Experimental)
+# OAuth IDE — 9router parity (Go rewrite)
 
-Lab-only feature. **Default OFF** (`LINTASAN_OAUTH_IDE_ENABLED` unset or `false`).
+Experimental lab (`LINTASAN_OAUTH_IDE_ENABLED=false` by default).
 
-## Enable (private instance)
+## Catalog (8 providers)
 
-Set environment variables before `lintasan start`:
+Mirrors `9router` `OAUTH_PROVIDERS` @ v0.4.71:
 
-- `LINTASAN_OAUTH_IDE_ENABLED=true`
-- `LINTASAN_OAUTH_PUBLIC_BASE_URL` — public HTTPS origin (must match OAuth app redirect)
-- Per provider: `LINTASAN_OAUTH_IDE_<PROVIDER>_CLIENT_ID` and `_CLIENT_SECRET`
-- Non-GitHub providers: also `LINTASAN_OAUTH_IDE_<PROVIDER>_TOKEN_URL`
+| id | flow | implementation |
+|----|------|----------------|
+| claude | PKCE | planned |
+| antigravity | PKCE | planned |
+| codex | PKCE | planned |
+| github | device_code | planned |
+| cursor | import_token | import_only |
+| **xai** | PKCE | **ready** |
+| kilocode | custom_device | planned |
+| cline | local_app_callback | planned |
 
-Example provider key: `COPILOT`, `CURSOR`, `CLAUDE_DESKTOP` (hyphens become underscores).
+All eight appear in `/api/oauth/status` → `catalog`. Only `implementation=ready` accepts **Authorize** today.
 
-## Behavior
+## Enable
 
-- **Admin-only** for authorize, list sessions, revoke.
-- **Public** only `GET /api/oauth/callback/{provider}` when flag is ON (validates `state` = pending session).
-- **No stub tokens** — callback fails if OAuth app env is missing.
-- **Proxy** does not consume tokens yet (`proxy_wired: false` in `/api/oauth/status`).
+```bash
+export LINTASAN_OAUTH_IDE_ENABLED=true
+export LINTASAN_OAUTH_PUBLIC_BASE_URL=https://your-lintasan-host
+```
+
+**xAI (Grok):** uses public client id ported from 9router — no env client secret. Redirect URI must match `.../api/oauth/callback/xai`.
+
+## Next ports (from `/tmp/9router-decolua-fresh`)
+
+1. github — `GITHUB_CONFIG` device flow + copilot_internal token  
+2. claude / codex — PKCE (`oauth.js` constants)  
+3. kilocode / cline — device/custom flows  
+4. cursor — import from vscdb  
+5. Proxy wire — `GetActiveToken` in connection resolver  
 
 ## ToS
 
-See disclaimer in dashboard. Not a substitute for official API keys. Multi-tenant / resale is out of scope.
+Same as dashboard disclaimer — personal BYO only.

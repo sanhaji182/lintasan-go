@@ -63,7 +63,16 @@ func (s *Server) handleOAuthAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authURL := buildOAuthURL(s.oauthPublicBaseURL(), input.Provider, session.ID)
+	authURL, err := startOAuthAuthorize(s, input.Provider, session.ID, s.oauthPublicBaseURL())
+	if err != nil {
+		writeJSONStatus(w, http.StatusBadRequest, map[string]any{
+			"error":      err.Error(),
+			"provider":   input.Provider,
+			"catalog":    true,
+			"disclaimer": auth.IdeOAuthDisclaimer,
+		})
+		return
+	}
 	s.audit("oauth.ide.authorize", admin.Username, "oauth/"+input.Provider, map[string]any{
 		"session_id": session.ID,
 		"provider":   input.Provider,
@@ -111,18 +120,19 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, exchErr := exchangeIdeOAuthCode(provider, code, s.oauthPublicBaseURL())
+	redirectURI := s.oauthPublicBaseURL() + "/api/oauth/callback/" + provider
+	access, refresh, expIn, exchErr := exchangeOAuthCallback(provider, code, redirectURI, pending.PKCEVerifier)
 	if exchErr != nil {
 		s.audit("oauth.ide.callback_failed", provider, state, map[string]any{"error": exchErr.Error()})
 		oauthIdeDisabledHTML(w, "Token exchange failed: "+exchErr.Error())
 		return
 	}
 
-	expires := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
-	if tokens.ExpiresIn <= 0 {
+	expires := time.Now().Add(time.Duration(expIn) * time.Second)
+	if expIn <= 0 {
 		expires = time.Now().Add(24 * time.Hour)
 	}
-	if err := s.oauthMgr.UpdateSessionTokens(state, tokens.AccessToken, tokens.RefreshToken, expires); err != nil {
+	if err := s.oauthMgr.UpdateSessionTokens(state, access, refresh, expires); err != nil {
 		oauthIdeDisabledHTML(w, "Failed to store tokens.")
 		return
 	}

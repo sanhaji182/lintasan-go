@@ -47,28 +47,3 @@ func isOAuthIdeCallback(method, path string) bool {
 	}
 	return strings.HasPrefix(path, "/api/oauth/callback/")
 }
-
-func (s *Server) handleOAuthStatus(w http.ResponseWriter, r *http.Request) {
-	if !s.oauthIdeEnabled() {
-		writeJSON(w, map[string]any{
-			"enabled":     false,
-			"experimental": true,
-			"providers":   []string{},
-			"disclaimer":  auth.IdeOAuthDisclaimer,
-		})
-		return
-	}
-	providers := make([]string, 0, len(auth.IdeOAuthProviders))
-	for p := range auth.IdeOAuthProviders {
-		providers = append(providers, p)
-	}
-	writeJSON(w, map[string]any{
-		"enabled":      true,
-		"experimental": true,
-		"providers":    providers,
-		"disclaimer":   auth.IdeOAuthDisclaimer,
-		"public_base":  s.oauthPublicBaseURL(),
-		"proxy_wired":  false,
-		"hint":         "Authorize stores tokens for future upstream wiring; token exchange requires per-provider OAuth client credentials in environment.",
-	})
-}

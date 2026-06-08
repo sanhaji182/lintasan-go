@@ -4,29 +4,21 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/sanhaji182/lintasan-go/internal/oauthide"
 )
 
 // IdeOAuthDisclaimer is shown in the dashboard before starting an IDE OAuth flow.
-const IdeOAuthDisclaimer = `Experimental — personal / lab use only.
+const IdeOAuthDisclaimer = oauthide.RiskNotice + `
 
+Experimental — personal / lab use only.
 • Tokens are stored in your Lintasan database (treat backups as sensitive).
-• Upstream providers (Cursor, GitHub Copilot, etc.) may prohibit routing their OAuth tokens through a third-party gateway; account suspension is possible.
-• This is NOT a substitute for official API keys or billing. Use at your own risk.
+• This is NOT a substitute for official API keys or billing.
 • Lintasan does not grant rights to resell or multi-tenant host someone else's subscription.`
 
-// IdeOAuthProviders lists IDE integrations supported by the lab OAuth flow.
-var IdeOAuthProviders = map[string]bool{
-	"cursor":         true,
-	"codex":          true,
-	"claude-desktop": true,
-	"copilot":        true,
-	"windsurf":       true,
-	"aider":          true,
-}
-
-// IsIdeOAuthProvider reports whether name is a known IDE OAuth provider slug.
+// IsIdeOAuthProvider reports whether name is in the 9router OAuth catalog.
 func IsIdeOAuthProvider(name string) bool {
-	return IdeOAuthProviders[name]
+	return oauthide.IsKnownProvider(name)
 }
 
 // GetPendingSession loads a session that must still be in pending status (callback gate).
@@ -35,11 +27,11 @@ func (m *OAuthManager) GetPendingSession(id string) (*OAuthSession, error) {
 		return nil, fmt.Errorf("oauth manager not configured")
 	}
 	var s OAuthSession
-	var accessToken, refreshToken, expiresAtStr, createdAt sql.NullString
+	var accessToken, refreshToken, expiresAtStr, createdAt, pkce sql.NullString
 	err := m.db.Conn().QueryRow(
-		`SELECT id, provider, access_token, refresh_token, expires_at, status, created_at FROM oauth_sessions WHERE id = ?`,
+		`SELECT id, provider, access_token, refresh_token, expires_at, status, created_at, pkce_verifier FROM oauth_sessions WHERE id = ?`,
 		id,
-	).Scan(&s.ID, &s.Provider, &accessToken, &refreshToken, &expiresAtStr, &s.Status, &createdAt)
+	).Scan(&s.ID, &s.Provider, &accessToken, &refreshToken, &expiresAtStr, &s.Status, &createdAt, &pkce)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -51,6 +43,9 @@ func (m *OAuthManager) GetPendingSession(id string) (*OAuthSession, error) {
 	}
 	if refreshToken.Valid {
 		s.RefreshToken = refreshToken.String
+	}
+	if pkce.Valid {
+		s.PKCEVerifier = pkce.String
 	}
 	if expiresAtStr.Valid && expiresAtStr.String != "" {
 		s.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAtStr.String)
@@ -65,4 +60,10 @@ func (m *OAuthManager) GetPendingSession(id string) (*OAuthSession, error) {
 		return nil, fmt.Errorf("session %s expired", id)
 	}
 	return &s, nil
+}
+
+// SetSessionPKCE stores PKCE verifier for pending PKCE flows.
+func (m *OAuthManager) SetSessionPKCE(id, verifier string) error {
+	_, err := m.db.Conn().Exec(`UPDATE oauth_sessions SET pkce_verifier = ? WHERE id = ? AND status = 'pending'`, verifier, id)
+	return err
 }

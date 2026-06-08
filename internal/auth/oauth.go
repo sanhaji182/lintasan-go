@@ -16,9 +16,10 @@ type OAuthManager struct {
 // OAuthSession represents an OAuth token session.
 type OAuthSession struct {
 	ID           string    `json:"id"`
-	Provider     string    `json:"provider"` // "cursor", "codex", "claude-desktop", "copilot"
+	Provider     string    `json:"provider"` // 9router OAuth id: claude, xai, github, ...
 	AccessToken  string    `json:"access_token,omitempty"`
 	RefreshToken string    `json:"refresh_token,omitempty"`
+	PKCEVerifier string    `json:"-"` // never expose
 	ExpiresAt    time.Time `json:"expires_at"`
 	Status       string    `json:"status"` // "pending", "active", "expired", "revoked"
 	CreatedAt    string    `json:"created_at"`
